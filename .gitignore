@@ -22,3 +22,5 @@
 *.pem
 *.tsbuildinfo
 next-env.d.ts.tmp
+.vercel
+.env*
