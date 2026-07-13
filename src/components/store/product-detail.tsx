@@ -1,0 +1,56 @@
+"use client";
+
+import { ChevronLeft, Heart, Minus, Plus, ShieldCheck, Truck } from "lucide-react";
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useCart } from "@/components/providers/cart-provider";
+import { useStore } from "@/components/providers/store-provider";
+import { useToast } from "@/components/providers/toast-provider";
+import { ProductArt } from "@/components/ui/product-art";
+import { stockLabel } from "@/lib/commerce";
+import { formatMoney } from "@/lib/format";
+import { ProductCard } from "./product-card";
+
+export function ProductDetail({ slug }: { slug: string }) {
+  const { data } = useStore();
+  const { addItem, favorites, toggleFavorite, setDrawerOpen } = useCart();
+  const toast = useToast();
+  const [quantity, setQuantity] = useState(1);
+  const product = data.products.find((item) => item.slug === slug && item.active);
+  const related = useMemo(
+    () => data.products.filter((item) => item.active && item.categoryId === product?.categoryId && item.id !== product?.id).slice(0, 4),
+    [data.products, product],
+  );
+
+  if (!product) {
+    return <section className="page-state container"><span className="section-kicker">PRODUTO</span><h1>Produto não encontrado.</h1><p>Ele pode ter sido ocultado ou removido do catálogo.</p><Link className="button button-primary" href="/#catalogo">Voltar ao catálogo</Link></section>;
+  }
+
+  const stock = stockLabel(product);
+  const favorite = favorites.includes(product.id);
+
+  return (
+    <>
+      <section className="product-page container">
+        <Link className="back-link" href="/#catalogo"><ChevronLeft /> Voltar ao catálogo</Link>
+        <div className="product-detail-grid">
+          <div className="product-detail-visual" style={{ "--product-accent": product.accent } as React.CSSProperties}><ProductArt product={product} large /></div>
+          <div className="product-detail-copy">
+            <span className="section-kicker">{product.category} · {product.brand}</span>
+            <div className="product-title-row"><h1>{product.name}</h1><button className={`favorite-button detail-favorite ${favorite ? "active" : ""}`} onClick={() => toggleFavorite(product.id)} aria-label="Alternar favorito"><Heart fill={favorite ? "currentColor" : "none"} /></button></div>
+            <div className="rating">★★★★★ <span>{product.rating} · {product.reviews} avaliações</span></div>
+            <p className="product-long-description">{product.description}</p>
+            <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong><small>{data.settings.pixDiscount}% OFF no Pix</small></div>
+            <dl className="product-facts"><div><dt>SKU</dt><dd>{product.sku}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Entrega</dt><dd>Frete grátis acima de {formatMoney(data.settings.freeShippingThreshold)}</dd></div></dl>
+            <div className="quantity-buy">
+              <div className="quantity-picker"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Diminuir quantidade"><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity((value) => Math.min(product.stock, value + 1))} aria-label="Aumentar quantidade"><Plus /></button></div>
+              <button className="button button-primary button-large" disabled={product.stock <= 0} onClick={() => { addItem(product.id, quantity); toast(`${product.name} adicionado ao carrinho.`); setDrawerOpen(true); }}>Adicionar ao carrinho</button>
+            </div>
+            <div className="detail-assurances"><span><ShieldCheck /> Pedido 100% demonstrativo</span><span><Truck /> Frete apenas simulado</span></div>
+          </div>
+        </div>
+      </section>
+      {related.length > 0 && <section className="section related-section"><div className="container"><h2>Produtos relacionados.</h2><div className="product-grid">{related.map((item) => <ProductCard product={item} key={item.id} />)}</div></div></section>}
+    </>
+  );
+}
