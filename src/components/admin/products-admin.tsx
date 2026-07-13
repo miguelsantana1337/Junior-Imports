@@ -1,7 +1,8 @@
 "use client";
 
 import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminPanel, StatusTag } from "./admin-ui";
 import { ProductArt } from "@/components/ui/product-art";
@@ -12,6 +13,8 @@ import type { Product } from "@/types/store";
 export function ProductsAdmin() {
   const { data, deleteProduct, moveItem, toggleItem } = useAdminData();
   const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const searchParams = useSearchParams();
+  useEffect(() => { if (searchParams.get("novo") === "1") setEditing("new"); }, [searchParams]);
   const products = [...data.products].sort((a, b) => a.order - b.order);
   return <><AdminPanel title="Catálogo de produtos" description="Adicione, edite, oculte e defina a ordem de exibição." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar produto</button>}><div className="admin-table-wrap"><table className="admin-table admin-products-table"><thead><tr><th>Ordem</th><th>Produto</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Destaque</th><th>Status</th><th>Ações</th></tr></thead><tbody>{products.map((product, index) => <tr key={product.id}><td><div className="order-buttons"><button disabled={index === 0} onClick={() => moveItem("products", product.id, -1)}>↑</button><button disabled={index === products.length - 1} onClick={() => moveItem("products", product.id, 1)}>↓</button></div></td><td><div className="admin-product-cell"><div className="admin-product-thumb"><ProductArt product={product} /></div><div><strong>{product.name}</strong><small>{product.sku}</small></div></div></td><td>{product.category}</td><td>{formatMoney(product.price)}</td><td>{product.stock}</td><td>{product.featured ? "Sim" : "Não"}</td><td><StatusTag active={product.active}>{product.active ? "Ativo" : "Oculto"}</StatusTag></td><td><div className="admin-actions"><button title={product.active ? "Ocultar" : "Exibir"} onClick={() => toggleItem("products", product.id)}>{product.active ? <EyeOff /> : <Eye />}</button><button title="Editar" onClick={() => setEditing(product)}><Pencil /></button><button className="danger" title="Excluir" onClick={() => window.confirm("Excluir este produto?") && deleteProduct(product.id)}><Trash2 /></button></div></td></tr>)}</tbody></table></div></AdminPanel>{editing && <ProductEditor product={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}</>;
 }

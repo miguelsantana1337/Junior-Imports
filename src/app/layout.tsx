@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AppProviders } from "@/components/providers/app-providers";
 import { getStoreData } from "@/lib/store-data";
+import "react-circular-progressbar/dist/styles.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const data = await getStoreData();
   return (
-    <html lang="pt-BR">
+    <html lang="pt-BR" data-scroll-behavior="smooth">
       <body>
         <AppProviders initialData={data}>{children}</AppProviders>
       </body>

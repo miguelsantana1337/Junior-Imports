@@ -8,11 +8,11 @@ test("autentica no modo local e cadastra um produto", async ({ page }) => {
   await page.goto("/admin/login");
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/admin$/);
-  await expect(page.getByRole("heading", { name: "Visão geral" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Boa tarde, Miguel" })).toBeVisible();
 
   const menuButton = page.getByRole("button", { name: "Abrir menu" });
   if (await menuButton.isVisible()) await menuButton.click();
-  await page.getByRole("link", { name: "Produtos" }).click();
+  await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name: "Produtos", exact: true }).click();
   await page.getByRole("button", { name: "Adicionar produto" }).click();
   const modal = page.getByRole("dialog", { name: "Novo produto" });
   await modal.getByLabel("Nome").fill("Produto E2E");

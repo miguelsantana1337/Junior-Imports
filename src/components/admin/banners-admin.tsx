@@ -1,7 +1,8 @@
 "use client";
 
 import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminPanel, StatusTag } from "./admin-ui";
 import { bannerSchema } from "@/lib/validation";
@@ -10,6 +11,8 @@ import type { Banner } from "@/types/store";
 export function BannersAdmin() {
   const { data, deleteBanner, moveItem, toggleItem } = useAdminData();
   const [editing, setEditing] = useState<Banner | "new" | null>(null);
+  const searchParams = useSearchParams();
+  useEffect(() => { if (searchParams.get("novo") === "1") setEditing("new"); }, [searchParams]);
   const banners = [...data.banners].sort((a, b) => a.order - b.order);
   return <><AdminPanel title="Banners rotativos" description="Controle imagem, texto, cores, ordem e visibilidade." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar banner</button>}><div className="admin-list">{banners.map((banner, index) => <article className="sortable-row" key={banner.id}><div className="order-buttons"><button disabled={index === 0} onClick={() => moveItem("banners", banner.id, -1)}>↑</button><button disabled={index === banners.length - 1} onClick={() => moveItem("banners", banner.id, 1)}>↓</button></div><div className="banner-thumb" style={{ backgroundImage: banner.imageUrl ? `url(${banner.imageUrl})` : undefined, background: banner.imageUrl ? undefined : `linear-gradient(120deg, ${banner.startColor}, ${banner.endColor})` }} /><div className="sortable-main"><strong>{banner.title}</strong><small>Posição {banner.order} · <StatusTag active={banner.active}>{banner.active ? "Visível" : "Oculto"}</StatusTag></small></div><div className="admin-actions"><button onClick={() => toggleItem("banners", banner.id)}>{banner.active ? <EyeOff /> : <Eye />}</button><button onClick={() => setEditing(banner)}><Pencil /></button><button className="danger" onClick={() => window.confirm("Excluir este banner?") && deleteBanner(banner.id)}><Trash2 /></button></div></article>)}</div></AdminPanel>{editing && <BannerEditor banner={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}</>;
 }

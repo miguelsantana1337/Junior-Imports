@@ -16,9 +16,11 @@
     "@hookform/resolvers": "latest",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@tabler/icons-react": "^3.44.0",
     "lucide-react": "latest",
     "next": "latest",
     "react": "latest",
+    "react-circular-progressbar": "^2.2.0",
     "react-dom": "latest",
     "react-hook-form": "latest",
     "zod": "latest"

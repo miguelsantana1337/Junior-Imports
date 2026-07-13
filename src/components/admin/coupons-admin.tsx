@@ -1,7 +1,8 @@
 "use client";
 
 import { Pencil, Plus, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminPanel, StatusTag } from "./admin-ui";
 import { formatMoney } from "@/lib/format";
@@ -11,6 +12,8 @@ import type { Coupon } from "@/types/store";
 export function CouponsAdmin() {
   const { data, deleteCoupon } = useAdminData();
   const [editing, setEditing] = useState<Coupon | "new" | null>(null);
+  const searchParams = useSearchParams();
+  useEffect(() => { if (searchParams.get("novo") === "1") setEditing("new"); }, [searchParams]);
   return <><AdminPanel title="Cupons de desconto" description="Configure percentual, valor fixo, mínimo e validade." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar cupom</button>}><div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Código</th><th>Tipo</th><th>Valor</th><th>Mínimo</th><th>Validade</th><th>Status</th><th>Ações</th></tr></thead><tbody>{data.coupons.map((coupon) => <tr key={coupon.id}><td><strong>{coupon.code}</strong></td><td>{coupon.type === "percent" ? "Percentual" : "Valor fixo"}</td><td>{coupon.type === "percent" ? `${coupon.value}%` : formatMoney(coupon.value)}</td><td>{formatMoney(coupon.minimum)}</td><td>{coupon.expiresAt ? new Date(`${coupon.expiresAt}T12:00:00`).toLocaleDateString("pt-BR") : "Sem validade"}</td><td><StatusTag active={coupon.active}>{coupon.active ? "Ativo" : "Inativo"}</StatusTag></td><td><div className="admin-actions"><button onClick={() => setEditing(coupon)}><Pencil /></button><button className="danger" onClick={() => window.confirm("Excluir este cupom?") && deleteCoupon(coupon.id)}><Trash2 /></button></div></td></tr>)}</tbody></table></div></AdminPanel>{editing && <CouponEditor coupon={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}</>;
 }
 
