@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { checkoutSchema, productSchema } from "./validation";
+import { bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
 
 describe("validacao do checkout", () => {
   const validCheckout = {
@@ -56,5 +56,21 @@ describe("validacao de produto", () => {
       active: true,
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("validacao do construtor da loja", () => {
+  it("aceita uma pagina e um container de texto validos", () => {
+    expect(storePageSchema.safeParse({ name: "Sobre", slug: "sobre", title: "Sobre nós", description: "", active: true, showInNavigation: true, isHome: false }).success).toBe(true);
+    expect(pageBlockSchema.safeParse({ pageId: "page-about", kind: "text", name: "Introdução", eyebrow: "SOBRE", title: "Nossa história", body: "Conteúdo da página", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "#07090d", textColor: "#ffffff", containerWidth: "normal", padding: "medium", columns: 1, active: true }).success).toBe(true);
+  });
+
+  it("exige imagem quando o banner não possui conteúdo", () => {
+    const result = bannerSchema.safeParse({ kicker: "", title: "", highlight: "", subtitle: "", buttonText: "", buttonLink: "", startColor: "#07101f", endColor: "#1677ff", imageUrl: "", imageOnly: true, active: true });
+    expect(result.success).toBe(false);
+  });
+
+  it("valida uma automacao por status", () => {
+    expect(messageAutomationSchema.safeParse({ name: "Pedido enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi enviado.", active: true }).success).toBe(true);
   });
 });

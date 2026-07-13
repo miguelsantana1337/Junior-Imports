@@ -16,6 +16,7 @@ export function StoreHeader() {
   const [query, setQuery] = useState("");
   const pathname = usePathname();
   const router = useRouter();
+  const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -43,6 +44,7 @@ export function StoreHeader() {
             <Link href="/#catalogo">Produtos</Link>
             <Link href="/#beneficios">Beneficios</Link>
             <Link href="/#duvidas">Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id}>{page.name}</Link>)}
           </nav>
           <div className="header-actions">
             <button
@@ -97,6 +99,7 @@ export function StoreHeader() {
             <Link href="/#catalogo" onClick={() => setMenuOpen(false)}>Produtos</Link>
             <Link href="/#beneficios" onClick={() => setMenuOpen(false)}>Beneficios</Link>
             <Link href="/#duvidas" onClick={() => setMenuOpen(false)}>Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id} onClick={() => setMenuOpen(false)}>{page.name}</Link>)}
           </nav>
         )}
       </header>

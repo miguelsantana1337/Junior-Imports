@@ -36,7 +36,7 @@ export function HeroCarousel() {
             : [banner.title, ""];
           return (
             <article
-              className={`hero-slide ${index === visibleIndex ? "active" : ""}`}
+              className={`hero-slide ${banner.imageOnly ? "image-only" : ""} ${index === visibleIndex ? "active" : ""}`}
               key={banner.id}
               style={{
                 "--banner-start": banner.startColor,
@@ -47,7 +47,8 @@ export function HeroCarousel() {
               {banner.imageUrl && (
                 <div className="hero-image" style={{ backgroundImage: `url(${banner.imageUrl})` }} />
               )}
-              <div className="container hero-content">
+              {banner.imageOnly && <Link className="hero-image-link" href={banner.buttonLink || "#catalogo"} aria-label={banner.title || `Abrir banner ${index + 1}`} />}
+              {!banner.imageOnly && <div className="container hero-content">
                 <div className="hero-copy">
                   <span className="hero-kicker">{banner.kicker}</span>
                   <h1>{before}{banner.highlight && <span>{banner.highlight}</span>}{after}</h1>
@@ -57,7 +58,7 @@ export function HeroCarousel() {
                     <a className="button button-ghost button-large" href={whatsappUrl(data.settings.whatsapp, "Olá! Quero saber mais sobre as ofertas da Junior Imports.")} target="_blank" rel="noreferrer">Falar no WhatsApp</a>
                   </div>
                 </div>
-              </div>
+              </div>}
             </article>
           );
         })}

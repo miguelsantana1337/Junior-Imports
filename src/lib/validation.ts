@@ -37,16 +37,27 @@ export const productSchema = z.object({
 
 export const bannerSchema = z.object({
   id: z.string().optional(),
-  kicker: z.string().trim().min(2),
-  title: z.string().trim().min(4),
+  kicker: z.string().trim(),
+  title: z.string().trim(),
   highlight: z.string().trim(),
-  subtitle: z.string().trim().min(4),
-  buttonText: z.string().trim().min(2),
-  buttonLink: z.string().trim().min(1),
+  subtitle: z.string().trim(),
+  buttonText: z.string().trim(),
+  buttonLink: z.string().trim(),
   startColor: z.string().regex(/^#[0-9a-f]{6}$/i),
   endColor: z.string().regex(/^#[0-9a-f]{6}$/i),
   imageUrl: z.union([z.literal(""), z.string().url("Use uma URL válida.")]),
+  imageOnly: z.boolean(),
   active: z.boolean(),
+}).superRefine((banner, context) => {
+  if (banner.imageOnly && !banner.imageUrl) {
+    context.addIssue({ code: "custom", path: ["imageUrl"], message: "Envie uma imagem para o banner somente imagem." });
+  }
+  if (!banner.imageOnly) {
+    if (banner.title.length < 4) context.addIssue({ code: "custom", path: ["title"], message: "Informe o título do banner." });
+    if (banner.subtitle.length < 4) context.addIssue({ code: "custom", path: ["subtitle"], message: "Informe o subtítulo do banner." });
+    if (banner.buttonText.length < 2) context.addIssue({ code: "custom", path: ["buttonText"], message: "Informe o texto do botão." });
+    if (!banner.buttonLink) context.addIssue({ code: "custom", path: ["buttonLink"], message: "Informe o link do botão." });
+  }
 });
 
 export const categorySchema = z.object({
@@ -67,16 +78,68 @@ export const couponSchema = z.object({
 
 export const settingsSchema = z.object({
   storeName: z.string().trim().min(2),
+  logoUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para a logo.")]),
+  faviconUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para o favicon.")]),
   whatsapp: z.string().trim().regex(/^\D*(?:\d\D*){10,13}$/),
   email: z.string().trim().email(),
   hours: z.string().trim().min(3),
   announcement: z.string().trim().min(3),
   footerDescription: z.string().trim().min(3),
   primaryColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  secondaryColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  backgroundColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  textColor: z.string().regex(/^#[0-9a-f]{6}$/i),
+  fontFamily: z.enum(["Inter", "Manrope", "Poppins", "System"]),
+  headerLayout: z.enum(["left", "center"]),
+  contentWidth: z.coerce.number().int().min(960).max(1600),
+  borderRadius: z.coerce.number().int().min(0).max(40),
   freeShippingThreshold: money,
   shippingFlat: money,
   pixDiscount: z.coerce.number().min(0).max(100),
   autoBannerSeconds: z.coerce.number().int().min(3).max(30),
+});
+
+export const storePageSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(2, "Informe o nome da página."),
+  slug: z.string().trim().min(2, "Informe o endereço da página.").regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "Use somente letras minúsculas, números e hífens."),
+  title: z.string().trim().min(2, "Informe o título da página."),
+  description: z.string().trim().max(180, "Use até 180 caracteres."),
+  active: z.boolean(),
+  showInNavigation: z.boolean(),
+  isHome: z.boolean(),
+});
+
+export const pageBlockSchema = z.object({
+  id: z.string().optional(),
+  pageId: z.string().min(1),
+  kind: z.enum(["hero", "trust", "featured", "catalog", "promo", "benefits", "faq", "text", "image", "cta", "spacer"]),
+  name: z.string().trim().min(2, "Informe um nome interno."),
+  eyebrow: z.string().trim().max(80),
+  title: z.string().trim().max(160),
+  body: z.string().trim().max(1200),
+  buttonText: z.string().trim().max(60),
+  buttonLink: z.string().trim().max(300),
+  imageUrl: z.union([z.literal(""), z.string().url("Use uma URL válida.")]),
+  backgroundColor: z.union([z.literal(""), z.string().regex(/^#[0-9a-f]{6}$/i)]),
+  textColor: z.union([z.literal(""), z.string().regex(/^#[0-9a-f]{6}$/i)]),
+  containerWidth: z.enum(["narrow", "normal", "wide", "full"]),
+  padding: z.enum(["none", "small", "medium", "large"]),
+  columns: z.coerce.number().int().min(1).max(4),
+  active: z.boolean(),
+}).superRefine((block, context) => {
+  if (block.kind === "image" && !block.imageUrl) context.addIssue({ code: "custom", path: ["imageUrl"], message: "Envie uma imagem para este container." });
+  if (["text", "cta"].includes(block.kind) && !block.title) context.addIssue({ code: "custom", path: ["title"], message: "Informe o título do container." });
+});
+
+export const messageAutomationSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().trim().min(2, "Informe o nome da automação."),
+  triggerStatus: z.enum(["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"]),
+  channel: z.enum(["whatsapp", "email"]),
+  subject: z.string().trim().max(140),
+  message: z.string().trim().min(10, "Escreva uma mensagem com pelo menos 10 caracteres.").max(1200),
+  active: z.boolean(),
 });
 
 export const adminLoginSchema = z.object({
@@ -90,3 +153,6 @@ export type BannerInput = z.infer<typeof bannerSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;
 export type CouponInput = z.infer<typeof couponSchema>;
 export type SettingsInput = z.infer<typeof settingsSchema>;
+export type StorePageInput = z.infer<typeof storePageSchema>;
+export type PageBlockInput = z.infer<typeof pageBlockSchema>;
+export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;

@@ -11,12 +11,21 @@ export type OrderStatus =
 
 export interface StoreSettings {
   storeName: string;
+  logoUrl: string;
+  faviconUrl: string;
   whatsapp: string;
   email: string;
   hours: string;
   announcement: string;
   footerDescription: string;
   primaryColor: string;
+  secondaryColor: string;
+  backgroundColor: string;
+  textColor: string;
+  fontFamily: "Inter" | "Manrope" | "Poppins" | "System";
+  headerLayout: "left" | "center";
+  contentWidth: number;
+  borderRadius: number;
   freeShippingThreshold: number;
   shippingFlat: number;
   pixDiscount: number;
@@ -64,6 +73,52 @@ export interface Banner {
   startColor: string;
   endColor: string;
   imageUrl: string;
+  imageOnly: boolean;
+  active: boolean;
+  order: number;
+}
+
+export interface StorePage {
+  id: string;
+  name: string;
+  slug: string;
+  title: string;
+  description: string;
+  active: boolean;
+  showInNavigation: boolean;
+  isHome: boolean;
+  order: number;
+}
+
+export type PageBlockKind =
+  | "hero"
+  | "trust"
+  | "featured"
+  | "catalog"
+  | "promo"
+  | "benefits"
+  | "faq"
+  | "text"
+  | "image"
+  | "cta"
+  | "spacer";
+
+export interface PageBlock {
+  id: string;
+  pageId: string;
+  kind: PageBlockKind;
+  name: string;
+  eyebrow: string;
+  title: string;
+  body: string;
+  buttonText: string;
+  buttonLink: string;
+  imageUrl: string;
+  backgroundColor: string;
+  textColor: string;
+  containerWidth: "narrow" | "normal" | "wide" | "full";
+  padding: "none" | "small" | "medium" | "large";
+  columns: number;
   active: boolean;
   order: number;
 }
@@ -153,17 +208,48 @@ export interface Order {
   couponCode: string;
 }
 
+export type MessageChannel = "whatsapp" | "email";
+
+export interface MessageAutomation {
+  id: string;
+  name: string;
+  triggerStatus: OrderStatus;
+  channel: MessageChannel;
+  subject: string;
+  message: string;
+  active: boolean;
+  order: number;
+}
+
+export interface MessageLog {
+  id: string;
+  orderId: string;
+  orderCode: string;
+  automationId: string;
+  automationName: string;
+  channel: MessageChannel;
+  recipient: string;
+  subject: string;
+  message: string;
+  status: "simulated" | "queued" | "sent" | "failed";
+  createdAt: string;
+}
+
 export interface StoreData {
   settings: StoreSettings;
   products: Product[];
   categories: Category[];
   banners: Banner[];
   sections: HomeSection[];
+  pages: StorePage[];
+  pageBlocks: PageBlock[];
   coupons: Coupon[];
   trustItems: TrustItem[];
   benefits: Benefit[];
   faqs: Faq[];
   orders: Order[];
+  messageAutomations: MessageAutomation[];
+  messageLogs: MessageLog[];
 }
 
 export interface CartLine {

@@ -12,8 +12,10 @@ import {
   IconExternalLink,
   IconHome,
   IconLayoutDashboard,
+  IconLayoutGrid,
   IconLogout,
   IconMenu2,
+  IconMessageCircle,
   IconPackage,
   IconPhoto,
   IconPlus,
@@ -48,13 +50,17 @@ const navigationGroups = [
   {
     label: "Loja",
     items: [
-      { href: "/admin/sections", label: "Página inicial", icon: IconLayoutDashboard },
+      { href: "/admin/layout", label: "Editor da loja", icon: IconLayoutGrid },
+      { href: "/admin/sections", label: "Conteúdo da home", icon: IconLayoutDashboard },
       { href: "/admin/banners", label: "Banners", icon: IconPhoto },
     ],
   },
   {
     label: "Marketing",
-    items: [{ href: "/admin/coupons", label: "Cupons", icon: IconTicket }],
+    items: [
+      { href: "/admin/coupons", label: "Cupons", icon: IconTicket },
+      { href: "/admin/messages", label: "Mensagens", icon: IconMessageCircle },
+    ],
   },
   {
     label: "Sistema",
@@ -73,7 +79,9 @@ const titles: Record<string, [string, string]> = {
   "/admin/banners": ["LOJA VIRTUAL", "Banners rotativos"],
   "/admin/categories": ["CATÁLOGO", "Categorias"],
   "/admin/sections": ["LOJA VIRTUAL", "Página inicial"],
+  "/admin/layout": ["LOJA VIRTUAL", "Editor de layout"],
   "/admin/coupons": ["MARKETING", "Cupons"],
+  "/admin/messages": ["MARKETING", "Mensagens automáticas"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos demonstrativos"],
   "/admin/settings": ["SISTEMA", "Configurações"],
   "/admin/data": ["SISTEMA", "Dados e backup"],
@@ -83,6 +91,8 @@ const createLinks = [
   { href: "/admin/products?novo=1", label: "Novo produto", icon: IconPackage },
   { href: "/admin/coupons?novo=1", label: "Novo cupom", icon: IconTicket },
   { href: "/admin/banners?novo=1", label: "Novo banner", icon: IconPhoto },
+  { href: "/admin/layout?novo=pagina", label: "Nova página", icon: IconLayoutGrid },
+  { href: "/admin/messages?novo=1", label: "Nova automação", icon: IconMessageCircle },
 ];
 
 export function AdminShell({ children, email, demoMode }: { children: ReactNode; email: string; demoMode: boolean }) {

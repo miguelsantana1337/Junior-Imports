@@ -1,18 +1,19 @@
+"use client";
+
+import Image, { type ImageLoaderProps } from "next/image";
 import Link from "next/link";
+import { useStore } from "@/components/providers/store-provider";
+
+const passthroughLoader = ({ src }: ImageLoaderProps) => src;
 
 export function Logo({ compact = false }: { compact?: boolean }) {
+  const { data } = useStore();
+  const customLogo = Boolean(data.settings.logoUrl);
+  const [firstName, ...rest] = data.settings.storeName.trim().split(/\s+/);
   return (
-    <Link className="brand" href="/" aria-label="Junior Imports - inicio">
-      <svg className="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
-        <path d="M10 10h17v25c0 8-5 13-13 13h-4V35h3c2 0 3-1 3-3V10Z" fill="currentColor" />
-        <path d="M31 10h11v13h12L38 39 22 23h9V10Z" fill="#1677ff" />
-      </svg>
-      {!compact && (
-        <span className="brand-text">
-          <strong>JUNIOR</strong>
-          <small>IMPORTS</small>
-        </span>
-      )}
+    <Link className={`brand ${customLogo ? "has-custom-logo" : ""}`} href="/" aria-label={`${data.settings.storeName} - início`}>
+      <Image className="brand-image" loader={passthroughLoader} unoptimized src={data.settings.logoUrl || "/admin-brand.png"} width={customLogo ? 160 : 38} height={customLogo ? 48 : 38} alt={customLogo ? data.settings.storeName : ""} priority />
+      {!compact && !customLogo && <span className="brand-text"><strong>{firstName || "JUNIOR"}</strong><small>{rest.join(" ") || "IMPORTS"}</small></span>}
     </Link>
   );
 }

@@ -60,4 +60,14 @@
 - P3 — Keep “Junior Imports” on one line on very narrow mobile screens if brand legibility is preferred over the current compact footprint.
 - P3 — Add a keyboard-shortcut hint to global search when a command palette is introduced.
 
+## Store builder extension — 2026-07-13
+
+- Desktop review: modular page/container editor, brand and theme settings, image-only banner mode, and automated-message manager passed at 1512 × 1074.
+- Mobile review: the editor and storefront passed at 390 × 844 with no horizontal overflow or inaccessible primary actions.
+- Storefront review: the generated “Sobre nós” page renders reusable text and CTA containers and appears in the public navigation.
+- Banner review: switching to “Somente imagem” removes overlay-copy fields and requires an image while retaining an optional click destination.
+- Messaging review: order-status rules support WhatsApp/e-mail templates and create demonstrative delivery logs without claiming a real provider delivery.
+- Browser console errors checked after desktop and mobile walkthrough: none found.
+- Automated verification: TypeScript, ESLint, 13 unit tests, and 10 Playwright desktop/mobile scenarios passed.
+
 final result: passed

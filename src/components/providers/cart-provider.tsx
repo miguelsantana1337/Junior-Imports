@@ -44,8 +44,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setLines(JSON.parse(window.localStorage.getItem(CART_KEY) ?? "[]"));
-      setFavorites(JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]"));
+      const storedLines = JSON.parse(window.localStorage.getItem(CART_KEY) ?? "[]") as CartLine[];
+      const storedFavorites = JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[];
+      setLines((current) => current.length ? current : storedLines);
+      setFavorites((current) => current.length ? current : storedFavorites);
     } catch {
       window.localStorage.removeItem(CART_KEY);
       window.localStorage.removeItem(FAVORITES_KEY);

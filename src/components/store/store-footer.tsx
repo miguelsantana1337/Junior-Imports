@@ -9,6 +9,7 @@ import { whatsappUrl } from "@/lib/format";
 export function StoreFooter() {
   const { data, demoMode } = useStore();
   const message = "Ola! Vim pelo e-commerce demonstrativo da Junior Imports.";
+  const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
 
   return (
     <>
@@ -23,6 +24,7 @@ export function StoreFooter() {
             <Link href="/#destaques">Destaques</Link>
             <Link href="/#catalogo">Produtos</Link>
             <Link href="/#duvidas">Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id}>{page.name}</Link>)}
           </div>
           <div>
             <strong>Atendimento</strong>
@@ -38,7 +40,7 @@ export function StoreFooter() {
           </div>
         </div>
         <div className="container footer-bottom">
-          <span>© 2026 Junior Imports</span>
+          <span>© 2026 {data.settings.storeName}</span>
           <span>Projeto academico sem vendas reais.</span>
         </div>
       </footer>

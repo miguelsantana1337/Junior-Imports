@@ -4,6 +4,8 @@ import { CategoriesAdmin } from "@/components/admin/categories-admin";
 import { CouponsAdmin } from "@/components/admin/coupons-admin";
 import { DataAdmin } from "@/components/admin/data-admin";
 import { OrdersAdmin } from "@/components/admin/orders-admin";
+import { LayoutAdmin } from "@/components/admin/layout-admin";
+import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ProductsAdmin } from "@/components/admin/products-admin";
 import { SectionsAdmin } from "@/components/admin/sections-admin";
 import { SettingsAdmin } from "@/components/admin/settings-admin";
@@ -13,8 +15,10 @@ const sections = {
   banners: BannersAdmin,
   categories: CategoriesAdmin,
   sections: SectionsAdmin,
+  layout: LayoutAdmin,
   coupons: CouponsAdmin,
   orders: OrdersAdmin,
+  messages: MessagesAdmin,
   settings: SettingsAdmin,
   data: DataAdmin,
 };

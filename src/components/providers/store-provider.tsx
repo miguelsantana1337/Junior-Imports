@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Order, StoreData } from "@/types/store";
+import { createMessageLogs } from "@/lib/message-automation";
 
 const DEMO_DATA_KEY = "juniorImportsNextDemoData";
 
@@ -24,6 +25,18 @@ interface StoreContextValue {
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
+
+function normalizeData(candidate: StoreData, fallback: StoreData): StoreData {
+  return {
+    ...fallback,
+    ...candidate,
+    settings: { ...fallback.settings, ...candidate.settings },
+    pages: candidate.pages ?? fallback.pages,
+    pageBlocks: candidate.pageBlocks ?? fallback.pageBlocks,
+    messageAutomations: candidate.messageAutomations ?? fallback.messageAutomations,
+    messageLogs: candidate.messageLogs ?? fallback.messageLogs,
+  };
+}
 
 export function StoreProvider({
   initialData,
@@ -41,7 +54,7 @@ export function StoreProvider({
     if (demoMode) {
       try {
         const stored = window.localStorage.getItem(DEMO_DATA_KEY);
-        if (stored) setData(JSON.parse(stored) as StoreData);
+        if (stored) setData(normalizeData(JSON.parse(stored) as StoreData, initialRef.current));
       } catch {
         window.localStorage.removeItem(DEMO_DATA_KEY);
       }
@@ -56,14 +69,26 @@ export function StoreProvider({
   }, [data, demoMode, hydrated]);
 
   useEffect(() => {
-    document.documentElement.style.setProperty(
-      "--primary",
-      data.settings.primaryColor || "#1677ff",
-    );
-  }, [data.settings.primaryColor]);
+    const root = document.documentElement;
+    root.style.setProperty("--primary", data.settings.primaryColor || "#1677ff");
+    root.style.setProperty("--primary-2", data.settings.secondaryColor || "#69a8ff");
+    root.style.setProperty("--bg", data.settings.backgroundColor || "#07090d");
+    root.style.setProperty("--text", data.settings.textColor || "#f5f7fb");
+    root.style.setProperty("--container", `${data.settings.contentWidth || 1240}px`);
+    root.style.setProperty("--radius", `${data.settings.borderRadius || 22}px`);
+    root.dataset.storeFont = data.settings.fontFamily || "Inter";
+    root.dataset.headerLayout = data.settings.headerLayout || "left";
+  }, [data.settings]);
 
   const addOrder = useCallback((order: Order) => {
-    setData((current) => ({ ...current, orders: [order, ...current.orders] }));
+    setData((current) => ({
+      ...current,
+      orders: [order, ...current.orders],
+      messageLogs: [
+        ...createMessageLogs(order, current.messageAutomations ?? []),
+        ...(current.messageLogs ?? []),
+      ],
+    }));
   }, []);
 
   const resetData = useCallback(() => setData(structuredClone(initialRef.current)), []);
