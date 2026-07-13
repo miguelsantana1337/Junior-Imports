@@ -53,14 +53,14 @@ As credenciais podem ser alteradas em `.env.local`.
 ## Configuração do Supabase
 
 1. Crie um projeto no Supabase.
-2. Execute, pelo SQL Editor, o arquivo
-   `supabase/migrations/202607130001_initial.sql`.
+2. Aplique as migrações com `pnpm dlx supabase@latest db push`.
 3. Execute `supabase/seed.sql` para carregar os dados demonstrativos.
 4. Copie a URL e a chave publicável para `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://seu-projeto.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sua-chave-publicavel
+SUPABASE_SERVICE_ROLE_KEY=sua-chave-secreta-do-servidor
 ```
 
 5. Crie o usuário administrador em Authentication > Users.
@@ -68,12 +68,14 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sua-chave-publicavel
 
 ```sql
 update public.profiles
-set role = 'admin'
+set role = 'owner',
+    permissions = array['dashboard', 'orders', 'catalog', 'store', 'marketing', 'settings', 'data', 'users']
 where id = (select id from auth.users where email = 'admin@exemplo.com');
 ```
 
 As políticas RLS permitem leitura pública somente do catálogo ativo. Operações
-administrativas exigem um usuário autenticado com `profiles.role = 'admin'`.
+administrativas exigem um usuário autenticado e as permissões correspondentes
+em `profiles.permissions`. A chave de serviço nunca deve ser exposta no cliente.
 Pedidos públicos são criados pela função `create_demo_order`, que recalcula
 preço, cupom, frete e estoque no banco antes de registrar a simulação.
 
@@ -98,6 +100,7 @@ pnpm build
 | `/admin/login` | Autenticação administrativa |
 | `/admin` | Dashboard |
 | `/admin/products` | Produtos |
+| `/admin/users` | Usuários, cargos e permissões |
 | `/admin/banners` | Banners rotativos |
 | `/admin/categories` | Categorias |
 | `/admin/sections` | Seções da página inicial |

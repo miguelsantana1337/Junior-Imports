@@ -2,6 +2,9 @@ import "server-only";
 
 import { cloneSeedData } from "@/data/seed";
 import type {
+  AdminPermission,
+  AdminRole,
+  AdminUser,
   Banner,
   Benefit,
   Category,
@@ -195,6 +198,19 @@ function mapMessageLog(row: Row): MessageLog {
   };
 }
 
+function mapAdminUser(row: Row): AdminUser {
+  return {
+    id: str(row.id),
+    fullName: str(row.full_name) || str(row.email).split("@")[0] || "Usuário",
+    email: str(row.email),
+    role: str(row.role) as AdminRole,
+    permissions: (Array.isArray(row.permissions) ? row.permissions : []) as AdminPermission[],
+    active: Boolean(row.active),
+    createdAt: str(row.created_at),
+    lastSignInAt: "",
+  };
+}
+
 function mapSimpleOrdered<T extends TrustItem | Benefit | Faq>(row: Row) {
   return { ...row, id: str(row.id), order: num(row.order_index) } as unknown as T;
 }
@@ -248,6 +264,9 @@ export async function getStoreData(options: { admin?: boolean } = {}): Promise<S
     options.admin
       ? supabase.from("message_logs").select("*").order("created_at", { ascending: false }).limit(100)
       : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? supabase.from("profiles").select("id, full_name, email, role, permissions, active, created_at").order("created_at")
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   const categories = queries[1].error
@@ -270,6 +289,7 @@ export async function getStoreData(options: { admin?: boolean } = {}): Promise<S
       ? (queries[12].error ? fallback.messageAutomations : ((queries[12].data ?? []) as Row[]).map(mapMessageAutomation))
       : [],
     messageLogs: options.admin && !queries[13].error ? ((queries[13].data ?? []) as Row[]).map(mapMessageLog) : [],
+    teamMembers: options.admin && !queries[14].error ? ((queries[14].data ?? []) as Row[]).map(mapAdminUser) : [],
   };
 }
 

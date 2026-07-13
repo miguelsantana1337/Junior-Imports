@@ -76,3 +76,22 @@ test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await openSection(page, "Mensagens");
   await expect(page.getByRole("cell", { name: "Aviso de preparação" })).toBeVisible();
 });
+
+test("cria usuario e personaliza suas permissoes", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Usuários");
+  await page.getByRole("button", { name: "Novo usuário", exact: true }).click();
+  const modal = page.getByRole("dialog", { name: "Novo usuário" });
+  await modal.getByLabel("Nome completo").fill("Operador E2E");
+  await modal.getByLabel("E-mail").fill("operador-e2e@exemplo.com");
+  await modal.getByLabel("Senha temporária").fill("senha-e2e-123");
+  await modal.getByLabel("Cargo").selectOption("support");
+  await modal.getByRole("button", { name: "Criar usuário" }).click();
+  await expect(page.getByText("Operador E2E", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Editar Operador E2E" }).click();
+  const editModal = page.getByRole("dialog", { name: "Editar usuário" });
+  await editModal.getByLabel("Acesso ativo").uncheck();
+  await editModal.getByRole("button", { name: "Salvar acesso" }).click();
+  await expect(page.getByText("Suspenso", { exact: true })).toBeVisible();
+});

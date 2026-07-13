@@ -235,6 +235,30 @@ export interface MessageLog {
   createdAt: string;
 }
 
+export type AdminRole = "owner" | "manager" | "editor" | "support" | "viewer";
+
+export type AdminPermission =
+  | "dashboard"
+  | "orders"
+  | "catalog"
+  | "store"
+  | "marketing"
+  | "settings"
+  | "data"
+  | "users";
+
+export interface AdminUser {
+  id: string;
+  fullName: string;
+  email: string;
+  role: AdminRole;
+  permissions: AdminPermission[];
+  active: boolean;
+  createdAt: string;
+  lastSignInAt: string;
+  isCurrent?: boolean;
+}
+
 export interface StoreData {
   settings: StoreSettings;
   products: Product[];
@@ -250,6 +274,7 @@ export interface StoreData {
   orders: Order[];
   messageAutomations: MessageAutomation[];
   messageLogs: MessageLog[];
+  teamMembers: AdminUser[];
 }
 
 export interface CartLine {

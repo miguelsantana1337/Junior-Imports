@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
+import { adminUserCreateSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
 
 describe("validacao do checkout", () => {
   const validCheckout = {
@@ -72,5 +72,15 @@ describe("validacao do construtor da loja", () => {
 
   it("valida uma automacao por status", () => {
     expect(messageAutomationSchema.safeParse({ name: "Pedido enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi enviado.", active: true }).success).toBe(true);
+  });
+});
+
+describe("validacao de usuarios administrativos", () => {
+  it("aceita um usuario com cargo e permissoes", () => {
+    expect(adminUserCreateSchema.safeParse({ fullName: "Equipe Comercial", email: "equipe@exemplo.com", password: "senha-segura-123", role: "support", permissions: ["dashboard", "orders"], active: true }).success).toBe(true);
+  });
+
+  it("rejeita senha curta e usuario sem permissoes", () => {
+    expect(adminUserCreateSchema.safeParse({ fullName: "Equipe Comercial", email: "equipe@exemplo.com", password: "123", role: "viewer", permissions: [], active: true }).success).toBe(false);
   });
 });

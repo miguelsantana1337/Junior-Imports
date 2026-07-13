@@ -142,6 +142,22 @@ export const messageAutomationSchema = z.object({
   active: z.boolean(),
 });
 
+const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
+const adminPermissionSchema = z.enum(["dashboard", "orders", "catalog", "store", "marketing", "settings", "data", "users"]);
+
+export const adminUserCreateSchema = z.object({
+  fullName: z.string().trim().min(3, "Informe o nome completo."),
+  email: z.string().trim().email("Informe um e-mail válido."),
+  password: z.string().min(8, "A senha temporária deve ter pelo menos 8 caracteres."),
+  role: adminRoleSchema,
+  permissions: z.array(adminPermissionSchema).min(1, "Selecione pelo menos uma permissão."),
+  active: z.boolean(),
+});
+
+export const adminUserUpdateSchema = adminUserCreateSchema.omit({ password: true, email: true }).extend({
+  id: z.string().uuid("Usuário inválido."),
+});
+
 export const adminLoginSchema = z.object({
   email: z.string().trim().email("Informe um e-mail válido."),
   password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
@@ -156,3 +172,5 @@ export type SettingsInput = z.infer<typeof settingsSchema>;
 export type StorePageInput = z.infer<typeof storePageSchema>;
 export type PageBlockInput = z.infer<typeof pageBlockSchema>;
 export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;
+export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
+export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;

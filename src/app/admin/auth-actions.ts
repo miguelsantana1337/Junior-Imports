@@ -26,8 +26,8 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
   if (!supabase) return { error: "Supabase não configurado." };
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !data.user) return { error: "E-mail ou senha inválidos." };
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
-  if (profile?.role !== "admin") {
+  const { data: profile } = await supabase.from("profiles").select("role, active, permissions").eq("id", data.user.id).maybeSingle();
+  if (!profile?.active || !["owner", "manager", "editor", "support", "viewer", "admin"].includes(profile.role)) {
     await supabase.auth.signOut();
     return { error: "Este usuário não possui permissão administrativa." };
   }

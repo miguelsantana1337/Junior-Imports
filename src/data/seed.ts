@@ -251,6 +251,10 @@ export const seedData: StoreData = {
     { id: "automation-shipped", name: "Pedido enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! O pedido demonstrativo {{pedido}} foi atualizado para Enviado.", active: true, order: 3 },
   ],
   messageLogs: [],
+  teamMembers: [
+    { id: "00000000-0000-4000-8000-000000000001", fullName: "Administrador Demo", email: "admin@juniorimports.demo", role: "owner", permissions: ["dashboard", "orders", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: "2026-07-01T09:00:00-03:00", lastSignInAt: "2026-07-13T13:10:00-03:00", isCurrent: true },
+    { id: "00000000-0000-4000-8000-000000000002", fullName: "Equipe de Conteúdo", email: "conteudo@juniorimports.demo", role: "editor", permissions: ["dashboard", "catalog", "store", "marketing"], active: true, createdAt: "2026-07-08T14:30:00-03:00", lastSignInAt: "2026-07-12T16:45:00-03:00" },
+  ],
 };
 
 export function cloneSeedData(): StoreData {

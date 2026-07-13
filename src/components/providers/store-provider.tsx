@@ -35,6 +35,7 @@ function normalizeData(candidate: StoreData, fallback: StoreData): StoreData {
     pageBlocks: candidate.pageBlocks ?? fallback.pageBlocks,
     messageAutomations: candidate.messageAutomations ?? fallback.messageAutomations,
     messageLogs: candidate.messageLogs ?? fallback.messageLogs,
+    teamMembers: candidate.teamMembers ?? fallback.teamMembers,
   };
 }
 

@@ -10,7 +10,7 @@ export function DataAdmin() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
   function exportData() {
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ ...data, teamMembers: [] }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

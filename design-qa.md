@@ -70,4 +70,13 @@
 - Browser console errors checked after desktop and mobile walkthrough: none found.
 - Automated verification: TypeScript, ESLint, 13 unit tests, and 10 Playwright desktop/mobile scenarios passed.
 
+## Users and permissions extension — 2026-07-13
+
+- Added a native “Usuários e permissões” surface under Sistema, following the same shell, card, table, modal, and status patterns as the existing admin.
+- Desktop review: team metrics, search, account rows, role labels, status, protected self-account actions, and permission editor passed at the standard admin viewport.
+- Mobile review: the team list, navigation and one-column permission picker passed at 390 × 844 without horizontal overflow.
+- Access model review: owner, manager, editor, support, and viewer presets map to eight independently selectable administrative modules.
+- Security review: navigation, server routes, API operations, and Supabase RLS all use the same permission model; the final active owner cannot be demoted, suspended, or deleted.
+- Automated verification: TypeScript, ESLint, 18 unit tests, and 12 Playwright desktop/mobile scenarios passed.
+
 final result: passed

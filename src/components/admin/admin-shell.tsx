@@ -24,6 +24,7 @@ import {
   IconSettings,
   IconTag,
   IconTicket,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import Image from "next/image";
@@ -31,42 +32,45 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/auth-actions";
+import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
+import type { AdminPermission, AdminRole } from "@/types/store";
 
 const navigationGroups = [
   {
     label: "Operação",
     items: [
-      { href: "/admin", label: "Visão geral", icon: IconHome },
-      { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2 },
+      { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
+      { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
     ],
   },
   {
     label: "Catálogo",
     items: [
-      { href: "/admin/products", label: "Produtos", icon: IconPackage },
-      { href: "/admin/categories", label: "Categorias", icon: IconTag },
+      { href: "/admin/products", label: "Produtos", icon: IconPackage, permission: "catalog" },
+      { href: "/admin/categories", label: "Categorias", icon: IconTag, permission: "catalog" },
     ],
   },
   {
     label: "Loja",
     items: [
-      { href: "/admin/layout", label: "Editor da loja", icon: IconLayoutGrid },
-      { href: "/admin/sections", label: "Conteúdo da home", icon: IconLayoutDashboard },
-      { href: "/admin/banners", label: "Banners", icon: IconPhoto },
+      { href: "/admin/layout", label: "Editor da loja", icon: IconLayoutGrid, permission: "store" },
+      { href: "/admin/sections", label: "Conteúdo da home", icon: IconLayoutDashboard, permission: "store" },
+      { href: "/admin/banners", label: "Banners", icon: IconPhoto, permission: "store" },
     ],
   },
   {
     label: "Marketing",
     items: [
-      { href: "/admin/coupons", label: "Cupons", icon: IconTicket },
-      { href: "/admin/messages", label: "Mensagens", icon: IconMessageCircle },
+      { href: "/admin/coupons", label: "Cupons", icon: IconTicket, permission: "marketing" },
+      { href: "/admin/messages", label: "Mensagens", icon: IconMessageCircle, permission: "marketing" },
     ],
   },
   {
     label: "Sistema",
     items: [
-      { href: "/admin/settings", label: "Configurações", icon: IconSettings },
-      { href: "/admin/data", label: "Dados", icon: IconDatabase },
+      { href: "/admin/users", label: "Usuários", icon: IconUsers, permission: "users" },
+      { href: "/admin/settings", label: "Configurações", icon: IconSettings, permission: "settings" },
+      { href: "/admin/data", label: "Dados", icon: IconDatabase, permission: "data" },
     ],
   },
 ];
@@ -84,18 +88,22 @@ const titles: Record<string, [string, string]> = {
   "/admin/messages": ["MARKETING", "Mensagens automáticas"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos demonstrativos"],
   "/admin/settings": ["SISTEMA", "Configurações"],
+  "/admin/users": ["SISTEMA", "Usuários e permissões"],
   "/admin/data": ["SISTEMA", "Dados e backup"],
 };
 
 const createLinks = [
-  { href: "/admin/products?novo=1", label: "Novo produto", icon: IconPackage },
-  { href: "/admin/coupons?novo=1", label: "Novo cupom", icon: IconTicket },
-  { href: "/admin/banners?novo=1", label: "Novo banner", icon: IconPhoto },
-  { href: "/admin/layout?novo=pagina", label: "Nova página", icon: IconLayoutGrid },
-  { href: "/admin/messages?novo=1", label: "Nova automação", icon: IconMessageCircle },
+  { href: "/admin/products?novo=1", label: "Novo produto", icon: IconPackage, permission: "catalog" },
+  { href: "/admin/coupons?novo=1", label: "Novo cupom", icon: IconTicket, permission: "marketing" },
+  { href: "/admin/banners?novo=1", label: "Novo banner", icon: IconPhoto, permission: "store" },
+  { href: "/admin/layout?novo=pagina", label: "Nova página", icon: IconLayoutGrid, permission: "store" },
+  { href: "/admin/messages?novo=1", label: "Nova automação", icon: IconMessageCircle, permission: "marketing" },
+  { href: "/admin/users?novo=1", label: "Novo usuário", icon: IconUsers, permission: "users" },
 ];
 
-export function AdminShell({ children, email, demoMode }: { children: ReactNode; email: string; demoMode: boolean }) {
+type ShellUser = { id: string; fullName: string; email: string; role: AdminRole; permissions: AdminPermission[] };
+
+export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -103,17 +111,16 @@ export function AdminShell({ children, email, demoMode }: { children: ReactNode;
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [eyebrow, title] = titles[pathname] ?? titles["/admin"];
-  const accountName = useMemo(() => {
-    const localPart = email.split("@")[0] ?? "Administrador";
-    if (localPart.toLowerCase().startsWith("miguel")) return "Miguel Santana";
-    return localPart.replace(/[._-]+/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-  }, [email]);
+  const accountName = user.fullName || user.email.split("@")[0] || "Administrador";
+  const can = (permission: string) => hasAdminPermission(user.role, user.permissions, permission as AdminPermission);
+  const visibleNavigation = navigation.filter((item) => can(item.permission));
+  const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
   const searchDestination = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     if (!normalized) return pathname;
-    const match = navigation.find((item) => item.label.toLocaleLowerCase("pt-BR").includes(normalized));
-    return match?.href ?? `/admin/products?busca=${encodeURIComponent(query.trim())}`;
-  }, [pathname, query]);
+    const match = visibleNavigation.find((item) => item.label.toLocaleLowerCase("pt-BR").includes(normalized));
+    return match?.href ?? pathname;
+  }, [pathname, query, visibleNavigation]);
 
   useEffect(() => {
     setOpen(false);
@@ -141,7 +148,7 @@ export function AdminShell({ children, email, demoMode }: { children: ReactNode;
             <Image src="/admin-brand.png" width={38} height={38} alt="" priority />
           </Link>
           <div className="admin-rail-links">
-            {navigation.map(({ href, label, icon: Icon }) => (
+            {visibleNavigation.map(({ href, label, icon: Icon }) => (
               <Link className={pathname === href ? "active" : ""} href={href} key={href} aria-label={label} title={label}>
                 <Icon stroke={1.8} />
               </Link>
@@ -163,7 +170,7 @@ export function AdminShell({ children, email, demoMode }: { children: ReactNode;
           </div>
 
           <nav className="admin-nav-groups" aria-label="Navegação administrativa">
-            {navigationGroups.map((group) => (
+            {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => can(item.permission)) })).filter((group) => group.items.length).map((group) => (
               <div className="admin-nav-group" key={group.label}>
                 <span>{group.label}</span>
                 {group.items.map(({ href, label, icon: Icon }) => (
@@ -206,7 +213,7 @@ export function AdminShell({ children, email, demoMode }: { children: ReactNode;
               <button className="admin-create-button" onClick={() => setCreateOpen((current) => !current)} aria-expanded={createOpen}>
                 <IconPlus /> Criar <span /><IconChevronDown />
               </button>
-              {createOpen && <div className="admin-popover admin-create-menu">{createLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={label}><Icon />{label}</Link>)}</div>}
+              {createOpen && <div className="admin-popover admin-create-menu">{visibleCreateLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={label}><Icon />{label}</Link>)}</div>}
             </div>
             <div className="admin-popover-wrap">
               <button className="admin-notification-button" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notificações" aria-expanded={notificationsOpen}>
@@ -217,7 +224,7 @@ export function AdminShell({ children, email, demoMode }: { children: ReactNode;
             <Link className="admin-view-store" href="/" target="_blank">Ver loja <IconExternalLink /></Link>
             <div className="admin-account">
               <span>{accountName.slice(0, 1)}</span>
-              <div><strong>{accountName}</strong><small>{email}</small></div>
+              <div><strong>{accountName}</strong><small>{adminRoleLabels[user.role]} · {user.email}</small></div>
               <IconChevronDown />
             </div>
           </div>

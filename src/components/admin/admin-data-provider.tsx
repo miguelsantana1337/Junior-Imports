@@ -14,6 +14,9 @@ import { slugify } from "@/lib/format";
 import { createMessageLogs } from "@/lib/message-automation";
 import { createClient } from "@/lib/supabase/client";
 import type {
+  AdminPermission,
+  AdminRole,
+  AdminUser,
   Banner,
   Category,
   Coupon,
@@ -26,6 +29,7 @@ import type {
   StoreData,
   StoreSettings,
 } from "@/types/store";
+import type { AdminUserCreateInput, AdminUserUpdateInput } from "@/lib/validation";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
 type OrderedKey = "products" | "banners" | "categories" | "sections";
@@ -33,6 +37,7 @@ type OrderedKey = "products" | "banners" | "categories" | "sections";
 interface AdminDataContextValue {
   data: StoreData;
   demoMode: boolean;
+  currentUser: { id: string; fullName: string; email: string; role: AdminRole; permissions: AdminPermission[] };
   saveProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   saveBanner: (banner: Banner) => Promise<void>;
@@ -55,13 +60,17 @@ interface AdminDataContextValue {
   saveSettings: (settings: StoreSettings) => Promise<void>;
   uploadMedia: (file: File, bucket: "product-media" | "banner-media" | "site-media") => Promise<string>;
   clearOrders: () => Promise<void>;
+  refreshTeamMembers: () => Promise<void>;
+  createAdminUser: (user: AdminUserCreateInput) => Promise<void>;
+  updateAdminUser: (user: AdminUserUpdateInput) => Promise<void>;
+  deleteAdminUser: (id: string) => Promise<void>;
   resetData: () => void;
   importData: (data: StoreData) => void;
 }
 
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
-export function AdminDataProvider({ initialData, children }: { initialData: StoreData; children: ReactNode }) {
+export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
   const store = useStore();
   const toast = useToast();
   const [remoteData, setRemoteData] = useState(initialData);
@@ -304,9 +313,49 @@ export function AdminDataProvider({ initialData, children }: { initialData: Stor
     toast("Pedidos demonstrativos removidos.");
   }, [setData, supabase, toast]);
 
+  const applyTeamResponse = useCallback(async (response: Response) => {
+    const payload = await response.json().catch(() => ({})) as { users?: AdminUser[]; error?: string };
+    if (!response.ok) throw new Error(payload.error || "Não foi possível concluir a operação.");
+    if (payload.users) setData((current) => ({ ...current, teamMembers: payload.users ?? current.teamMembers }));
+  }, [setData]);
+
+  const refreshTeamMembers = useCallback(async () => {
+    if (demoMode) return;
+    await applyTeamResponse(await fetch("/api/admin/users", { cache: "no-store" }));
+  }, [applyTeamResponse, demoMode]);
+
+  const createAdminUser = useCallback(async (user: AdminUserCreateInput) => {
+    if (demoMode) {
+      const member: AdminUser = { id: crypto.randomUUID(), fullName: user.fullName, email: user.email, role: user.role, permissions: user.permissions, active: user.active, createdAt: new Date().toISOString(), lastSignInAt: "" };
+      setData((current) => ({ ...current, teamMembers: [...current.teamMembers, member] }));
+    } else {
+      await applyTeamResponse(await fetch("/api/admin/users", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(user) }));
+    }
+    toast("Usuário criado.");
+  }, [applyTeamResponse, demoMode, setData, toast]);
+
+  const updateAdminUser = useCallback(async (user: AdminUserUpdateInput) => {
+    if (demoMode) {
+      setData((current) => ({ ...current, teamMembers: current.teamMembers.map((member) => member.id === user.id ? { ...member, ...user } : member) }));
+    } else {
+      await applyTeamResponse(await fetch("/api/admin/users", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(user) }));
+    }
+    toast("Acesso atualizado.");
+  }, [applyTeamResponse, demoMode, setData, toast]);
+
+  const deleteAdminUser = useCallback(async (id: string) => {
+    if (demoMode) {
+      setData((current) => ({ ...current, teamMembers: current.teamMembers.filter((member) => member.id !== id) }));
+    } else {
+      await applyTeamResponse(await fetch(`/api/admin/users?id=${encodeURIComponent(id)}`, { method: "DELETE" }));
+    }
+    toast("Usuário excluído.");
+  }, [applyTeamResponse, demoMode, setData, toast]);
+
   const value = useMemo<AdminDataContextValue>(() => ({
     data,
     demoMode,
+    currentUser,
     saveProduct,
     deleteProduct,
     saveBanner,
@@ -329,9 +378,13 @@ export function AdminDataProvider({ initialData, children }: { initialData: Stor
     saveSettings,
     uploadMedia,
     clearOrders,
+    refreshTeamMembers,
+    createAdminUser,
+    updateAdminUser,
+    deleteAdminUser,
     resetData: store.resetData,
     importData: store.importData,
-  }), [data, demoMode, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, moveItem, toggleItem, updateOrderStatus, saveSettings, uploadMedia, clearOrders, store.resetData, store.importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, moveItem, toggleItem, updateOrderStatus, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }
