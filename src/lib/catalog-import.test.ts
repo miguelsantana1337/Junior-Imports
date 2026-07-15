@@ -15,6 +15,18 @@ describe("importação de catálogo por planilha", () => {
     expect(result.products[0].stock).toBe(12);
   });
 
+  it("gera endereços diferentes para produtos importados com o mesmo nome", () => {
+    const category = seedData.categories[0];
+    const result = parseProductImport(
+      `sku;nome;categoria;preco;estoque\nJI-NOVO-1;Produto repetido;${category.name};99,90;12\nJI-NOVO-2;Produto repetido;${category.name};109,90;8`,
+      seedData.products,
+      seedData.categories,
+    );
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.products.map((product) => product.slug)).toEqual(["produto-repetido", "produto-repetido-2"]);
+  });
+
   it("substitui ou soma estoque em massa", () => {
     const product = seedData.products[0];
     const parsed = parseStockImport(`sku;quantidade\n${product.sku};5`, seedData.products);

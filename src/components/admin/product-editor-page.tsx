@@ -22,8 +22,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { ProductArt } from "@/components/ui/product-art";
-import { formatMoney, slugify } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { normalizeProductImages, removeProductImage, reorderProductImages, setProductCover } from "@/lib/product-images";
+import { createUniqueProductSlug, toProductSaveError } from "@/lib/product-slug";
 import { productSchema } from "@/lib/validation";
 import type { Product } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
@@ -205,10 +206,11 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
     setSaving(true);
     setError("");
     try {
+      const savedProductId = productId ? form.id : crypto.randomUUID();
       const savedProduct: Product = {
         ...form,
-        id: productId ? form.id : crypto.randomUUID(),
-        slug: slugify(form.name),
+        id: savedProductId,
+        slug: createUniqueProductSlug(productId && form.slug ? form.slug : form.name, data.products, savedProductId),
         category: selectedCategory.name,
         imageUrl: cover,
         imageUrls: images,
@@ -218,7 +220,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
       initialForm.current = JSON.stringify(form);
       router.push("/admin/products");
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Não foi possível salvar o produto.");
+      setError(toProductSaveError(caught).message);
     } finally {
       setSaving(false);
     }
