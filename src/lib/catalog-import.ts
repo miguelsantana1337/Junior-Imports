@@ -1,4 +1,5 @@
 import { slugify } from "@/lib/format";
+import { createUniqueProductSlug } from "@/lib/product-slug";
 import { productSchema } from "@/lib/validation";
 import type { Category, Product, ProductType, RegulatoryStatus, StockImportMode } from "@/types/store";
 
@@ -110,7 +111,7 @@ export function parseProductImport(text: string, existing: Product[], categories
     const imageUrl = record.imagem_url?.trim() || current?.imageUrl || "";
     const product: Product = {
       id: current?.id ?? `import-${slugify(sku)}`,
-      slug: current?.slug ?? slugify(name || sku),
+      slug: current?.slug ?? createUniqueProductSlug(name || sku, [...existing, ...products]),
       name,
       categoryId: category?.id ?? current!.categoryId,
       category: category?.name ?? current!.category,

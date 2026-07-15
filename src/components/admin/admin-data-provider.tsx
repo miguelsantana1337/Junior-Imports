@@ -14,6 +14,12 @@ import { useStore } from "@/components/providers/store-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { slugify } from "@/lib/format";
 import { createMessageLogs } from "@/lib/message-automation";
+import {
+  createUniqueProductSlug,
+  ensureUniqueProductSlugs,
+  ProductSaveConflictError,
+  toProductSaveError,
+} from "@/lib/product-slug";
 import { createClient } from "@/lib/supabase/client";
 import { applyStockImport, type StockImportRow } from "@/lib/catalog-import";
 import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
@@ -131,7 +137,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     async (table: string, row: Record<string, unknown>) => {
       if (!supabase) return;
       const { error } = await supabase.from(table).upsert({ ...row, tenant_id: dataRef.current.tenant.id });
-      if (error) throw new Error(error.message);
+      if (error) throw table === "products" ? toProductSaveError(error) : new Error(error.message);
     },
     [supabase],
   );
@@ -169,13 +175,73 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     throw new Error(error.message);
   }, [supabase, update]);
 
+  const reconcilePersistedProductSlugs = useCallback((rows: Array<{ id: string; slug: string }>) => {
+    if (!rows.length) return;
+    const persistedSlugs = new Map(rows.map((row) => [row.id, row.slug]));
+    const current = dataRef.current;
+    let changed = false;
+    const products = current.products.map((product) => {
+      const slug = persistedSlugs.get(product.id);
+      if (!slug || slug === product.slug) return product;
+      changed = true;
+      return { ...product, slug };
+    });
+    if (!changed) return;
+    const next = { ...current, products };
+    dataRef.current = next;
+    setData(next);
+  }, [setData]);
+
+  const persistProduct = useCallback(async (product: Product) => {
+    if (!supabase) return product;
+    const retrySeeds = [
+      product.slug,
+      `${product.slug}-${slugify(product.sku) || "item"}`,
+      `${product.slug}-${slugify(product.id)}`,
+    ];
+    let lastError: Error | undefined;
+
+    for (const seed of retrySeeds) {
+      const candidate = {
+        ...product,
+        slug: createUniqueProductSlug(seed, dataRef.current.products, product.id),
+      };
+      const { data: saved, error } = await supabase
+        .from("products")
+        .upsert({ ...productRecord(candidate), tenant_id: dataRef.current.tenant.id })
+        .select("id, slug")
+        .single();
+      if (!error) return { ...candidate, slug: saved?.slug || candidate.slug };
+
+      const friendlyError = toProductSaveError(error);
+      lastError = friendlyError;
+      if (!(friendlyError instanceof ProductSaveConflictError) || friendlyError.kind !== "slug") {
+        throw friendlyError;
+      }
+    }
+
+    throw lastError ?? new ProductSaveConflictError("slug");
+  }, [supabase]);
+
   const saveProduct = useCallback(async (product: Product) => {
+    let candidate = product;
     await commitMutation(
-      (current) => ({ ...current, products: current.products.some((item) => item.id === product.id) ? current.products.map((item) => item.id === product.id ? product : item) : [...current.products, product] }),
-      () => persist("products", productRecord(product)),
+      (current) => {
+        [candidate] = ensureUniqueProductSlugs([product], current.products);
+        return {
+          ...current,
+          products: current.products.some((item) => item.id === candidate.id)
+            ? current.products.map((item) => item.id === candidate.id ? candidate : item)
+            : [...current.products, candidate],
+        };
+      },
+      async () => {
+        const persisted = await persistProduct(candidate);
+        reconcilePersistedProductSlugs([{ id: persisted.id, slug: persisted.slug }]);
+      },
       "Produto salvo.",
     );
-  }, [commitMutation, persist]);
+  }, [commitMutation, persistProduct, reconcilePersistedProductSlugs]);
 
   const deleteProduct = useCallback(async (id: string) => {
     await commitMutation(
@@ -309,18 +375,24 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
 
   const importProducts = useCallback(async (products: Product[], filename: string) => {
     const run: CatalogImportRun = { id: crypto.randomUUID(), kind: "products", filename, mode: "upsert", totalRows: products.length, successRows: products.length, errorRows: 0, createdAt: new Date().toISOString(), actorEmail: currentUser.email };
+    let candidates = products;
     await commitMutation((current) => {
-      const replacements = new Map(products.map((product) => [product.id, product]));
+      candidates = ensureUniqueProductSlugs(products, current.products);
+      const replacements = new Map(candidates.map((product) => [product.id, product]));
       const existing = current.products.map((product) => replacements.get(product.id) ?? product);
       const existingIds = new Set(current.products.map((product) => product.id));
-      return { ...current, products: [...existing, ...products.filter((product) => !existingIds.has(product.id))], catalogImports: [run, ...current.catalogImports] };
+      return { ...current, products: [...existing, ...candidates.filter((product) => !existingIds.has(product.id))], catalogImports: [run, ...current.catalogImports] };
     }, async () => {
       if (!supabase) return;
-      const { error } = await supabase.from("products").upsert(products.map((product) => ({ ...productRecord(product), tenant_id: dataRef.current.tenant.id })));
-      if (error) throw new Error(error.message);
+      const { data: savedRows, error } = await supabase
+        .from("products")
+        .upsert(candidates.map((product) => ({ ...productRecord(product), tenant_id: dataRef.current.tenant.id })))
+        .select("id, slug");
+      if (error) throw toProductSaveError(error);
+      reconcilePersistedProductSlugs((savedRows ?? []) as Array<{ id: string; slug: string }>);
       await persist("catalog_imports", { id: run.id, kind: run.kind, filename: run.filename, mode: run.mode, total_rows: run.totalRows, success_rows: run.successRows, error_rows: run.errorRows, created_at: run.createdAt, actor_email: run.actorEmail });
     }, `${products.length} produto${products.length === 1 ? "" : "s"} processado${products.length === 1 ? "" : "s"}.`);
-  }, [commitMutation, currentUser.email, persist, supabase]);
+  }, [commitMutation, currentUser.email, persist, reconcilePersistedProductSlugs, supabase]);
 
   const importStock = useCallback(async (rows: StockImportRow[], mode: StockImportMode, filename: string) => {
     const run: CatalogImportRun = { id: crypto.randomUUID(), kind: "stock", filename, mode, totalRows: rows.length, successRows: rows.length, errorRows: 0, createdAt: new Date().toISOString(), actorEmail: currentUser.email };
