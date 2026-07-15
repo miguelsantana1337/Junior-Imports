@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Product } from "@/types/store";
-import { getProductComplianceIssues, isProductPubliclySellable } from "./product-compliance";
+import { getProductComplianceIssues, isProductPubliclySellable, isProductVisibleInCatalog, productPublicationLabel } from "./product-compliance";
 
 const base: Product = {
   id: "produto",
@@ -37,8 +37,15 @@ describe("publicação responsável de produtos", () => {
     expect(isProductPubliclySellable(base)).toBe(true);
   });
 
-  it("mantém produto sem validação no painel, mas fora da vitrine", () => {
-    expect(isProductPubliclySellable({ ...base, regulatoryStatus: "pending" })).toBe(false);
+  it("mantém produto sem validação visível para consulta, mas fora do carrinho", () => {
+    const pending = { ...base, regulatoryStatus: "pending" as const };
+    expect(isProductVisibleInCatalog(pending)).toBe(true);
+    expect(isProductPubliclySellable(pending)).toBe(false);
+    expect(productPublicationLabel(pending)).toBe("Visível para consulta");
+  });
+
+  it("mantém produtos ocultos fora do catálogo", () => {
+    expect(isProductVisibleInCatalog({ ...base, active: false })).toBe(false);
   });
 
   it("bloqueia medicamento sob prescrição na vitrine pública", () => {

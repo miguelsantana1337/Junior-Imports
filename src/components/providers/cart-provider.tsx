@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { calculateCart } from "@/lib/commerce";
+import { isProductPubliclySellable } from "@/lib/product-compliance";
 import type { CartLine, Coupon, PaymentMethod } from "@/types/store";
 import { useStore } from "./store-provider";
 
@@ -71,7 +72,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     (productId: string, quantity = 1) => {
       const product = data.products.find((item) => item.id === productId);
-      if (!product || !product.active || product.stock <= 0) return;
+      if (!product || !isProductPubliclySellable(product) || product.stock <= 0) return;
       setLines((current) => {
         const existing = current.find((line) => line.productId === productId);
         if (existing) {
@@ -93,7 +94,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateItem = useCallback(
     (productId: string, quantity: number) => {
       const product = data.products.find((item) => item.id === productId);
-      if (!product) return;
+      if (!product || !isProductPubliclySellable(product)) {
+        setLines((current) => current.filter((line) => line.productId !== productId));
+        return;
+      }
       setLines((current) =>
         quantity <= 0
           ? current.filter((line) => line.productId !== productId)
