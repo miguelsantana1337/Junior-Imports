@@ -10,10 +10,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Order, StoreData } from "@/types/store";
+import type { CouponRedemption, Customer, Order, StoreData } from "@/types/store";
 import { createMessageLogs } from "@/lib/message-automation";
-
-const DEMO_DATA_KEY = "juniorImportsNextDemoData";
+import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 
 interface StoreContextValue {
   data: StoreData;
@@ -30,12 +29,17 @@ function normalizeData(candidate: StoreData, fallback: StoreData): StoreData {
   return {
     ...fallback,
     ...candidate,
+    tenant: { ...fallback.tenant, ...candidate.tenant },
     settings: { ...fallback.settings, ...candidate.settings },
     pages: candidate.pages ?? fallback.pages,
     pageBlocks: candidate.pageBlocks ?? fallback.pageBlocks,
     messageAutomations: candidate.messageAutomations ?? fallback.messageAutomations,
     messageLogs: candidate.messageLogs ?? fallback.messageLogs,
+    customers: candidate.customers ?? fallback.customers,
+    couponRedemptions: candidate.couponRedemptions ?? fallback.couponRedemptions,
+    catalogImports: candidate.catalogImports ?? fallback.catalogImports,
     teamMembers: candidate.teamMembers ?? fallback.teamMembers,
+    auditLogs: candidate.auditLogs ?? fallback.auditLogs,
   };
 }
 
@@ -47,6 +51,7 @@ export function StoreProvider({
   children: ReactNode;
 }) {
   const demoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const demoDataKey = `${initialData.tenant.id}:store-data:v1`;
   const [data, setData] = useState(initialData);
   const [hydrated, setHydrated] = useState(false);
   const initialRef = useRef(initialData);
@@ -54,20 +59,20 @@ export function StoreProvider({
   useEffect(() => {
     if (demoMode) {
       try {
-        const stored = window.localStorage.getItem(DEMO_DATA_KEY);
+        const stored = window.localStorage.getItem(demoDataKey);
         if (stored) setData(normalizeData(JSON.parse(stored) as StoreData, initialRef.current));
       } catch {
-        window.localStorage.removeItem(DEMO_DATA_KEY);
+        window.localStorage.removeItem(demoDataKey);
       }
     }
     setHydrated(true);
-  }, [demoMode]);
+  }, [demoMode, demoDataKey]);
 
   useEffect(() => {
     if (demoMode && hydrated) {
-      window.localStorage.setItem(DEMO_DATA_KEY, JSON.stringify(data));
+      window.localStorage.setItem(demoDataKey, JSON.stringify(data));
     }
-  }, [data, demoMode, hydrated]);
+  }, [data, demoMode, hydrated, demoDataKey]);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -82,18 +87,44 @@ export function StoreProvider({
   }, [data.settings]);
 
   const addOrder = useCallback((order: Order) => {
-    setData((current) => ({
-      ...current,
-      orders: [order, ...current.orders],
-      messageLogs: [
-        ...createMessageLogs(order, current.messageAutomations ?? []),
-        ...(current.messageLogs ?? []),
-      ],
-    }));
+    setData((current) => {
+      const email = normalizeCustomerEmail(order.customer.email);
+      const phone = normalizeCustomerPhone(order.customer.phone);
+      const existingCustomer = current.customers.find((customer) => (
+        (email && normalizeCustomerEmail(customer.email) === email)
+        || (phone && normalizeCustomerPhone(customer.phone) === phone)
+      ));
+      const now = order.createdAt || new Date().toISOString();
+      const customerId = order.customerId || existingCustomer?.id || `customer-${crypto.randomUUID()}`;
+      const storedOrder = { ...order, customerId };
+      const customer: Customer = existingCustomer
+        ? { ...existingCustomer, name: order.customer.name, email: order.customer.email, phone: order.customer.phone, city: order.customer.city, state: order.customer.state, updatedAt: now }
+        : { id: customerId, name: order.customer.name, email: order.customer.email, phone: order.customer.phone, city: order.customer.city, state: order.customer.state, source: "whatsapp", tags: [], notes: "", createdAt: now, updatedAt: now };
+      const customers = existingCustomer
+        ? current.customers.map((item) => item.id === existingCustomer.id ? customer : item)
+        : [customer, ...current.customers];
+      const coupon = current.coupons.find((item) => item.code.toUpperCase() === order.couponCode.toUpperCase());
+      let couponRedemptions = current.couponRedemptions;
+      if (coupon && !couponRedemptions.some((item) => item.orderId === order.id)) {
+        const couponDiscount = Math.min(order.subtotal, coupon.type === "percent" ? order.subtotal * coupon.value / 100 : coupon.value);
+        const redemption: CouponRedemption = { id: `redemption-${crypto.randomUUID()}`, couponId: coupon.id, couponCode: coupon.code, customerId, orderId: order.id, normalizedEmail: email, normalizedPhone: phone, discount: couponDiscount, status: order.status === "Cancelado" ? "released" : "used", usedAt: now };
+        couponRedemptions = [redemption, ...couponRedemptions];
+      }
+      return {
+        ...current,
+        customers,
+        couponRedemptions,
+        orders: [storedOrder, ...current.orders],
+        messageLogs: [
+          ...createMessageLogs(storedOrder, current.messageAutomations ?? []),
+          ...(current.messageLogs ?? []),
+        ],
+      };
+    });
   }, []);
 
   const resetData = useCallback(() => setData(structuredClone(initialRef.current)), []);
-  const importData = useCallback((next: StoreData) => setData(next), []);
+  const importData = useCallback((next: StoreData) => setData(normalizeData(next, initialRef.current)), []);
 
   const value = useMemo(
     () => ({ data, demoMode, setData, addOrder, resetData, importData }),

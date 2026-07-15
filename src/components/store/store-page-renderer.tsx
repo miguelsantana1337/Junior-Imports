@@ -4,6 +4,8 @@ import Image, { type ImageLoaderProps } from "next/image";
 import Link from "next/link";
 import { useStore } from "@/components/providers/store-provider";
 import type { HomeSection, PageBlock } from "@/types/store";
+import { withStorefrontPath } from "@/lib/storefront-path";
+import { formatMoney } from "@/lib/format";
 import { CatalogSection } from "./catalog-section";
 import { HeroCarousel } from "./hero-carousel";
 import { ProductCard } from "./product-card";
@@ -41,6 +43,7 @@ function getSection(block: PageBlock, sections: HomeSection[]): HomeSection {
 
 function PageBlockRenderer({ block }: { block: PageBlock }) {
   const { data } = useStore();
+  const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   if (block.kind === "hero") return <HeroCarousel />;
   if (block.kind === "trust") return <TrustStrip />;
 
@@ -49,11 +52,14 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
 
   if (block.kind === "featured") {
     const products = data.products.filter((product) => product.active && product.featured).sort((a, b) => a.order - b.order).slice(0, Math.max(4, block.columns * 2));
-    return <BlockShell block={block}><SectionHeading eyebrow={section.eyebrow} title={section.title} action={<Link className="text-link" href="/#catalogo">Ver catálogo completo →</Link>} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
+    return <BlockShell block={block}><SectionHeading eyebrow={section.eyebrow} title={section.title} action={<Link className="text-link" href={storeHref("/#catalogo")}>Ver catálogo completo →</Link>} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
   }
 
   if (block.kind === "promo") {
-    return <BlockShell block={block}><div className="promo-card"><div><span className="section-kicker">{section.eyebrow}</span><h2>{section.title}</h2><p>{section.subtitle}</p></div><Link className="button button-light button-large" href={section.buttonLink || "/#catalogo"}>{section.buttonText || "Ver produtos"}</Link></div></BlockShell>;
+    if (!data.settings.freeShippingBannerEnabled) return null;
+    const shippingValue = formatMoney(data.settings.freeShippingThreshold);
+    const campaignTitle = data.settings.freeShippingBannerTitle.replaceAll("{{valor}}", shippingValue);
+    return <BlockShell block={block}><div className="promo-card"><div><span className="section-kicker">{data.settings.freeShippingBannerEyebrow}</span><h2>{campaignTitle}</h2><p>{data.settings.freeShippingBannerSubtitle}</p></div><Link className="button button-light button-large" href={storeHref(data.settings.freeShippingBannerButtonLink || "/#catalogo")}>{data.settings.freeShippingBannerButtonText || "Ver produtos"}</Link></div></BlockShell>;
   }
 
   if (block.kind === "benefits") {
@@ -68,14 +74,14 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
 
   if (block.kind === "image") {
     const media = <figure className="page-image-block"><Image loader={passthroughLoader} unoptimized fill sizes="100vw" src={block.imageUrl} alt={block.title || block.name} /><figcaption>{block.body}</figcaption></figure>;
-    return <BlockShell block={block}>{block.buttonLink ? <Link href={block.buttonLink} aria-label={block.buttonText || block.title || block.name}>{media}</Link> : media}</BlockShell>;
+    return <BlockShell block={block}>{block.buttonLink ? <Link href={storeHref(block.buttonLink)} aria-label={block.buttonText || block.title || block.name}>{media}</Link> : media}</BlockShell>;
   }
 
   if (block.kind === "cta") {
-    return <BlockShell block={block}><div className="page-cta-block"><div><span className="section-kicker">{block.eyebrow}</span><h2>{block.title}</h2><p>{block.body}</p></div>{block.buttonText && <Link className="button button-light button-large" href={block.buttonLink || "/"}>{block.buttonText}</Link>}</div></BlockShell>;
+    return <BlockShell block={block}><div className="page-cta-block"><div><span className="section-kicker">{block.eyebrow}</span><h2>{block.title}</h2><p>{block.body}</p></div>{block.buttonText && <Link className="button button-light button-large" href={storeHref(block.buttonLink || "/")}>{block.buttonText}</Link>}</div></BlockShell>;
   }
 
-  return <BlockShell block={block}><div className="page-text-block"><span className="section-kicker">{block.eyebrow}</span><h1>{block.title}</h1><p>{block.body}</p>{block.buttonText && <Link className="button button-primary button-large" href={block.buttonLink || "/"}>{block.buttonText}</Link>}</div></BlockShell>;
+  return <BlockShell block={block}><div className="page-text-block"><span className="section-kicker">{block.eyebrow}</span><h1>{block.title}</h1><p>{block.body}</p>{block.buttonText && <Link className="button button-primary button-large" href={storeHref(block.buttonLink || "/")}>{block.buttonText}</Link>}</div></BlockShell>;
 }
 
 function BlockShell({ block, children }: { block: PageBlock; children: React.ReactNode }) {

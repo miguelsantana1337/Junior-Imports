@@ -1,18 +1,34 @@
 import type { Metadata } from "next";
 import { AppProviders } from "@/components/providers/app-providers";
 import { getStoreData } from "@/lib/store-data";
+import { platformConfig } from "@/config/platform";
+import {
+  buildPrivateCatalogSocialMetadata,
+  privateCatalogRobots,
+} from "@/lib/storefront-metadata";
 import "react-circular-progressbar/dist/styles.css";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const data = await getStoreData();
+  const title = `${data.settings.storeName} | Catálogo privado`;
+  const description = data.settings.footerDescription || platformConfig.metadataDescription;
+
   return {
+    metadataBase: new URL(platformConfig.siteUrl),
     title: {
-      default: `${data.settings.storeName} | E-commerce demonstrativo`,
+      default: title,
       template: `%s | ${data.settings.storeName}`,
     },
-    description: "Aplicação demonstrativa de e-commerce com catálogo, carrinho, checkout e painel administrativo.",
-    icons: { icon: data.settings.faviconUrl || "/favicon.svg" },
+    description,
+    icons: { icon: data.settings.faviconUrl || platformConfig.defaultFaviconUrl },
+    robots: privateCatalogRobots,
+    ...buildPrivateCatalogSocialMetadata({
+      title,
+      description,
+      storeName: data.settings.storeName,
+      imageUrl: data.settings.logoUrl || platformConfig.socialImageUrl,
+    }),
   };
 }
 

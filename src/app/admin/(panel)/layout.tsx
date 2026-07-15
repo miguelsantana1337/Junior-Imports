@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { getStoreData } from "@/lib/store-data";
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
-  const [user, data] = await Promise.all([requireAdmin(), getStoreData({ admin: true })]);
+  const user = await requireAdmin();
+  const data = await getStoreData({ admin: true, tenantSlug: user.tenantSlug });
   return <AdminDataProvider initialData={data} currentUser={user}><AdminShell user={user} demoMode={!isSupabaseConfigured()}>{children}</AdminShell></AdminDataProvider>;
 }

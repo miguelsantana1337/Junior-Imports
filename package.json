@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "create:client": "node scripts/create-client.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -13,32 +14,32 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@hookform/resolvers": "latest",
-    "@supabase/ssr": "latest",
-    "@supabase/supabase-js": "latest",
-    "@tabler/icons-react": "^3.44.0",
-    "lucide-react": "latest",
-    "next": "latest",
-    "react": "latest",
-    "react-circular-progressbar": "^2.2.0",
-    "react-dom": "latest",
-    "react-hook-form": "latest",
-    "zod": "latest"
+    "@hookform/resolvers": "5.4.0",
+    "@supabase/ssr": "0.12.0",
+    "@supabase/supabase-js": "2.110.2",
+    "@tabler/icons-react": "3.44.0",
+    "lucide-react": "1.24.0",
+    "next": "16.2.10",
+    "react": "19.2.7",
+    "react-circular-progressbar": "2.2.0",
+    "react-dom": "19.2.7",
+    "react-hook-form": "7.81.0",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@playwright/test": "latest",
-    "@testing-library/jest-dom": "latest",
-    "@testing-library/react": "latest",
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
+    "@playwright/test": "1.61.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "@types/node": "26.1.1",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
     "eslint": "9.39.2",
-    "eslint-config-next": "latest",
-    "jsdom": "latest",
+    "eslint-config-next": "16.2.10",
+    "jsdom": "29.1.1",
     "typescript": "5.9.3",
-    "vite": "latest",
-    "vitest": "latest"
+    "vite": "8.1.4",
+    "vitest": "4.1.10"
   },
   "packageManager": "pnpm@11.7.0"
 }

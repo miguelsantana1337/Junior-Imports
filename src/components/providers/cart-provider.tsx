@@ -13,9 +13,6 @@ import { calculateCart } from "@/lib/commerce";
 import type { CartLine, Coupon, PaymentMethod } from "@/types/store";
 import { useStore } from "./store-provider";
 
-const CART_KEY = "juniorImportsNextCart";
-const FAVORITES_KEY = "juniorImportsNextFavorites";
-
 interface CartContextValue {
   lines: CartLine[];
   favorites: string[];
@@ -36,6 +33,8 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const { data } = useStore();
+  const cartKey = `${data.tenant.id}:cart:v1`;
+  const favoritesKey = `${data.tenant.id}:favorites:v1`;
   const [lines, setLines] = useState<CartLine[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
@@ -44,25 +43,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedLines = JSON.parse(window.localStorage.getItem(CART_KEY) ?? "[]") as CartLine[];
-      const storedFavorites = JSON.parse(window.localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[];
-      setLines((current) => current.length ? current : storedLines);
-      setFavorites((current) => current.length ? current : storedFavorites);
+      const storedLines = JSON.parse(window.localStorage.getItem(cartKey) ?? "[]") as CartLine[];
+      const storedFavorites = JSON.parse(window.localStorage.getItem(favoritesKey) ?? "[]") as string[];
+      setLines(storedLines);
+      setFavorites(storedFavorites);
     } catch {
-      window.localStorage.removeItem(CART_KEY);
-      window.localStorage.removeItem(FAVORITES_KEY);
+      window.localStorage.removeItem(cartKey);
+      window.localStorage.removeItem(favoritesKey);
     }
     setHydrated(true);
-  }, []);
+  }, [cartKey, favoritesKey]);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(CART_KEY, JSON.stringify(lines));
-  }, [lines, hydrated]);
+    if (hydrated) window.localStorage.setItem(cartKey, JSON.stringify(lines));
+  }, [lines, hydrated, cartKey]);
 
   useEffect(() => {
     if (hydrated)
-      window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-  }, [favorites, hydrated]);
+      window.localStorage.setItem(favoritesKey, JSON.stringify(favorites));
+  }, [favorites, hydrated, favoritesKey]);
 
   useEffect(() => {
     document.body.classList.toggle("locked", drawerOpen);

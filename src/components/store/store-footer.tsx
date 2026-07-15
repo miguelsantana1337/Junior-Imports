@@ -5,11 +5,13 @@ import { MessageCircle } from "lucide-react";
 import { useStore } from "@/components/providers/store-provider";
 import { Logo } from "@/components/ui/logo";
 import { whatsappUrl } from "@/lib/format";
+import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function StoreFooter() {
   const { data, demoMode } = useStore();
-  const message = "Ola! Vim pelo e-commerce demonstrativo da Junior Imports.";
+  const message = `Olá! Vim pelo e-commerce demonstrativo da ${data.settings.storeName}.`;
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
+  const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
 
   return (
     <>
@@ -21,10 +23,10 @@ export function StoreFooter() {
           </div>
           <div>
             <strong>Loja</strong>
-            <Link href="/#destaques">Destaques</Link>
-            <Link href="/#catalogo">Produtos</Link>
-            <Link href="/#duvidas">Dúvidas</Link>
-            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id}>{page.name}</Link>)}
+            <Link href={storeHref("/#destaques")}>Destaques</Link>
+            <Link href={storeHref("/#catalogo")}>Produtos</Link>
+            <Link href={storeHref("/#duvidas")}>Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
           </div>
           <div>
             <strong>Atendimento</strong>
@@ -33,15 +35,15 @@ export function StoreFooter() {
             <span>{data.settings.email}</span>
           </div>
           <div>
-            <strong>Projeto</strong>
-            <span>Ambiente demonstrativo</span>
+            <strong>Operação</strong>
+            <span>{data.settings.checkoutMode === "whatsapp" ? "Pedidos pelo WhatsApp" : "Ambiente demonstrativo"}</span>
             <span>{demoMode ? "Modo local ativo" : "Conectado ao Supabase"}</span>
             <Link className="footer-admin" href="/admin/login">Abrir painel administrativo</Link>
           </div>
         </div>
         <div className="container footer-bottom">
           <span>© 2026 {data.settings.storeName}</span>
-          <span>Projeto academico sem vendas reais.</span>
+          <span>{data.settings.checkoutMode === "whatsapp" ? "Atendimento e fechamento realizados pela loja." : "Projeto demonstrativo sem vendas reais."}</span>
         </div>
       </footer>
       <a

@@ -7,6 +7,8 @@ import { useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { Logo } from "@/components/ui/logo";
+import { formatMoney } from "@/lib/format";
+import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function StoreHeader() {
   const { data } = useStore();
@@ -17,14 +19,19 @@ export function StoreHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
+  const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
+  const shippingValue = formatMoney(data.settings.freeShippingThreshold);
+  const announcement = data.settings.announcement
+    .replaceAll("{{valor}}", shippingValue)
+    .replace(/(frete grátis.*?acima de)\s*R\$\s*[\d.,]+/i, `$1 ${shippingValue}`);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
-    if (pathname === "/") {
+    if (pathname === (data.tenant.storefrontPath || "/")) {
       window.dispatchEvent(new CustomEvent("junior-search", { detail: query }));
       document.querySelector("#catalogo")?.scrollIntoView({ behavior: "smooth" });
     } else {
-      router.push(`/?q=${encodeURIComponent(query)}#catalogo`);
+      router.push(`${storeHref("/")}?q=${encodeURIComponent(query)}#catalogo`);
     }
   }
 
@@ -32,19 +39,19 @@ export function StoreHeader() {
     <>
       <div className="announcement">
         <div className="container announcement-inner">
-          <span>{data.settings.announcement}</span>
-          <Link href="/#catalogo">Ver ofertas →</Link>
+          <span>{announcement}</span>
+          <Link href={storeHref("/#catalogo")}>Ver ofertas →</Link>
         </div>
       </div>
       <header className="store-header">
         <div className="container header-inner">
           <Logo />
           <nav className="desktop-nav" aria-label="Navegacao principal">
-            <Link href="/#destaques">Destaques</Link>
-            <Link href="/#catalogo">Produtos</Link>
-            <Link href="/#beneficios">Beneficios</Link>
-            <Link href="/#duvidas">Dúvidas</Link>
-            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id}>{page.name}</Link>)}
+            <Link href={storeHref("/#destaques")}>Destaques</Link>
+            <Link href={storeHref("/#catalogo")}>Produtos</Link>
+            <Link href={storeHref("/#beneficios")}>Beneficios</Link>
+            <Link href={storeHref("/#duvidas")}>Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
           </nav>
           <div className="header-actions">
             <button
@@ -95,11 +102,11 @@ export function StoreHeader() {
         )}
         {menuOpen && (
           <nav className="mobile-nav" aria-label="Navegacao movel">
-            <Link href="/#destaques" onClick={() => setMenuOpen(false)}>Destaques</Link>
-            <Link href="/#catalogo" onClick={() => setMenuOpen(false)}>Produtos</Link>
-            <Link href="/#beneficios" onClick={() => setMenuOpen(false)}>Beneficios</Link>
-            <Link href="/#duvidas" onClick={() => setMenuOpen(false)}>Dúvidas</Link>
-            {navigationPages.map((page) => <Link href={`/paginas/${page.slug}`} key={page.id} onClick={() => setMenuOpen(false)}>{page.name}</Link>)}
+            <Link href={storeHref("/#destaques")} onClick={() => setMenuOpen(false)}>Destaques</Link>
+            <Link href={storeHref("/#catalogo")} onClick={() => setMenuOpen(false)}>Produtos</Link>
+            <Link href={storeHref("/#beneficios")} onClick={() => setMenuOpen(false)}>Beneficios</Link>
+            <Link href={storeHref("/#duvidas")} onClick={() => setMenuOpen(false)}>Dúvidas</Link>
+            {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id} onClick={() => setMenuOpen(false)}>{page.name}</Link>)}
           </nav>
         )}
       </header>

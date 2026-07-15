@@ -16,7 +16,7 @@ export function ProductArt({ product, large = false }: { product: Product; large
       aria-label={`Ilustracao demonstrativa de ${product.name}`}
     >
       <div className="product-art-box">
-        <small>{product.brand || "JUNIOR IMPORTS"}</small>
+        <small>{product.brand || "LOJA ONLINE"}</small>
         <b>{product.name}</b>
         <i />
       </div>

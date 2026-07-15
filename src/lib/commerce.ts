@@ -9,6 +9,8 @@ import type {
 
 export function isCouponValid(coupon: Coupon, subtotal: number, now = new Date()) {
   if (!coupon.active || subtotal < coupon.minimum) return false;
+  if (coupon.totalUsageLimit > 0 && coupon.usageCount >= coupon.totalUsageLimit) return false;
+  if (coupon.startsAt && new Date(`${coupon.startsAt}T00:00:00`) > now) return false;
   if (!coupon.expiresAt) return true;
   const expiration = new Date(`${coupon.expiresAt}T23:59:59`);
   return expiration >= now;
@@ -47,7 +49,7 @@ export function calculateCart(
     payment === "Pix" ? afterCoupon * (settings.pixDiscount / 100) : 0;
   const afterDiscounts = Math.max(0, afterCoupon - paymentDiscount);
   const shipping =
-    subtotal === 0 || afterDiscounts >= settings.freeShippingThreshold
+    subtotal === 0 || (settings.freeShippingEnabled && afterDiscounts >= settings.freeShippingThreshold)
       ? 0
       : settings.shippingFlat;
 
