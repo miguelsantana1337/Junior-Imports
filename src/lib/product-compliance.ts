@@ -48,8 +48,12 @@ export function isProductPubliclySellable(product: Product): boolean {
   return product.active && getProductComplianceIssues(product).length === 0;
 }
 
+export function isProductVisibleInCatalog(product: Product): boolean {
+  return product.active;
+}
+
 export function productPublicationLabel(product: Product): string {
-  if (isProductPubliclySellable(product)) return "Publicado";
   if (!product.active) return "Oculto";
-  return "Aguardando validação";
+  if (isProductPubliclySellable(product)) return "Disponível para pedido";
+  return "Visível para consulta";
 }

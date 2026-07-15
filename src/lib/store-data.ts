@@ -1,7 +1,7 @@
 import "server-only";
 
 import { cloneSeedData } from "@/data/seed";
-import { isProductPubliclySellable } from "@/lib/product-compliance";
+import { isProductVisibleInCatalog } from "@/lib/product-compliance";
 import type {
   AdminPermission,
   AdminRole,
@@ -403,7 +403,7 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
   if (!supabase) {
     return {
       ...fallback,
-      products: options.admin ? fallback.products : fallback.products.filter(isProductPubliclySellable),
+      products: options.admin ? fallback.products : fallback.products.filter(isProductVisibleInCatalog),
       tenant: {
         ...fallback.tenant,
         storefrontPath: options.storefrontPath ?? (options.tenantSlug ? `/loja/${fallback.tenant.slug}` : ""),
@@ -493,7 +493,7 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     tenant: resolution.tenant,
     settings: queries[0].data && !queries[0].error ? mapSettings(queries[0].data as Row, fallback.settings) : fallback.settings,
     categories,
-    products: options.admin ? mappedProducts : mappedProducts.filter(isProductPubliclySellable),
+    products: options.admin ? mappedProducts : mappedProducts.filter(isProductVisibleInCatalog),
     banners: queries[3].error ? fallback.banners : ((queries[3].data ?? []) as Row[]).map(mapBanner),
     sections: queries[4].error ? fallback.sections : ((queries[4].data ?? []) as Row[]).map(mapSection),
     coupons,
