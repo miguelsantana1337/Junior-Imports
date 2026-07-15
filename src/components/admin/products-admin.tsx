@@ -1,38 +1,88 @@
 "use client";
 
-import { Eye, EyeOff, ImagePlus, Pencil, Plus, Trash2, X } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { ChevronLeft, ChevronRight, Eye, EyeOff, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
-import { AdminPanel, StatusTag } from "./admin-ui";
+import { AdminEmpty, AdminPanel, StatusTag } from "./admin-ui";
 import { ProductArt } from "@/components/ui/product-art";
-import { formatMoney, slugify } from "@/lib/format";
-import { productSchema } from "@/lib/validation";
+import { useConfirm } from "@/components/providers/confirm-provider";
+import { formatMoney } from "@/lib/format";
 import type { Product } from "@/types/store";
+
+const pageSize = 10;
 
 export function ProductsAdmin() {
   const { data, deleteProduct, moveItem, toggleItem } = useAdminData();
-  const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const confirm = useConfirm();
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [visibility, setVisibility] = useState("all");
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<string[]>([]);
+  const router = useRouter();
   const searchParams = useSearchParams();
-  useEffect(() => { if (searchParams.get("novo") === "1") setEditing("new"); }, [searchParams]);
-  const products = [...data.products].sort((a, b) => a.order - b.order);
-  return <><AdminPanel title="Catálogo de produtos" description="Adicione, edite, oculte e defina a ordem de exibição." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar produto</button>}><div className="admin-table-wrap"><table className="admin-table admin-products-table"><thead><tr><th>Ordem</th><th>Produto</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Destaque</th><th>Status</th><th>Ações</th></tr></thead><tbody>{products.map((product, index) => <tr key={product.id}><td><div className="order-buttons"><button disabled={index === 0} onClick={() => moveItem("products", product.id, -1)}>↑</button><button disabled={index === products.length - 1} onClick={() => moveItem("products", product.id, 1)}>↓</button></div></td><td><div className="admin-product-cell"><div className="admin-product-thumb"><ProductArt product={product} /></div><div><strong>{product.name}</strong><small>{product.sku}</small></div></div></td><td>{product.category}</td><td>{formatMoney(product.price)}</td><td>{product.stock}</td><td>{product.featured ? "Sim" : "Não"}</td><td><StatusTag active={product.active}>{product.active ? "Ativo" : "Oculto"}</StatusTag></td><td><div className="admin-actions"><button title={product.active ? "Ocultar" : "Exibir"} onClick={() => toggleItem("products", product.id)}>{product.active ? <EyeOff /> : <Eye />}</button><button title="Editar" onClick={() => setEditing(product)}><Pencil /></button><button className="danger" title="Excluir" onClick={() => window.confirm("Excluir este produto?") && deleteProduct(product.id)}><Trash2 /></button></div></td></tr>)}</tbody></table></div></AdminPanel>{editing && <ProductEditor product={editing === "new" ? null : editing} onClose={() => setEditing(null)} />}</>;
-}
+  useEffect(() => { if (searchParams.get("novo") === "1") router.replace("/admin/products/new"); }, [router, searchParams]);
+  const products = useMemo(() => [...data.products]
+    .sort((a, b) => a.order - b.order)
+    .filter((product) => {
+      const normalized = query.trim().toLocaleLowerCase("pt-BR");
+      const matchesQuery = !normalized || `${product.name} ${product.sku} ${product.brand}`.toLocaleLowerCase("pt-BR").includes(normalized);
+      return matchesQuery
+        && (category === "all" || product.categoryId === category)
+        && (visibility === "all" || (visibility === "active" ? product.active : !product.active));
+    }), [category, data.products, query, visibility]);
+  const pageCount = Math.max(1, Math.ceil(products.length / pageSize));
+  const currentPage = Math.min(page, pageCount);
+  const visibleProducts = products.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-function ProductEditor({ product, onClose }: { product: Product | null; onClose: () => void }) {
-  const { data, saveProduct, uploadMedia } = useAdminData();
-  const category = data.categories.find((item) => item.id === product?.categoryId) ?? data.categories[0];
-  const [form, setForm] = useState<Product>(product ?? { id: crypto.randomUUID(), slug: "", name: "", categoryId: category?.id ?? "", category: category?.name ?? "", brand: "", price: 0, compareAt: 0, stock: 0, badge: "", accent: "#1677ff", description: "", sku: `JI-${String(data.products.length + 1).padStart(3, "0")}`, rating: 5, reviews: 0, featured: false, active: true, order: data.products.length + 1, imageUrl: "" });
-  const [error, setError] = useState("");
-  const [uploading, setUploading] = useState(false);
-  function field<K extends keyof Product>(key: K, value: Product[K]) { setForm((current) => ({ ...current, [key]: value })); }
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    const parsed = productSchema.safeParse(form);
-    if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revise os campos."); return; }
-    const selectedCategory = data.categories.find((item) => item.id === form.categoryId)!;
-    await saveProduct({ ...form, slug: slugify(form.name), category: selectedCategory.name });
-    onClose();
+  useEffect(() => { setPage(1); setSelected([]); }, [category, query, visibility]);
+
+  const askDelete = useCallback(async (product: Product) => {
+    const accepted = await confirm({ title: "Excluir produto?", description: `“${product.name}” será removido permanentemente do catálogo.`, confirmLabel: "Excluir produto", danger: true });
+    if (accepted) await deleteProduct(product.id);
+  }, [confirm, deleteProduct]);
+
+  async function applyBulk(action: "show" | "hide" | "delete") {
+    const targets = data.products.filter((product) => selected.includes(product.id));
+    if (action === "delete") {
+      const accepted = await confirm({ title: "Excluir produtos selecionados?", description: `${targets.length} produto(s) serão removidos permanentemente.`, confirmLabel: "Excluir selecionados", danger: true });
+      if (!accepted) return;
+      for (const product of targets) await deleteProduct(product.id);
+    } else {
+      const active = action === "show";
+      for (const product of targets) if (product.active !== active) await toggleItem("products", product.id);
+    }
+    setSelected([]);
   }
-  return <div className="admin-modal" role="dialog" aria-modal="true" aria-label={product ? "Editar produto" : "Novo produto"}><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel"><header><div><span>PRODUTOS</span><h2>{product ? "Editar produto" : "Novo produto"}</h2></div><button onClick={onClose}><X /></button></header><form className="admin-form" onSubmit={submit}><label>Nome<input value={form.name} onChange={(event) => field("name", event.target.value)} required /></label><label>SKU<input value={form.sku} onChange={(event) => field("sku", event.target.value)} required /></label><label>Categoria<select value={form.categoryId} onChange={(event) => field("categoryId", event.target.value)}>{data.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label><label>Marca<input value={form.brand} onChange={(event) => field("brand", event.target.value)} required /></label><label>Preço<input type="number" step="0.01" min="0" value={form.price} onChange={(event) => field("price", Number(event.target.value))} /></label><label>Preço anterior<input type="number" step="0.01" min="0" value={form.compareAt} onChange={(event) => field("compareAt", Number(event.target.value))} /></label><label>Estoque<input type="number" min="0" value={form.stock} onChange={(event) => field("stock", Number(event.target.value))} /></label><label>Etiqueta<input value={form.badge} onChange={(event) => field("badge", event.target.value)} /></label><label>Avaliação<input type="number" min="0" max="5" step="0.1" value={form.rating} onChange={(event) => field("rating", Number(event.target.value))} /></label><label>Nº de avaliações<input type="number" min="0" value={form.reviews} onChange={(event) => field("reviews", Number(event.target.value))} /></label><label>Cor do mockup<input type="color" value={form.accent} onChange={(event) => field("accent", event.target.value)} /></label><label>URL da imagem<input value={form.imageUrl} onChange={(event) => field("imageUrl", event.target.value)} placeholder="https://..." /></label><label className="full upload-label"><ImagePlus /> {uploading ? "Enviando..." : "Enviar imagem"}<input type="file" accept="image/*" disabled={uploading} onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setUploading(true); try { field("imageUrl", await uploadMedia(file, "product-media")); } finally { setUploading(false); } }} /></label><label className="full">Descrição<textarea value={form.description} onChange={(event) => field("description", event.target.value)} /></label><label className="check-field"><input type="checkbox" checked={form.featured} onChange={(event) => field("featured", event.target.checked)} /> Produto em destaque</label><label className="check-field"><input type="checkbox" checked={form.active} onChange={(event) => field("active", event.target.checked)} /> Produto visível</label>{error && <p className="admin-form-error full">{error}</p>}<div className="admin-form-actions full"><button type="button" className="admin-button" onClick={onClose}>Cancelar</button><button className="admin-button primary" type="submit">Salvar produto</button></div></form></div></div>;
+
+  return (
+    <>
+      <AdminPanel title="Catálogo de produtos" description="Pesquise, filtre, edite, oculte e defina a ordem de exibição." action={<Link className="admin-button primary" href="/admin/products/new"><Plus /> Adicionar produto</Link>}>
+        <div className="admin-list-toolbar">
+          <label className="admin-search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, SKU ou marca" aria-label="Buscar produtos" /></label>
+          <label><span>Categoria</span><select value={category} onChange={(event) => setCategory(event.target.value)}><option value="all">Todas</option>{data.categories.map((item) => <option value={item.id} key={item.id}>{item.name}</option>)}</select></label>
+          <label><span>Visibilidade</span><select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="all">Todos</option><option value="active">Ativos</option><option value="hidden">Ocultos</option></select></label>
+          <strong>{products.length} produto{products.length === 1 ? "" : "s"}</strong>
+        </div>
+        {selected.length > 0 && <div className="admin-bulk-bar"><strong>{selected.length} selecionado{selected.length === 1 ? "" : "s"}</strong><button onClick={() => applyBulk("show")}><Eye /> Exibir</button><button onClick={() => applyBulk("hide")}><EyeOff /> Ocultar</button><button className="danger" onClick={() => applyBulk("delete")}><Trash2 /> Excluir</button></div>}
+        {visibleProducts.length ? (
+          <>
+            <div className="admin-table-wrap admin-products-desktop">
+              <table className="admin-table admin-products-table">
+                <thead><tr><th><input type="checkbox" aria-label="Selecionar página" checked={visibleProducts.every((product) => selected.includes(product.id))} onChange={(event) => setSelected(event.target.checked ? [...new Set([...selected, ...visibleProducts.map((product) => product.id)])] : selected.filter((id) => !visibleProducts.some((product) => product.id === id)))} /></th><th>Ordem</th><th>Produto</th><th>Categoria</th><th>Preço</th><th>Estoque</th><th>Status</th><th>Ações</th></tr></thead>
+                <tbody>{visibleProducts.map((product) => {
+                  const globalIndex = [...data.products].sort((a, b) => a.order - b.order).findIndex((item) => item.id === product.id);
+                  return <tr key={product.id}><td><input type="checkbox" aria-label={`Selecionar ${product.name}`} checked={selected.includes(product.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, product.id] : selected.filter((id) => id !== product.id))} /></td><td><div className="order-buttons"><button aria-label={`Mover ${product.name} para cima`} disabled={globalIndex === 0} onClick={() => moveItem("products", product.id, -1)}>↑</button><button aria-label={`Mover ${product.name} para baixo`} disabled={globalIndex === data.products.length - 1} onClick={() => moveItem("products", product.id, 1)}>↓</button></div></td><td><div className="admin-product-cell"><div className="admin-product-thumb"><ProductArt product={product} /></div><div><strong>{product.name}</strong><small>{product.sku}</small></div></div></td><td>{product.category}</td><td>{formatMoney(product.price)}</td><td>{product.stock}</td><td><StatusTag active={product.active}>{product.active ? "Ativo" : "Oculto"}</StatusTag></td><td><div className="admin-actions"><button aria-label={product.active ? `Ocultar ${product.name}` : `Exibir ${product.name}`} onClick={() => toggleItem("products", product.id)}>{product.active ? <EyeOff /> : <Eye />}</button><Link aria-label={`Editar ${product.name}`} href={`/admin/products/${encodeURIComponent(product.id)}`}><Pencil /></Link><button className="danger" aria-label={`Excluir ${product.name}`} onClick={() => askDelete(product)}><Trash2 /></button></div></td></tr>;
+                })}</tbody>
+              </table>
+            </div>
+            <div className="admin-mobile-cards">{visibleProducts.map((product) => <article key={product.id}><div className="admin-product-cell"><div className="admin-product-thumb"><ProductArt product={product} /></div><div><strong>{product.name}</strong><small>{product.sku} · {product.category}</small></div></div><dl><div><dt>Preço</dt><dd>{formatMoney(product.price)}</dd></div><div><dt>Estoque</dt><dd>{product.stock}</dd></div></dl><footer><StatusTag active={product.active}>{product.active ? "Ativo" : "Oculto"}</StatusTag><div className="admin-actions"><button aria-label={product.active ? `Ocultar ${product.name}` : `Exibir ${product.name}`} onClick={() => toggleItem("products", product.id)}>{product.active ? <EyeOff /> : <Eye />}</button><Link aria-label={`Editar ${product.name}`} href={`/admin/products/${encodeURIComponent(product.id)}`}><Pencil /></Link><button className="danger" aria-label={`Excluir ${product.name}`} onClick={() => askDelete(product)}><Trash2 /></button></div></footer></article>)}</div>
+            <div className="admin-pagination"><span>Página {currentPage} de {pageCount}</span><div><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Página anterior"><ChevronLeft /></button><button disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Próxima página"><ChevronRight /></button></div></div>
+          </>
+        ) : <AdminEmpty><strong>Nenhum produto encontrado.</strong><span>Ajuste os filtros ou adicione um novo produto.</span></AdminEmpty>}
+      </AdminPanel>
+    </>
+  );
 }

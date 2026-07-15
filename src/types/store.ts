@@ -1,5 +1,30 @@
 export type PaymentMethod = "Pix" | "Cartao" | "Boleto";
 
+export type CheckoutMode = "whatsapp" | "demo";
+
+export type ProductType =
+  | "unclassified"
+  | "non_medicine"
+  | "otc"
+  | "prescription"
+  | "controlled";
+
+export type RegulatoryStatus = "pending" | "approved" | "blocked";
+
+export interface StoreTenant {
+  id: string;
+  slug: string;
+  name: string;
+  status: "trial" | "active" | "suspended";
+  plan: "starter" | "pro" | "scale";
+  primaryDomain: string;
+  storefrontPath: string;
+}
+
+export interface SaasTenant extends Omit<StoreTenant, "storefrontPath"> {
+  createdAt: string;
+}
+
 export type OrderStatus =
   | "Novo"
   | "Aguardando pagamento"
@@ -14,6 +39,7 @@ export interface StoreSettings {
   logoUrl: string;
   faviconUrl: string;
   whatsapp: string;
+  orderPrefix: string;
   email: string;
   hours: string;
   announcement: string;
@@ -28,8 +54,17 @@ export interface StoreSettings {
   borderRadius: number;
   freeShippingThreshold: number;
   shippingFlat: number;
+  freeShippingEnabled: boolean;
+  freeShippingBannerEnabled: boolean;
+  freeShippingBannerEyebrow: string;
+  freeShippingBannerTitle: string;
+  freeShippingBannerSubtitle: string;
+  freeShippingBannerButtonText: string;
+  freeShippingBannerButtonLink: string;
   pixDiscount: number;
   autoBannerSeconds: number;
+  checkoutMode: CheckoutMode;
+  whatsappMessage: string;
 }
 
 export interface Product {
@@ -52,6 +87,14 @@ export interface Product {
   active: boolean;
   order: number;
   imageUrl: string;
+  imageUrls: string[];
+  productType: ProductType;
+  regulatoryStatus: RegulatoryStatus;
+  activeIngredient: string;
+  anvisaRegistration: string;
+  presentation: string;
+  regulatoryWarning: string;
+  pharmacistReviewed: boolean;
 }
 
 export interface Category {
@@ -73,6 +116,8 @@ export interface Banner {
   startColor: string;
   endColor: string;
   imageUrl: string;
+  mobileImageUrl: string;
+  altText: string;
   imageOnly: boolean;
   active: boolean;
   order: number;
@@ -150,7 +195,71 @@ export interface Coupon {
   value: number;
   minimum: number;
   active: boolean;
+  startsAt: string;
   expiresAt: string;
+  totalUsageLimit: number;
+  perCustomerLimit: number;
+  firstOrderOnly: boolean;
+  usageCount: number;
+}
+
+export type CustomerSource = "whatsapp" | "instagram" | "referral" | "other";
+
+export interface Customer {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  source: CustomerSource;
+  tags: string[];
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CustomerSegment = "new" | "active" | "recurring" | "vip" | "at_risk" | "inactive";
+
+export interface CustomerInsight extends Customer {
+  segment: CustomerSegment;
+  orderCount: number;
+  totalSpent: number;
+  averageTicket: number;
+  firstOrderAt: string;
+  lastOrderAt: string;
+  averageDaysBetweenOrders: number;
+  daysSinceLastOrder: number;
+  predictedNextOrderAt: string;
+  favoriteProducts: string[];
+}
+
+export interface CouponRedemption {
+  id: string;
+  couponId: string;
+  couponCode: string;
+  customerId: string;
+  orderId: string;
+  normalizedEmail: string;
+  normalizedPhone: string;
+  discount: number;
+  status: "used" | "released";
+  usedAt: string;
+}
+
+export type CatalogImportKind = "products" | "stock";
+export type StockImportMode = "replace" | "increment" | "decrement";
+
+export interface CatalogImportRun {
+  id: string;
+  kind: CatalogImportKind;
+  filename: string;
+  mode: StockImportMode | "upsert";
+  totalRows: number;
+  successRows: number;
+  errorRows: number;
+  createdAt: string;
+  actorEmail: string;
 }
 
 export interface TrustItem {
@@ -195,6 +304,7 @@ export interface OrderCustomer {
 
 export interface Order {
   id: string;
+  customerId: string;
   code: string;
   createdAt: string;
   customer: OrderCustomer;
@@ -206,6 +316,8 @@ export interface Order {
   payment: PaymentMethod;
   status: OrderStatus;
   couponCode: string;
+  internalNotes: string;
+  trackingCode: string;
 }
 
 export type MessageChannel = "whatsapp" | "email";
@@ -239,6 +351,7 @@ export type AdminRole = "owner" | "manager" | "editor" | "support" | "viewer";
 
 export type AdminPermission =
   | "dashboard"
+  | "customers"
   | "orders"
   | "catalog"
   | "store"
@@ -259,7 +372,21 @@ export interface AdminUser {
   isCurrent?: boolean;
 }
 
+export interface AuditLog {
+  id: string;
+  actorId: string;
+  actorEmail: string;
+  action: "insert" | "update" | "delete";
+  entityType: string;
+  entityId: string;
+  entityLabel: string;
+  beforeData: Record<string, unknown> | null;
+  afterData: Record<string, unknown> | null;
+  createdAt: string;
+}
+
 export interface StoreData {
+  tenant: StoreTenant;
   settings: StoreSettings;
   products: Product[];
   categories: Category[];
@@ -268,6 +395,9 @@ export interface StoreData {
   pages: StorePage[];
   pageBlocks: PageBlock[];
   coupons: Coupon[];
+  customers: Customer[];
+  couponRedemptions: CouponRedemption[];
+  catalogImports: CatalogImportRun[];
   trustItems: TrustItem[];
   benefits: Benefit[];
   faqs: Faq[];
@@ -275,6 +405,7 @@ export interface StoreData {
   messageAutomations: MessageAutomation[];
   messageLogs: MessageLog[];
   teamMembers: AdminUser[];
+  auditLogs: AuditLog[];
 }
 
 export interface CartLine {

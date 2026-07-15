@@ -1,0 +1,195 @@
+import { platformConfig } from "@/config/platform";
+import { slugify } from "@/lib/format";
+import type { StoreData } from "@/types/store";
+
+const couponCode = `${platformConfig.orderPrefix}10`;
+const categoryNames = ["Destaques", "Casa e estilo", "Acessórios"];
+
+const categories = categoryNames.map((name, index) => ({
+  id: `cat-${index + 1}`,
+  name,
+  slug: slugify(name),
+  active: true,
+  order: index + 1,
+}));
+
+const productRows = [
+  ["produto-1", "Produto Essencial", "Destaques", "Marca Exemplo", 129.9, 159.9, 24, "Mais vendido", "#1677ff"],
+  ["produto-2", "Produto Premium", "Destaques", "Marca Exemplo", 219.9, 249.9, 12, "Novidade", "#6a58d8"],
+  ["produto-3", "Item para Casa", "Casa e estilo", "Casa Demo", 89.9, 109.9, 30, "Oferta", "#1b9688"],
+  ["produto-4", "Acessório Versátil", "Acessórios", "Linha Demo", 59.9, 0, 45, "", "#d46a9e"],
+] as const;
+
+const products = productRows.map((row, index) => {
+  const category = categories.find((item) => item.name === row[2])!;
+  return {
+    id: row[0],
+    slug: slugify(row[1]),
+    name: row[1],
+    categoryId: category.id,
+    category: category.name,
+    brand: row[3],
+    price: row[4],
+    compareAt: row[5],
+    stock: row[6],
+    badge: row[7],
+    accent: row[8],
+    description: `${row[1]} disponível no catálogo demonstrativo da ${platformConfig.storeName}.`,
+    sku: `${platformConfig.orderPrefix}-${String(index + 1).padStart(3, "0")}`,
+    rating: Number((4.7 + index * 0.1).toFixed(1)),
+    reviews: 8 + index * 6,
+    featured: index < 2,
+    active: true,
+    order: index + 1,
+    imageUrl: "",
+    imageUrls: [],
+    productType: "non_medicine" as const,
+    regulatoryStatus: "approved" as const,
+    activeIngredient: "",
+    anvisaRegistration: "",
+    presentation: "1 unidade",
+    regulatoryWarning: "",
+    pharmacistReviewed: true,
+  };
+});
+
+export const seedData: StoreData = {
+  tenant: {
+    id: "00000000-0000-4000-8000-000000000100",
+    slug: platformConfig.clientId,
+    name: platformConfig.storeName,
+    status: "trial",
+    plan: "starter",
+    primaryDomain: "",
+    storefrontPath: "",
+  },
+  settings: {
+    storeName: platformConfig.storeName,
+    logoUrl: "",
+    faviconUrl: "",
+    whatsapp: platformConfig.contact.whatsapp,
+    orderPrefix: platformConfig.orderPrefix,
+    email: platformConfig.contact.email,
+    hours: "Segunda a sexta · 9h às 18h",
+    announcement: "Frete grátis em compras acima de {{valor}}",
+    footerDescription: "Produtos selecionados, ofertas exclusivas e compra rápida.",
+    primaryColor: platformConfig.theme.primaryColor,
+    secondaryColor: platformConfig.theme.secondaryColor,
+    backgroundColor: "#07090d",
+    textColor: "#f5f7fb",
+    fontFamily: "Inter",
+    headerLayout: "left",
+    contentWidth: 1240,
+    borderRadius: 22,
+    freeShippingThreshold: 299,
+    shippingFlat: 24.9,
+    freeShippingEnabled: true,
+    freeShippingBannerEnabled: true,
+    freeShippingBannerEyebrow: "CONDIÇÃO ESPECIAL",
+    freeShippingBannerTitle: "Frete grátis acima de {{valor}}.",
+    freeShippingBannerSubtitle: "Personalize esta campanha no painel administrativo.",
+    freeShippingBannerButtonText: "Ver produtos",
+    freeShippingBannerButtonLink: "#catalogo",
+    pixDiscount: 5,
+    autoBannerSeconds: 6,
+    checkoutMode: platformConfig.defaultCheckoutMode,
+    whatsappMessage: "🛒 *Novo pedido – {{loja}}*\n\nOlá! Gostaria de finalizar o seguinte pedido:\n\n📦 *Pedido:* {{pedido}}\n\n*Produtos:*\n{{itens}}\n\n💰 *Total do pedido:* {{total}}\n💳 *Forma de pagamento:* {{pagamento}}\n🎟️ *Cupom utilizado:* {{cupom}}\n\n👤 *Cliente:* {{cliente}}\n\nAguardo a confirmação. Obrigado!",
+  },
+  categories,
+  products,
+  banners: [
+    {
+      id: "banner-1",
+      kicker: "OFERTA DA SEMANA",
+      title: "Produtos selecionados com condições especiais.",
+      highlight: "condições especiais.",
+      subtitle: "Explore o catálogo, aplique o cupom e simule um pedido em poucos passos.",
+      buttonText: "Ver produtos",
+      buttonLink: "#catalogo",
+      startColor: "#07101f",
+      endColor: platformConfig.theme.primaryColor,
+      imageUrl: "",
+      mobileImageUrl: "",
+      altText: "Produtos selecionados no catálogo",
+      imageOnly: false,
+      active: true,
+      order: 1,
+    },
+    {
+      id: "banner-2",
+      kicker: "CUPOM DE BOAS-VINDAS",
+      title: `Use ${couponCode} e ganhe 10% de desconto.`,
+      highlight: "10% de desconto.",
+      subtitle: "Uma campanha inicial pronta para ser personalizada no painel.",
+      buttonText: "Usar cupom",
+      buttonLink: "#catalogo",
+      startColor: "#071d19",
+      endColor: "#128a72",
+      imageUrl: "",
+      mobileImageUrl: "",
+      altText: "Campanha de boas-vindas da loja",
+      imageOnly: false,
+      active: true,
+      order: 2,
+    },
+  ],
+  trustItems: [
+    { id: "trust-1", title: "Compra rápida", subtitle: "Checkout em poucos passos", order: 1 },
+    { id: "trust-2", title: "Pagamento simulado", subtitle: "Pix, cartão ou boleto", order: 2 },
+    { id: "trust-3", title: "Frete demonstrativo", subtitle: "Grátis acima de R$ 299", order: 3 },
+    { id: "trust-4", title: "Suporte direto", subtitle: "Atendimento por WhatsApp", order: 4 },
+  ],
+  sections: [
+    { id: "section-featured", kind: "featured", name: "Produtos em destaque", eyebrow: "DESTAQUES DA LOJA", title: "Os produtos mais procurados.", subtitle: "Seleção configurável pelo painel.", active: true, order: 1 },
+    { id: "section-catalog", kind: "catalog", name: "Catálogo completo", eyebrow: "TODOS OS PRODUTOS", title: "Encontre o produto certo.", subtitle: "Busque, filtre e ordene o catálogo.", active: true, order: 2 },
+    { id: "section-promo", kind: "promo", name: "Banner promocional", eyebrow: "CONDIÇÃO ESPECIAL", title: "Frete grátis acima de R$ 299.", subtitle: "Personalize esta oferta no painel administrativo.", buttonText: "Ver produtos", buttonLink: "#catalogo", active: true, order: 3 },
+    { id: "section-benefits", kind: "benefits", name: "Benefícios", eyebrow: "POR QUE COMPRAR", title: "Uma experiência pensada para conversão.", subtitle: "", active: true, order: 4 },
+    { id: "section-faq", kind: "faq", name: "Dúvidas frequentes", eyebrow: "PRECISA DE AJUDA?", title: "Informação clara antes da compra.", subtitle: "", active: true, order: 5 },
+  ],
+  pages: [
+    { id: "home", name: "Página inicial", slug: "inicio", title: platformConfig.storeName, description: "Página principal da loja.", active: true, showInNavigation: false, isHome: true, order: 1 },
+    { id: "page-about", name: "Sobre nós", slug: "sobre", title: `Sobre a ${platformConfig.storeName}`, description: "Conheça a proposta da loja.", active: true, showInNavigation: true, isHome: false, order: 2 },
+  ],
+  pageBlocks: [
+    { id: "block-home-hero", pageId: "home", kind: "hero", name: "Banners principais", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "full", padding: "none", columns: 1, active: true, order: 1 },
+    { id: "block-home-trust", pageId: "home", kind: "trust", name: "Faixa de confiança", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "full", padding: "none", columns: 4, active: true, order: 2 },
+    { id: "block-home-featured", pageId: "home", kind: "featured", name: "Produtos em destaque", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "normal", padding: "large", columns: 4, active: true, order: 3 },
+    { id: "block-home-catalog", pageId: "home", kind: "catalog", name: "Catálogo completo", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "normal", padding: "large", columns: 4, active: true, order: 4 },
+    { id: "block-home-promo", pageId: "home", kind: "promo", name: "Campanha promocional", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "normal", padding: "large", columns: 1, active: true, order: 5 },
+    { id: "block-home-benefits", pageId: "home", kind: "benefits", name: "Benefícios", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "normal", padding: "large", columns: 4, active: true, order: 6 },
+    { id: "block-home-faq", pageId: "home", kind: "faq", name: "Dúvidas frequentes", eyebrow: "", title: "", body: "", buttonText: "", buttonLink: "", imageUrl: "", backgroundColor: "", textColor: "", containerWidth: "normal", padding: "large", columns: 1, active: true, order: 7 },
+    { id: "block-about-text", pageId: "page-about", kind: "text", name: "Apresentação", eyebrow: "NOSSA HISTÓRIA", title: "Uma loja pronta para evoluir.", body: `A ${platformConfig.storeName} reúne catálogo, carrinho, checkout e gestão em uma experiência completa e personalizável.`, buttonText: "Ver produtos", buttonLink: "/#catalogo", imageUrl: "", backgroundColor: "#0e1117", textColor: "#f5f7fb", containerWidth: "narrow", padding: "large", columns: 1, active: true, order: 1 },
+    { id: "block-about-cta", pageId: "page-about", kind: "cta", name: "Chamada para o catálogo", eyebrow: "EXPLORE A LOJA", title: "Conheça o catálogo demonstrativo.", body: "Veja produtos, simule um pedido e acompanhe o resultado no painel.", buttonText: "Abrir catálogo", buttonLink: "/#catalogo", imageUrl: "", backgroundColor: "#0d2f65", textColor: "#ffffff", containerWidth: "normal", padding: "medium", columns: 1, active: true, order: 2 },
+  ],
+  benefits: [
+    { id: "benefit-1", title: "Ofertas visíveis", text: "Preço, desconto e condições apresentados diretamente no produto.", order: 1 },
+    { id: "benefit-2", title: "Carrinho completo", text: "Quantidade, cupom, subtotal, frete e total em uma única tela.", order: 2 },
+    { id: "benefit-3", title: "Checkout objetivo", text: "Formulário simples com entrega e pagamento demonstrativos.", order: 3 },
+    { id: "benefit-4", title: "Gestão centralizada", text: "Catálogo, conteúdo e pedidos disponíveis no painel.", order: 4 },
+  ],
+  faqs: [
+    { id: "faq-1", question: "As compras são reais?", answer: "Não. Este projeto começa em modo demonstrativo e não processa pagamentos ou entregas reais.", order: 1 },
+    { id: "faq-2", question: "Posso alterar os produtos?", answer: "Sim. O painel permite adicionar, editar, ocultar, excluir e reorganizar produtos.", order: 2 },
+    { id: "faq-3", question: "Os banners são editáveis?", answer: "Sim. Textos, links, cores, imagens, posição e visibilidade são configuráveis.", order: 3 },
+  ],
+  coupons: [
+    { id: "coupon-1", code: couponCode, type: "percent", value: 10, minimum: 0, active: true, startsAt: "", expiresAt: "", totalUsageLimit: 100, perCustomerLimit: 1, firstOrderOnly: true, usageCount: 0 },
+  ],
+  customers: [],
+  couponRedemptions: [],
+  catalogImports: [],
+  orders: [],
+  messageAutomations: [
+    { id: "automation-new", name: "Pedido recebido", triggerStatus: "Novo", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Recebemos o pedido demonstrativo {{pedido}} no valor de {{total}}.", active: true, order: 1 },
+    { id: "automation-paid", name: "Pagamento confirmado", triggerStatus: "Pago", channel: "email", subject: "Pagamento confirmado — {{pedido}}", message: "Olá, {{cliente}}! O pagamento demonstrativo do pedido {{pedido}} foi marcado como confirmado.", active: true, order: 2 },
+  ],
+  messageLogs: [],
+  auditLogs: [],
+  teamMembers: [
+    { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "customers", "orders", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: new Date().toISOString(), lastSignInAt: "", isCurrent: true },
+  ],
+};
+
+export function cloneSeedData(): StoreData {
+  return structuredClone(seedData);
+}

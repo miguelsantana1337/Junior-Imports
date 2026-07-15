@@ -1,3 +1,5 @@
+import { platformConfig } from "@/config/platform";
+
 export function isSupabaseConfigured() {
   return Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
@@ -6,6 +8,6 @@ export function isSupabaseConfigured() {
 }
 
 export const demoAdminCredentials = {
-  email: process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL ?? "admin@juniorimports.demo",
-  password: process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD ?? "junior123",
+  email: platformConfig.demoAdmin.email,
+  password: platformConfig.demoAdmin.password,
 };

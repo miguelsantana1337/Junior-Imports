@@ -1,13 +1,12 @@
 import { StoreHeader } from "@/components/store/store-header";
 import { StoreFooter } from "@/components/store/store-footer";
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { StoreModeNotice } from "@/components/store/store-mode-notice";
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <div className="demo-notice">
-        PROJETO DEMONSTRATIVO · NENHUMA COMPRA OU PAGAMENTO É PROCESSADO DE FORMA REAL
-      </div>
+      <StoreModeNotice />
       <StoreHeader />
       <main>{children}</main>
       <StoreFooter />

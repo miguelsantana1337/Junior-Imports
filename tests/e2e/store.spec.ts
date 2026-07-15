@@ -4,23 +4,41 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => window.localStorage.clear());
 });
 
+test("mantém o catálogo fora dos buscadores e compartilhável", async ({ page, request }) => {
+  const navigation = await page.goto("/");
+  expect(navigation?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
+  await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute("content", /Junior Imports/);
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /^https?:\/\//);
+
+  const response = await request.get("/robots.txt");
+  expect(response.ok()).toBe(true);
+  const body = await response.text();
+  expect(body).toMatch(/User-Agent:\s*WhatsApp[\s\S]*Allow:\s*\//i);
+  expect(body).toMatch(/User-Agent:\s*facebookexternalhit[\s\S]*Allow:\s*\//i);
+  expect(body).toMatch(/User-Agent:\s*\*/i);
+  expect(body).toMatch(/Disallow:\s*\//i);
+});
+
 test("abre uma pagina individual de produto", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("PROJETO DEMONSTRATIVO").first()).toBeVisible();
-  await page.getByRole("link", { name: "Ver detalhes de T.G. 15" }).first().click();
-  await expect(page).toHaveURL(/\/produtos\/t-g-15$/);
-  await expect(page.getByRole("heading", { name: "T.G. 15" })).toBeVisible();
+  await expect(page.getByText("PEDIDOS FINALIZADOS PELO WHATSAPP").first()).toBeVisible();
+  await page.getByTestId("product-organizador-semanal-premium").first().getByRole("link", { name: "Organizador semanal premium", exact: true }).click();
+  await expect(page).toHaveURL(/\/produtos\/organizador-semanal-premium$/);
+  await expect(page.getByRole("heading", { name: "Organizador semanal premium" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Adicionar ao carrinho/ })).toBeVisible();
 });
 
-test("conclui carrinho, cupom e checkout demonstrativo", async ({ page }) => {
+test("conclui carrinho, cupom e envia o pedido para o WhatsApp", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Adicionar T.G. 15 ao carrinho" }).first().click();
+  await page.getByRole("button", { name: "Adicionar Organizador semanal premium ao carrinho" }).first().click();
   const cart = page.getByRole("dialog", { name: "Carrinho" });
   await expect(cart).toBeVisible();
-  await cart.getByLabel("Cupom de desconto").fill("JUNIOR10");
+  const couponInput = cart.getByLabel("Cupom de desconto");
+  const couponCode = (await couponInput.getAttribute("placeholder"))?.replace("Ex.: ", "") ?? "JI10";
+  await couponInput.fill(couponCode);
   await cart.getByRole("button", { name: "Aplicar" }).click();
-  await expect(cart.getByText("Cupom JUNIOR10 aplicado.")).toBeVisible();
+  await expect(cart.getByText(`Cupom ${couponCode} aplicado.`)).toBeVisible();
   await cart.getByRole("link", { name: "Ir para o checkout" }).click();
 
   await page.getByLabel("Nome completo").fill("Cliente Demonstracao");
@@ -32,9 +50,15 @@ test("conclui carrinho, cupom e checkout demonstrativo", async ({ page }) => {
   await page.getByLabel("Endereço").fill("Rua Exemplo");
   await page.getByLabel("Número").fill("100");
   await page.getByRole("checkbox").check();
-  await page.getByRole("button", { name: "Criar pedido demonstrativo" }).click();
-
-  await expect(page).toHaveURL(/\/pedidos\/JI-\d+$/);
-  await expect(page.getByRole("heading", { name: "Pedido demonstrativo criado." })).toBeVisible();
-  await expect(page.getByText("Nenhuma cobrança, separação ou entrega foi iniciada.")).toBeVisible();
+  await page.route("https://wa.me/**", (route) => route.abort());
+  const whatsappRequest = page.waitForRequest((request) => request.url().startsWith("https://wa.me/"));
+  await page.getByRole("button", { name: "Enviar pedido pelo WhatsApp" }).click();
+  const request = await whatsappRequest;
+  const message = new URL(request.url()).searchParams.get("text") ?? "";
+  expect(message).toContain("Cliente Demonstracao");
+  expect(message).toContain("Organizador semanal premium");
+  expect(message).toContain("JI-");
+  expect(message).toContain("Forma de pagamento");
+  expect(message).toContain("Cupom utilizado");
+  expect(message).not.toContain("\\n");
 });

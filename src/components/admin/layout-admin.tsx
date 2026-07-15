@@ -21,6 +21,7 @@ import { pageBlockSchema, storePageSchema } from "@/lib/validation";
 import type { PageBlock, PageBlockKind, StorePage } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { AdminPanel, StatusTag } from "./admin-ui";
+import { useConfirm } from "@/components/providers/confirm-provider";
 
 const blockKinds: Array<{ value: PageBlockKind; label: string; description: string }> = [
   { value: "hero", label: "Banners rotativos", description: "Usa os banners configurados na loja." },
@@ -38,6 +39,7 @@ const blockKinds: Array<{ value: PageBlockKind; label: string; description: stri
 
 export function LayoutAdmin() {
   const { data, deletePage, savePageBlock, deletePageBlock, movePageBlock } = useAdminData();
+  const confirm = useConfirm();
   const searchParams = useSearchParams();
   const pages = useMemo(() => [...data.pages].sort((a, b) => a.order - b.order), [data.pages]);
   const [selectedId, setSelectedId] = useState(pages[0]?.id ?? "home");
@@ -77,7 +79,7 @@ export function LayoutAdmin() {
                 </button>
                 <div className="admin-actions">
                   <button title="Editar página" onClick={() => setPageEditor(page)}><Pencil /></button>
-                  {!page.isHome && <button className="danger" title="Excluir página" onClick={() => window.confirm("Excluir esta página e seus containers?") && deletePage(page.id)}><Trash2 /></button>}
+                  {!page.isHome && <button className="danger" title="Excluir página" onClick={async () => { const accepted = await confirm({ title: "Excluir página?", description: `A página “${page.name}” e todos os containers dela serão removidos.`, confirmLabel: "Excluir página", danger: true }); if (accepted) await deletePage(page.id); }}><Trash2 /></button>}
                 </div>
               </article>
             ))}
@@ -97,7 +99,7 @@ export function LayoutAdmin() {
                     <button title={block.active ? "Ocultar" : "Exibir"} onClick={() => savePageBlock({ ...block, active: !block.active })}>{block.active ? <EyeOff /> : <Eye />}</button>
                     <button title="Duplicar" onClick={() => savePageBlock({ ...block, id: crypto.randomUUID(), name: `${block.name} (cópia)`, order: blocks.length + 1 })}><Copy /></button>
                     <button title="Editar" onClick={() => setBlockEditor(block)}><Pencil /></button>
-                    <button className="danger" title="Excluir" onClick={() => window.confirm("Excluir este container?") && deletePageBlock(block.id)}><Trash2 /></button>
+                    <button className="danger" title="Excluir" onClick={async () => { const accepted = await confirm({ title: "Excluir container?", description: `O container “${block.name}” será removido desta página.`, confirmLabel: "Excluir container", danger: true }); if (accepted) await deletePageBlock(block.id); }}><Trash2 /></button>
                   </div>
                 </article>
               );
@@ -117,7 +119,7 @@ function PageEditor({ page, pages, onSaved, onClose }: { page: StorePage | null;
   const [form, setForm] = useState<StorePage>(page ?? { id: crypto.randomUUID(), name: "Nova página", slug: "nova-pagina", title: "Nova página", description: "", active: true, showInNavigation: true, isHome: false, order: pages.length + 1 });
   const [error, setError] = useState("");
   function field<K extends keyof StorePage>(key: K, value: StorePage[K]) { setForm((current) => ({ ...current, [key]: value })); }
-  return <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="page-editor-title"><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel small"><header><div><span>EDITOR DA LOJA</span><h2 id="page-editor-title">{page ? "Editar página" : "Nova página"}</h2></div><button onClick={onClose} aria-label="Fechar"><X /></button></header><form className="admin-form" onSubmit={async (event) => { event.preventDefault(); const parsed = storePageSchema.safeParse(form); if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revise os campos."); return; } if (pages.some((item) => item.slug === form.slug && item.id !== form.id)) { setError("Já existe uma página com este endereço."); return; } await savePage(form); onSaved(form.id); }}><label>Nome interno<input value={form.name} onChange={(event) => { field("name", event.target.value); if (!page) field("slug", slugify(event.target.value)); }} /></label><label>Endereço da página<input value={form.slug} disabled={form.isHome} onChange={(event) => field("slug", slugify(event.target.value))} /></label><label className="full">Título público<input value={form.title} onChange={(event) => field("title", event.target.value)} /></label><label className="full">Descrição para busca<textarea value={form.description} onChange={(event) => field("description", event.target.value)} /></label><label className="check-field"><input type="checkbox" checked={form.active} disabled={form.isHome} onChange={(event) => field("active", event.target.checked)} /> Página publicada</label><label className="check-field"><input type="checkbox" checked={form.showInNavigation} disabled={form.isHome} onChange={(event) => field("showInNavigation", event.target.checked)} /> Mostrar no menu da loja</label>{error && <p className="admin-form-error full">{error}</p>}<div className="admin-form-actions full"><button type="button" className="admin-button" onClick={onClose}>Cancelar</button><button className="admin-button primary">Salvar página</button></div></form></div></div>;
+  return <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="page-editor-title"><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel small"><header><div><span>EDITOR DA LOJA</span><h2 id="page-editor-title">{page ? "Editar página" : "Nova página"}</h2></div><button onClick={onClose} aria-label="Fechar"><X /></button></header><form className="admin-form" onSubmit={async (event) => { event.preventDefault(); const parsed = storePageSchema.safeParse(form); if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revise os campos."); return; } if (pages.some((item) => item.slug === form.slug && item.id !== form.id)) { setError("Já existe uma página com este endereço."); return; } await savePage(form); onSaved(form.id); }}><label>Nome interno<input value={form.name} onChange={(event) => { field("name", event.target.value); if (!page) field("slug", slugify(event.target.value)); }} /></label><label>Endereço da página<input value={form.slug} disabled={form.isHome} onChange={(event) => field("slug", slugify(event.target.value))} /></label><label className="full">Título público<input value={form.title} onChange={(event) => field("title", event.target.value)} /></label><label className="full">Descrição da prévia do link<textarea value={form.description} onChange={(event) => field("description", event.target.value)} /></label><label className="check-field"><input type="checkbox" checked={form.active} disabled={form.isHome} onChange={(event) => field("active", event.target.checked)} /> Página publicada</label><label className="check-field"><input type="checkbox" checked={form.showInNavigation} disabled={form.isHome} onChange={(event) => field("showInNavigation", event.target.checked)} /> Mostrar no menu da loja</label>{error && <p className="admin-form-error full">{error}</p>}<div className="admin-form-actions full"><button type="button" className="admin-button" onClick={onClose}>Cancelar</button><button className="admin-button primary">Salvar página</button></div></form></div></div>;
 }
 
 function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | null; page: StorePage; blockCount: number; onClose: () => void }) {

@@ -43,6 +43,16 @@ describe("calculateCart", () => {
     expect(result.items).toBe(product.stock);
     expect(result.subtotal).toBeCloseTo(product.price * product.stock);
   });
+
+  it("cobra o frete fixo quando a regra de frete gratis esta desativada", () => {
+    const result = calculateCart(
+      [{ productId: product.id, quantity: 1 }],
+      seedData.products,
+      { ...seedData.settings, freeShippingEnabled: false },
+    );
+
+    expect(result.shipping).toBe(seedData.settings.shippingFlat);
+  });
 });
 
 describe("regras auxiliares", () => {

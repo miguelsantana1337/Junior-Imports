@@ -1,6 +1,21 @@
-insert into public.store_settings (id, store_name, whatsapp, email, hours, announcement, footer_description, primary_color, free_shipping_threshold, shipping_flat, pix_discount, auto_banner_seconds)
-values ('default', 'Junior Imports', '5531999999999', 'contato@juniorimports.com.br', 'Segunda a sexta · 9h às 18h', 'Frete grátis em compras acima de R$ 499', 'Importados selecionados, ofertas exclusivas e compra rápida.', '#1677ff', 499, 29.90, 5, 6)
-on conflict (id) do update set store_name = excluded.store_name;
+insert into public.store_settings (tenant_id, id, store_name, whatsapp, order_prefix, email, hours, announcement, footer_description, primary_color, free_shipping_threshold, shipping_flat, pix_discount, auto_banner_seconds, checkout_mode, whatsapp_message)
+values ('00000000-0000-4000-8000-000000000100', 'default', 'Junior Imports', '5531999999999', 'JI', 'contato@juniorimports.com.br', 'Segunda a sexta · 9h às 18h', 'Frete grátis em compras acima de {{valor}}', 'Importados selecionados, ofertas exclusivas e compra rápida.', '#1677ff', 499, 29.90, 5, 6, 'whatsapp', $message$🛒 *Novo pedido – {{loja}}*
+
+Olá! Gostaria de finalizar o seguinte pedido:
+
+📦 *Pedido:* {{pedido}}
+
+*Produtos:*
+{{itens}}
+
+💰 *Total do pedido:* {{total}}
+💳 *Forma de pagamento:* {{pagamento}}
+🎟️ *Cupom utilizado:* {{cupom}}
+
+👤 *Cliente:* {{cliente}}
+
+Aguardo a confirmação. Obrigado!$message$)
+on conflict (tenant_id, id) do update set store_name = excluded.store_name, whatsapp = excluded.whatsapp, order_prefix = excluded.order_prefix, checkout_mode = excluded.checkout_mode, whatsapp_message = excluded.whatsapp_message;
 
 insert into public.categories (id, name, slug, active, order_index) values
 ('cat-1','Tirzepatida','tirzepatida',true,1),('cat-2','Retatrutida','retatrutida',true,2),('cat-3','Peptídeos','peptideos',true,3),('cat-4','Medicamentos','medicamentos',true,4),('cat-5','Estética profissional','estetica-profissional',true,5),('cat-6','Diluentes','diluentes',true,6)

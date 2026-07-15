@@ -13,16 +13,17 @@ import {
   IconLayoutDashboard,
   IconPackage,
   IconPhoto,
-  IconSettings,
   IconShoppingBag,
   IconShoppingCartOff,
   IconTag,
   IconTicket,
+  IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { useAdminData } from "./admin-data-provider";
-import { formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
+import { buildCustomerInsights, customerRecurrenceRate } from "@/lib/crm";
 
 function getDayKey(date: Date) {
   const year = date.getFullYear();
@@ -31,17 +32,50 @@ function getDayKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+const auditEntityLabels: Record<string, string> = {
+  products: "Produto",
+  categories: "Categoria",
+  banners: "Banner",
+  home_sections: "Seção",
+  store_pages: "Página",
+  page_blocks: "Container",
+  coupons: "Cupom",
+  message_automations: "Automação",
+  orders: "Pedido",
+  profiles: "Usuário",
+  store_settings: "Configurações",
+};
+
+function auditDescription(action: "insert" | "update" | "delete", entityType: string, label: string) {
+  const entity = auditEntityLabels[entityType] ?? "Item";
+  const verb = action === "insert" ? "criado" : action === "delete" ? "excluído" : "atualizado";
+  return `${entity} “${label || "sem nome"}” ${verb}`;
+}
+
 export function DashboardAdmin() {
-  const { data, demoMode } = useAdminData();
+  const { data, demoMode, currentUser } = useAdminData();
   const now = new Date();
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
+  const accountName = currentUser.fullName.split(/\s+/)[0] || "Administrador";
+  const activityProduct = data.products[0];
+  const activityCategory = data.categories[0];
   const todayKey = getDayKey(now);
   const activeProducts = data.products.filter((product) => product.active);
   const activeCoupons = data.coupons.filter((coupon) => coupon.active);
   const activeBanners = data.banners.filter((banner) => banner.active);
   const activeSections = data.sections.filter((section) => section.active);
+  const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
+  const recurrenceRate = customerRecurrenceRate(customerInsights);
+  const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
   const ordersToday = data.orders.filter((order) => order.createdAt.slice(0, 10) === todayKey);
-  const weeklyRevenue = data.orders.reduce((sum, order) => sum + order.total, 0);
+  const sevenDaysAgo = new Date(now);
+  sevenDaysAgo.setDate(now.getDate() - 6);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const weeklyRevenue = data.orders
+    .filter((order) => new Date(order.createdAt) >= sevenDaysAgo)
+    .reduce((sum, order) => sum + order.total, 0);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
@@ -68,7 +102,7 @@ export function DashboardAdmin() {
     <div className="admin-dashboard-command">
       <header className="admin-dashboard-hero">
         <div>
-          <h1>Boa tarde, Miguel</h1>
+          <h1>{greeting}, {accountName}</h1>
           <div className="admin-dashboard-subtitle">
             <span>Sua loja está pronta para testes</span>
             <strong><IconFlask /> Demonstração — não realiza vendas reais</strong>
@@ -82,6 +116,8 @@ export function DashboardAdmin() {
         <article><span className="blue"><IconCoin /></span><div><small>Receita simulada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Últimos 7 dias</p></div></article>
         <article><span className="blue"><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
         <article><span className="blue"><IconTicket /></span><div><small>Cupons ativos</small><strong>{activeCoupons.length}</strong><p>{activeCoupons.length === 1 ? "1 disponível" : `${activeCoupons.length} disponíveis`}</p></div></article>
+        <article><span className="blue"><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
+        <article><span className="blue"><IconShoppingBag /></span><div><small>Recompra</small><strong>{recurrenceRate.toFixed(0)}%</strong><p>{customerInsights.filter((customer) => customer.orderCount > 1).length} recorrentes</p></div></article>
       </section>
 
       <div className="admin-command-grid">
@@ -101,8 +137,8 @@ export function DashboardAdmin() {
               </article>
               <article>
                 <span className="info"><IconShoppingBag /></span><b>3</b>
-                <div><strong>{data.orders.length ? "Acompanhe seus pedidos demonstrativos" : "Faça um pedido de teste completo"}</strong><p>{data.orders.length ? `${data.orders.length} simulações registradas no painel.` : "Simule uma compra para validar o checkout."}</p></div>
-                <Link href={data.orders.length ? "/admin/orders" : "/"}>{data.orders.length ? "Ver pedidos" : "Simular compra"}</Link>
+                <div><strong>{customersNeedingContact.length ? `Retome contato com ${customersNeedingContact.length} clientes` : "Relacionamento com clientes em dia"}</strong><p>{customersNeedingContact.length ? "Clientes inativos ou fora da frequência esperada." : "Nenhum cliente precisa de acompanhamento imediato."}</p></div>
+                <Link href="/admin/customers">Abrir CRM</Link>
               </article>
             </div>
           </section>
@@ -110,11 +146,12 @@ export function DashboardAdmin() {
           <section className="admin-command-panel admin-activity">
             <header><h2>Atividade recente</h2><Link href="/admin/data">Ver todas</Link></header>
             <div className="admin-activity-list">
-              <article><span className="blue"><IconPackage /></span><div><strong>Produto “GHK-Cu” está no catálogo</strong><p>{data.products.find((product) => product.slug === "ghk-cu")?.stock ?? 31} unidades disponíveis</p></div><time>Hoje, 13:42</time></article>
-              <article><span className="green"><IconDatabase /></span><div><strong>{demoMode ? "Modo demonstrativo iniciado" : "Supabase conectado com sucesso"}</strong><p>{demoMode ? "Dados armazenados neste navegador" : "Projeto “juniorimports” — conexão ativa"}</p></div><time>Hoje, 13:10</time></article>
-              <article><span className="purple"><IconTag /></span><div><strong>Categoria “Peptídeos” organizada</strong><p>{data.products.filter((product) => product.category === "Peptídeos").length} produtos vinculados</p></div><time>Hoje, 12:38</time></article>
-              <article><span className="blue"><IconPhoto /></span><div><strong>Vitrine atualizada</strong><p>{activeBanners.length} banners ativos na página inicial</p></div><time>Hoje, 11:55</time></article>
-              <article><span className="orange"><IconSettings /></span><div><strong>Configurações gerais revisadas</strong><p>Moeda, frete e identidade da loja</p></div><time>Hoje, 11:21</time></article>
+              {data.auditLogs.slice(0, 5).map((log) => <article key={log.id}><span className="blue"><IconDatabase /></span><div><strong>{auditDescription(log.action, log.entityType, log.entityLabel)}</strong><p>{log.actorEmail || "Equipe administrativa"}</p></div><time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time></article>)}
+              {!data.auditLogs.length && <>
+                <article><span className="blue"><IconPackage /></span><div><strong>{activityProduct ? `Produto “${activityProduct.name}” está no catálogo` : "Cadastre o primeiro produto"}</strong><p>{activityProduct ? `${activityProduct.stock} unidades disponíveis` : "O catálogo ainda está vazio"}</p></div><time>Agora</time></article>
+                <article><span className="green"><IconDatabase /></span><div><strong>{demoMode ? "Modo demonstrativo iniciado" : "Supabase conectado com sucesso"}</strong><p>{demoMode ? "Dados armazenados neste navegador" : `Projeto “${data.settings.storeName}” — conexão ativa`}</p></div><time>Agora</time></article>
+                <article><span className="purple"><IconTag /></span><div><strong>{activityCategory ? `Categoria “${activityCategory.name}” organizada` : "Crie a primeira categoria"}</strong><p>{activityCategory ? `${data.products.filter((product) => product.categoryId === activityCategory.id).length} produtos vinculados` : "Organize os produtos por categoria"}</p></div><time>Agora</time></article>
+              </>}
             </div>
           </section>
 
@@ -131,7 +168,7 @@ export function DashboardAdmin() {
           <section className="admin-command-panel admin-shortcuts">
             <header><h2>Atalhos</h2></header>
             <div>
-              <Link href="/admin/products?novo=1"><span className="blue"><IconPackage /></span><div><strong>Novo produto</strong><small>Adicionar ao catálogo</small></div></Link>
+              <Link href="/admin/products/new"><span className="blue"><IconPackage /></span><div><strong>Novo produto</strong><small>Adicionar ao catálogo</small></div></Link>
               <Link href="/admin/coupons?novo=1"><span className="purple"><IconTicket /></span><div><strong>Novo cupom</strong><small>Criar promoção</small></div></Link>
               <Link href="/admin/banners?novo=1"><span className="green"><IconPhoto /></span><div><strong>Novo banner</strong><small>Destacar na vitrine</small></div></Link>
               <Link href="/admin/sections"><span className="orange"><IconLayoutDashboard /></span><div><strong>Organizar início</strong><small>Editar página inicial</small></div></Link>

@@ -4,21 +4,35 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
-const ToastContext = createContext<((message: string) => void) | null>(null);
+export type ToastKind = "success" | "error" | "info";
+export type ToastInput = string | { message: string; kind?: ToastKind; duration?: number };
+
+const ToastContext = createContext<((input: ToastInput) => void) | null>(null);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState("");
+  const [kind, setKind] = useState<ToastKind>("success");
   const [visible, setVisible] = useState(false);
+  const timer = useRef<number | null>(null);
 
-  const toast = useCallback((next: string) => {
-    setMessage(next);
+  const toast = useCallback((input: ToastInput) => {
+    const next = typeof input === "string" ? { message: input, kind: "success" as const, duration: 3200 } : input;
+    if (timer.current) window.clearTimeout(timer.current);
+    setMessage(next.message);
+    setKind(next.kind ?? "success");
     setVisible(true);
-    window.setTimeout(() => setVisible(false), 2400);
+    timer.current = window.setTimeout(() => setVisible(false), next.duration ?? 4200);
+  }, []);
+
+  useEffect(() => () => {
+    if (timer.current) window.clearTimeout(timer.current);
   }, []);
 
   const value = useMemo(() => toast, [toast]);
@@ -26,7 +40,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className={`toast ${visible ? "show" : ""}`} role="status" aria-live="polite">
+      <div
+        className={`toast ${kind} ${visible ? "show" : ""}`}
+        role={kind === "error" ? "alert" : "status"}
+        aria-live={kind === "error" ? "assertive" : "polite"}
+      >
         {message}
       </div>
     </ToastContext.Provider>

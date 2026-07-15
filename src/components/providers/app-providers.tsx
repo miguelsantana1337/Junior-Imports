@@ -5,6 +5,7 @@ import type { StoreData } from "@/types/store";
 import { StoreProvider } from "./store-provider";
 import { CartProvider } from "./cart-provider";
 import { ToastProvider } from "./toast-provider";
+import { ConfirmProvider } from "./confirm-provider";
 
 export function AppProviders({
   initialData,
@@ -16,7 +17,9 @@ export function AppProviders({
   return (
     <StoreProvider initialData={initialData}>
       <ToastProvider>
-        <CartProvider>{children}</CartProvider>
+        <ConfirmProvider>
+          <CartProvider>{children}</CartProvider>
+        </ConfirmProvider>
       </ToastProvider>
     </StoreProvider>
   );

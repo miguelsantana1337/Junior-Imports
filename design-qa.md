@@ -79,4 +79,15 @@
 - Security review: navigation, server routes, API operations, and Supabase RLS all use the same permission model; the final active owner cannot be demoted, suspended, or deleted.
 - Automated verification: TypeScript, ESLint, 18 unit tests, and 12 Playwright desktop/mobile scenarios passed.
 
+## Product editor extension — 2026-07-14
+
+- Direction: option 2 of the approved visual study, converted from the former product modal into a dedicated four-step page.
+- Desktop comparison: the approved source and the implemented photo step were reviewed side by side at the same target state and viewport.
+- Responsive review: the editor passed on desktop and mobile without horizontal document overflow; the gallery becomes two columns and the primary actions stay accessible.
+- Gallery review: multiple images, URL and file inputs, cover selection, drag/button reordering, removal, ten-image limit and live preview are functional.
+- Storefront review: products with multiple images expose accessible thumbnails and update the main image.
+- Persistence review: `image_urls` is live in Supabase and the selected cover remains compatible with the existing `image_url` field.
+- Browser review: create, edit, cover selection, price, stock, publication, save, return to the product list and public gallery were exercised without console errors.
+- Automated verification: TypeScript, ESLint, 31 unit tests and the production build passed.
+
 final result: passed

@@ -17,6 +17,8 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAdminData } from "@/components/admin/admin-data-provider";
 import { AdminPanel } from "@/components/admin/admin-ui";
+import { useAdminDialog } from "@/components/admin/use-admin-dialog";
+import { useConfirm } from "@/components/providers/confirm-provider";
 import { adminPermissionCatalog, adminRoleLabels, adminRolePermissions } from "@/lib/admin-permissions";
 import { formatDateTime } from "@/lib/format";
 import { adminUserCreateSchema, adminUserUpdateSchema } from "@/lib/validation";
@@ -37,13 +39,14 @@ function UserEditor({ user, canCreateOwner, onClose }: { user?: AdminUser; canCr
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const panelRef = useAdminDialog(onClose);
   const field = <K extends keyof typeof form>(key: K, value: (typeof form)[K]) => setForm((current) => ({ ...current, [key]: value }));
   const togglePermission = (permission: AdminPermission) => field("permissions", form.permissions.includes(permission) ? form.permissions.filter((item) => item !== permission) : [...form.permissions, permission]);
 
   return (
     <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="user-editor-title">
       <button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" />
-      <div className="admin-modal-panel user-editor-modal">
+      <div className="admin-modal-panel user-editor-modal" ref={panelRef}>
         <header>
           <div><span>EQUIPE</span><h2 id="user-editor-title">{user ? "Editar usuário" : "Novo usuário"}</h2><small>{user ? "Atualize o cargo, o status e as áreas liberadas." : "Crie uma conta com senha temporária e acesso personalizado."}</small></div>
           <button onClick={onClose} aria-label="Fechar"><IconX /></button>
@@ -89,9 +92,12 @@ function UserEditor({ user, canCreateOwner, onClose }: { user?: AdminUser; canCr
 
 export function UsersAdmin() {
   const { data, currentUser, refreshTeamMembers, deleteAdminUser } = useAdminData();
+  const confirm = useConfirm();
   const searchParams = useSearchParams();
   const [editor, setEditor] = useState<AdminUser | "new" | null>(searchParams.get("novo") === "1" ? "new" : null);
   const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -103,9 +109,13 @@ export function UsersAdmin() {
   const users = data.teamMembers;
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
-    if (!normalized) return users;
-    return users.filter((user) => `${user.fullName} ${user.email} ${adminRoleLabels[user.role]}`.toLocaleLowerCase("pt-BR").includes(normalized));
-  }, [query, users]);
+    return users.filter((user) => {
+      const matchesQuery = !normalized || `${user.fullName} ${user.email} ${adminRoleLabels[user.role]}`.toLocaleLowerCase("pt-BR").includes(normalized);
+      return matchesQuery
+        && (roleFilter === "all" || user.role === roleFilter)
+        && (statusFilter === "all" || (statusFilter === "active" ? user.active : !user.active));
+    });
+  }, [query, roleFilter, statusFilter, users]);
   const activeUsers = users.filter((user) => user.active).length;
   const privilegedUsers = users.filter((user) => ["owner", "manager"].includes(user.role)).length;
 
@@ -121,6 +131,8 @@ export function UsersAdmin() {
       <AdminPanel title="Equipe da loja" description="Crie usuários, suspenda acessos e personalize as permissões de cada pessoa." action={<button className="admin-button primary" onClick={() => setEditor("new")}><IconPlus /> Novo usuário</button>}>
         <div className="users-toolbar">
           <label><IconSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" aria-label="Buscar usuários" /></label>
+          <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="Filtrar por cargo"><option value="all">Todos os cargos</option>{roles.map((role) => <option value={role} key={role}>{adminRoleLabels[role]}</option>)}</select>
+          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} aria-label="Filtrar por status"><option value="all">Todos os acessos</option><option value="active">Ativos</option><option value="inactive">Suspensos</option></select>
           <span>{loading ? "Atualizando..." : `${filtered.length} usuário${filtered.length === 1 ? "" : "s"}`}</span>
         </div>
         {loadError && <p className="admin-form-error users-load-error" role="alert">{loadError}</p>}
@@ -132,7 +144,7 @@ export function UsersAdmin() {
               <div className="user-role"><span>{adminRoleLabels[user.role]}</span><small>{user.permissions.length || adminPermissionCatalog.length} módulos</small></div>
               <div className="user-last-access"><span>Último acesso</span><small>{user.lastSignInAt ? formatDateTime(user.lastSignInAt) : "Ainda não acessou"}</small></div>
               <span className={`status-tag ${user.active ? "" : "off"}`}>{user.active ? "Ativo" : "Suspenso"}</span>
-              <div className="admin-actions"><button onClick={() => setEditor(user)} title="Editar usuário" aria-label={`Editar ${user.fullName}`}><IconPencil /></button><button className="danger" title="Excluir" aria-label={`Excluir ${user.fullName}`} disabled={user.isCurrent} onClick={() => window.confirm(`Excluir o acesso de ${user.fullName}?`) && deleteAdminUser(user.id)}><IconTrash /></button></div>
+              <div className="admin-actions"><button onClick={() => setEditor(user)} title="Editar usuário" aria-label={`Editar ${user.fullName}`}><IconPencil /></button><button className="danger" title="Excluir" aria-label={`Excluir ${user.fullName}`} disabled={user.isCurrent} onClick={async () => { const accepted = await confirm({ title: "Excluir usuário?", description: `O acesso de ${user.fullName} será removido permanentemente.`, confirmLabel: "Excluir acesso", danger: true }); if (accepted) await deleteAdminUser(user.id); }}><IconTrash /></button></div>
             </article>
           ))}
           {!filtered.length && <div className="admin-empty"><IconUsers /><strong>Nenhum usuário encontrado.</strong><span>Ajuste a busca ou crie um novo acesso.</span></div>}

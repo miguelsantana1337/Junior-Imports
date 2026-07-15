@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { formatMoney } from "@/lib/format";
+import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function CartDrawer() {
   const { data } = useStore();
@@ -50,7 +51,7 @@ export function CartDrawer() {
               if (!product) return null;
               return (
                 <article className="cart-item" key={line.productId}>
-                  <div className="cart-thumb">JI</div>
+                  <div className="cart-thumb">{data.settings.orderPrefix}</div>
                   <div>
                     <h3>{product.name}</h3>
                     <strong>{formatMoney(product.price * line.quantity)}</strong>
@@ -76,14 +77,14 @@ export function CartDrawer() {
             }}
           >
             <label htmlFor="cart-coupon">Cupom de desconto</label>
-            <div><input id="cart-coupon" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="Ex.: JUNIOR10" /><button type="submit">Aplicar</button></div>
+            <div><input id="cart-coupon" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder={`Ex.: ${data.coupons[0]?.code ?? "CUPOM10"}`} /><button type="submit">Aplicar</button></div>
             <small className={couponMessage?.ok ? "success-text" : "error-text"}>{couponMessage?.text}</small>
           </form>
           <div className="total-line"><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>
           {calculation.discount > 0 && <div className="total-line"><span>Desconto</span><strong>- {formatMoney(calculation.discount)}</strong></div>}
-          <div className="total-line"><span>Frete demonstrativo</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
+          <div className="total-line"><span>{data.settings.checkoutMode === "whatsapp" ? "Frete estimado" : "Frete demonstrativo"}</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
           <div className="total-line grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>
-          <Link className={`button button-primary button-full button-large ${lines.length ? "" : "disabled"}`} href={lines.length ? "/checkout" : "#"} onClick={() => lines.length && setDrawerOpen(false)}>Ir para o checkout</Link>
+          <Link className={`button button-primary button-full button-large ${lines.length ? "" : "disabled"}`} href={lines.length ? withStorefrontPath(data.tenant.storefrontPath, "/checkout") : "#"} onClick={() => lines.length && setDrawerOpen(false)}>Ir para o checkout</Link>
           <button className="text-button" onClick={clearCart} disabled={!lines.length}>Esvaziar carrinho</button>
         </div>
       </div>

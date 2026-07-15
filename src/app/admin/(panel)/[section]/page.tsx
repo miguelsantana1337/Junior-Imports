@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { BannersAdmin } from "@/components/admin/banners-admin";
 import { CategoriesAdmin } from "@/components/admin/categories-admin";
+import { CatalogImportAdmin } from "@/components/admin/catalog-import-admin";
 import { CouponsAdmin } from "@/components/admin/coupons-admin";
+import { CustomersAdmin } from "@/components/admin/customers-admin";
 import { DataAdmin } from "@/components/admin/data-admin";
 import { OrdersAdmin } from "@/components/admin/orders-admin";
 import { LayoutAdmin } from "@/components/admin/layout-admin";
@@ -17,9 +19,11 @@ const sections = {
   products: ProductsAdmin,
   banners: BannersAdmin,
   categories: CategoriesAdmin,
+  import: CatalogImportAdmin,
   sections: SectionsAdmin,
   layout: LayoutAdmin,
   coupons: CouponsAdmin,
+  customers: CustomersAdmin,
   orders: OrdersAdmin,
   messages: MessagesAdmin,
   settings: SettingsAdmin,
