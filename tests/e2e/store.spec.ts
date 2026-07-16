@@ -29,6 +29,18 @@ test("abre uma pagina individual de produto", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Adicionar ao carrinho/ })).toBeVisible();
 });
 
+test("organiza o catálogo em carrosséis por categoria", async ({ page }) => {
+  await page.goto("/");
+  const catalog = page.locator("#catalogo");
+  const categories = catalog.locator(".catalog-category");
+
+  expect(await categories.count()).toBeGreaterThan(1);
+  await expect(categories.first().locator(".catalog-category-header h3")).toBeVisible();
+  await expect(categories.first().locator(".product-carousel-viewport")).toBeVisible();
+  await expect(categories.first().locator(".product-card").first()).toBeVisible();
+  await expect(catalog.locator(".product-grid")).toHaveCount(0);
+});
+
 test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsApp", async ({ page }) => {
   await page.goto("/produtos/t-g-15");
   await expect(page.getByText("Solicitação sujeita a confirmação")).toBeVisible();
