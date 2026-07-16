@@ -39,6 +39,49 @@ test("alterna e mantém o modo escuro do painel", async ({ page }) => {
   await expect(html).toHaveAttribute("data-admin-theme", "light");
 });
 
+test("recolhe o menu lateral e mantém os indicadores sem sobreposição", async ({ page }) => {
+  test.skip((page.viewportSize()?.width ?? 0) <= 900, "O recolhimento é exclusivo do painel em desktop.");
+  await login(page);
+
+  const revenueValue = page.locator(".admin-command-stats article").nth(1).locator("strong");
+  const productsCard = page.locator(".admin-command-stats article").nth(2);
+  const revenueBox = await revenueValue.boundingBox();
+  const productsBox = await productsCard.boundingBox();
+  expect(revenueBox).not.toBeNull();
+  expect(productsBox).not.toBeNull();
+  if (revenueBox && productsBox && Math.abs(revenueBox.y - productsBox.y) < productsBox.height) {
+    expect(revenueBox.x + revenueBox.width).toBeLessThanOrEqual(productsBox.x);
+  }
+
+  await page.getByRole("button", { name: "Recolher menu lateral" }).click();
+  await expect(page.locator(".admin-shell-next")).toHaveClass(/is-collapsed/);
+  await expect(page.getByRole("button", { name: "Expandir menu lateral" })).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("junior-imports:admin-sidebar"))).toBe("collapsed");
+  await page.getByRole("button", { name: "Expandir menu lateral" }).click();
+  await expect(page.locator(".admin-shell-next")).not.toHaveClass(/is-collapsed/);
+  await expect.poll(() => page.evaluate(() => window.localStorage.getItem("junior-imports:admin-sidebar"))).toBe("expanded");
+});
+
+test("cria um pedido manual e reserva o estoque", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Pedidos");
+  await page.getByRole("button", { name: "Criar pedido", exact: true }).click();
+
+  const modal = page.getByRole("dialog", { name: "Criar pedido" });
+  await modal.getByLabel("Nome completo do cliente").fill("Cliente Pedido Manual");
+  await modal.getByLabel("WhatsApp do cliente").fill("(31) 99999-1122");
+  await modal.getByLabel("E-mail do cliente").fill("pedido.manual@exemplo.com");
+  await modal.getByLabel("Produto 1", { exact: true }).selectOption({ index: 1 });
+  await modal.getByLabel("Quantidade do produto 1").fill("1");
+  await modal.getByLabel("Forma de pagamento").selectOption("Pix");
+  await modal.getByRole("button", { name: "Criar pedido e reservar estoque" }).click();
+
+  await expect(page.getByRole("status").filter({ hasText: "Pedido criado." })).toBeVisible();
+  const detail = page.getByRole("dialog", { name: /Pedido / });
+  await expect(detail).toBeVisible();
+  await expect(detail.getByText("Cliente Pedido Manual", { exact: true })).toBeVisible();
+});
+
 test("autentica no modo local e cadastra um produto", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { name: /^(Bom dia|Boa tarde|Boa noite),/ })).toBeVisible();

@@ -16,6 +16,31 @@ export const checkoutSchema = z.object({
   consent: z.boolean().refine(Boolean, "Confirme que este pedido é apenas uma simulação."),
 });
 
+export const manualOrderSchema = z.object({
+  customerId: z.string(),
+  name: z.string().trim().min(3, "Informe o nome completo do cliente."),
+  phone: z.string().trim().regex(/^\D*(?:\d\D*){10,13}$/, "Informe um WhatsApp válido."),
+  email: z.string().trim().email("Informe um e-mail válido."),
+  zip: z.union([z.literal(""), z.string().trim().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido.")]),
+  city: z.string().trim().max(100),
+  state: z.string().trim().max(2),
+  address: z.string().trim().max(160),
+  number: z.string().trim().max(30),
+  complement: z.string().trim().max(120),
+  payment: z.enum(["Pix", "Cartao", "Boleto"]),
+  couponCode: z.string().trim().max(30).transform((value) => value.toUpperCase()),
+  internalNotes: z.string().trim().max(1000, "Use no máximo 1.000 caracteres."),
+  items: z.array(z.object({
+    productId: z.string().min(1, "Selecione um produto."),
+    quantity: z.coerce.number().int().min(1, "A quantidade deve ser maior que zero.").max(100),
+  })).min(1, "Adicione pelo menos um produto.").max(50, "Adicione no máximo 50 produtos."),
+}).superRefine((order, context) => {
+  const productIds = order.items.map((item) => item.productId);
+  if (new Set(productIds).size !== productIds.length) {
+    context.addIssue({ code: "custom", path: ["items"], message: "O mesmo produto não pode aparecer duas vezes no pedido." });
+  }
+});
+
 export const productSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(2, "Informe o nome."),
@@ -323,6 +348,7 @@ export const adminLoginSchema = z.object({
 });
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
 export type ProductInput = z.infer<typeof productSchema>;
 export type BannerInput = z.infer<typeof bannerSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;

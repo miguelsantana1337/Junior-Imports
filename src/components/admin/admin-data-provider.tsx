@@ -22,7 +22,10 @@ import {
 } from "@/lib/product-slug";
 import { createClient } from "@/lib/supabase/client";
 import { applyStockImport, type StockImportRow } from "@/lib/catalog-import";
+import { calculateCart } from "@/lib/commerce";
+import { validateCouponForCustomer } from "@/lib/coupon-rules";
 import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
+import { applyCreatedOrder } from "@/lib/order-state";
 import type {
   AdminPermission,
   AdminRole,
@@ -38,6 +41,7 @@ import type {
   HomeSection,
   InventoryMovement,
   MessageAutomation,
+  Order,
   OrderStatus,
   PageBlock,
   Product,
@@ -49,10 +53,21 @@ import type {
   StockImportMode,
   Supplier,
 } from "@/types/store";
-import type { AdminUserCreateInput, AdminUserUpdateInput } from "@/lib/validation";
+import type { AdminUserCreateInput, AdminUserUpdateInput, ManualOrderInput } from "@/lib/validation";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
 type OrderedKey = "products" | "banners" | "categories" | "sections";
+type PersistedOrder = {
+  id: string;
+  customer_id?: string;
+  code: string;
+  created_at: string;
+  subtotal: number;
+  discount: number;
+  shipping: number;
+  total: number;
+  status: OrderStatus;
+};
 
 interface AdminDataContextValue {
   data: StoreData;
@@ -78,6 +93,7 @@ interface AdminDataContextValue {
   saveCustomerTask: (task: CustomerTask) => Promise<void>;
   deleteCustomerTask: (id: string) => Promise<void>;
   saveCustomerContact: (contact: CustomerContact) => Promise<void>;
+  createOrder: (input: ManualOrderInput) => Promise<Order>;
   saveFinancialTransaction: (transaction: FinancialTransaction) => Promise<void>;
   deleteFinancialTransaction: (id: string) => Promise<void>;
   recordInventoryMovement: (movement: InventoryMovement) => Promise<void>;
@@ -577,6 +593,129 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     });
   }, [commitMutation, update]);
 
+  const createOrder = useCallback(async (input: ManualOrderInput) => {
+    const current = dataRef.current;
+    const lines = input.items.map((item) => ({ productId: item.productId, quantity: item.quantity }));
+    const selectedProducts = input.items.map((item) => {
+      const product = current.products.find((candidate) => candidate.id === item.productId);
+      if (!product || !product.active) throw new Error("Um dos produtos selecionados não está disponível.");
+      if (item.quantity > product.stock) throw new Error(`${product.name} possui apenas ${product.stock} unidade${product.stock === 1 ? "" : "s"} em estoque.`);
+      return { product, quantity: item.quantity };
+    });
+    const customer = {
+      name: input.name,
+      phone: input.phone,
+      email: input.email,
+      zip: input.zip,
+      city: input.city,
+      state: input.state,
+      address: input.address,
+      number: input.number,
+      complement: input.complement,
+    };
+    const baseCalculation = calculateCart(lines, current.products, current.settings, null, input.payment);
+    const couponCode = input.couponCode.trim().toUpperCase();
+    const coupon = couponCode
+      ? current.coupons.find((candidate) => candidate.code.toUpperCase() === couponCode)
+      : null;
+
+    if (couponCode && !coupon) throw new Error("Cupom não encontrado.");
+    if (coupon) {
+      const eligibility = validateCouponForCustomer(coupon, customer, current.orders, current.couponRedemptions);
+      if (!eligibility.valid) throw new Error(eligibility.message);
+      if (baseCalculation.subtotal < coupon.minimum) {
+        throw new Error(`Este cupom exige um pedido mínimo de R$ ${coupon.minimum.toFixed(2).replace(".", ",")}.`);
+      }
+    }
+
+    const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment);
+    const items = selectedProducts.map(({ product, quantity }) => ({
+      productId: product.id,
+      name: product.name,
+      quantity,
+      unitPrice: product.price,
+      unitCost: product.costPrice,
+    }));
+    const nextNumber = current.orders.reduce(
+      (max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000),
+      1000,
+    ) + 1;
+    let persisted: PersistedOrder | null = null;
+
+    if (!demoMode) {
+      if (!supabase) throw new Error("Não foi possível conectar ao banco de dados.");
+      let result = await supabase.rpc("create_tenant_order", {
+        p_tenant_id: current.tenant.id,
+        p_customer: customer,
+        p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+        p_payment: input.payment,
+        p_coupon_code: coupon?.code ?? "",
+      });
+      if (result.error?.code === "PGRST202" || result.error?.code === "42883") {
+        result = await supabase.rpc("create_demo_order", {
+          p_customer: customer,
+          p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+          p_payment: input.payment,
+          p_coupon_code: coupon?.code ?? "",
+        });
+      }
+      if (result.error || !result.data) throw new Error(result.error?.message ?? "Não foi possível registrar o pedido.");
+      persisted = result.data as PersistedOrder;
+    }
+
+    const order: Order = {
+      id: persisted?.id ?? `order-${crypto.randomUUID()}`,
+      customerId: persisted?.customer_id ?? input.customerId,
+      code: persisted?.code ?? `${current.settings.orderPrefix || "PED"}-${nextNumber}`,
+      createdAt: persisted?.created_at ?? new Date().toISOString(),
+      customer,
+      items,
+      subtotal: persisted?.subtotal ?? calculation.subtotal,
+      discount: persisted?.discount ?? calculation.discount,
+      shipping: persisted?.shipping ?? calculation.shipping,
+      total: persisted?.total ?? calculation.total,
+      payment: input.payment,
+      status: persisted?.status ?? "Novo",
+      couponCode: coupon?.code ?? "",
+      internalNotes: input.internalNotes,
+      trackingCode: "",
+    };
+    const generatedLogs = createMessageLogs(order, current.messageAutomations);
+    const next = applyCreatedOrder(current, order, {
+      actorEmail: currentUser.email,
+      customerSource: "whatsapp",
+      generatedLogs,
+    });
+    dataRef.current = next;
+    setData(next);
+
+    if (!demoMode) {
+      const followUpWrites = [
+        ...(input.internalNotes ? [update("orders", order.id, { internal_notes: input.internalNotes })] : []),
+        ...generatedLogs.map((log) => persist("message_logs", {
+          id: log.id,
+          order_id: log.orderId,
+          order_code: log.orderCode,
+          automation_id: log.automationId,
+          automation_name: log.automationName,
+          channel: log.channel,
+          recipient: log.recipient,
+          subject: log.subject,
+          message: log.message,
+          status: log.status,
+          created_at: log.createdAt,
+        })),
+      ];
+      const results = await Promise.allSettled(followUpWrites);
+      if (results.some((result) => result.status === "rejected")) {
+        toast({ message: "Pedido criado, mas uma observação ou automação não pôde ser registrada.", kind: "error", duration: 6000 });
+      }
+    }
+
+    toast("Pedido criado.");
+    return order;
+  }, [currentUser.email, demoMode, persist, setData, supabase, toast, update]);
+
   const updateOrderStatus = useCallback(async (id: string, status: OrderStatus) => {
     await commitMutation((current) => {
       const previousOrder = current.orders.find((order) => order.id === id);
@@ -748,6 +887,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     saveCustomerTask,
     deleteCustomerTask,
     saveCustomerContact,
+    createOrder,
     saveFinancialTransaction,
     deleteFinancialTransaction,
     recordInventoryMovement,
@@ -770,7 +910,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData: store.resetData,
     importData: store.importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

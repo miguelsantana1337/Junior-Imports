@@ -127,6 +127,7 @@ type ShellUser = { id: string; fullName: string; email: string; role: AdminRole;
 type AdminTheme = "light" | "dark";
 
 const adminThemeStorageKey = "junior-imports:admin-theme";
+const adminSidebarStorageKey = "junior-imports:admin-sidebar";
 
 export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
   const { data } = useStore();
@@ -182,6 +183,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
     setTheme(preferredTheme);
     document.documentElement.dataset.adminTheme = preferredTheme;
+    setCollapsed(window.localStorage.getItem(adminSidebarStorageKey) === "collapsed");
   }, []);
 
   const toggleTheme = () => {
@@ -190,6 +192,14 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       window.localStorage.setItem(adminThemeStorageKey, nextTheme);
       document.documentElement.dataset.adminTheme = nextTheme;
       return nextTheme;
+    });
+  };
+
+  const toggleSidebar = () => {
+    setCollapsed((currentState) => {
+      const nextState = !currentState;
+      window.localStorage.setItem(adminSidebarStorageKey, nextState ? "collapsed" : "expanded");
+      return nextState;
     });
   };
 
@@ -202,7 +212,6 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
               <Image src={data.settings.logoUrl || platformConfig.defaultLogoUrl} fill sizes="38px" alt="" priority unoptimized />
             </Link>
             <div className="admin-brand-copy"><strong>{data.settings.storeName}</strong><small>Painel de controle</small></div>
-            <button className="admin-collapse-button" onClick={() => setCollapsed((current) => !current)} aria-label={collapsed ? "Expandir menu" : "Recolher menu"}><IconChevronLeft /></button>
             <button className="admin-mobile-close" onClick={() => setOpen(false)} aria-label="Fechar menu"><IconX /></button>
           </div>
 
@@ -233,6 +242,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           </div>
 
           <div className="admin-sidebar-actions">
+            <button className="admin-sidebar-toggle" type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"} title={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"}><IconChevronLeft /><span>{collapsed ? "Expandir menu" : "Recolher menu"}</span></button>
             <Link href={data.tenant.storefrontPath || "/"} target="_blank" title="Ver loja"><IconExternalLink /><span>Ver loja</span></Link>
             <form action={logoutAction}><button title="Sair"><IconLogout /><span>Sair</span></button></form>
           </div>
