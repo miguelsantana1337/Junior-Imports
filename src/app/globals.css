@@ -1301,6 +1301,16 @@ html[data-header-layout="center"] .header-actions { grid-column: 3; grid-row: 1;
 .users-guide div { display: grid; align-content: start; gap: 5px; }
 .users-guide strong { color: #15253a; font-size: 10px; }
 .users-guide span { color: #718198; font-size: 9px; line-height: 1.55; }
+.users-panel-actions { display: flex; align-items: center; gap: 8px; }
+.password-reset-modal { width: min(580px, calc(100vw - 32px)); }
+.password-reset-warning { display: flex; align-items: flex-start; gap: 10px; margin: 0; }
+.password-reset-warning > svg { width: 22px; flex: 0 0 auto; color: #1677ff; }
+.password-reset-warning > div { display: grid; gap: 3px; }
+.password-reset-field { display: flex; align-items: stretch; gap: 8px; }
+.password-reset-field input { flex: 1; }
+.password-reset-field button { width: 44px; display: grid; place-items: center; border: 1px solid #d7e0ea; border-radius: 8px; background: #fff; color: #1677ff; cursor: pointer; }
+.password-reset-field button svg { width: 18px; }
+html[data-admin-theme="dark"] .password-reset-field button { border-color: #314056; background: #182235; color: #70a9f7; }
 .user-editor-modal { max-width: 850px; }
 .permission-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
 .permission-picker > label { min-height: 70px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid #dbe3ec; border-radius: 9px; background: #f9fbfd; cursor: pointer; }
@@ -1319,6 +1329,8 @@ html[data-header-layout="center"] .header-actions { grid-column: 3; grid-row: 1;
 @media (max-width: 700px) {
   .users-toolbar { align-items: stretch; flex-direction: column; }
   .users-toolbar label { width: 100%; }
+  .users-panel-actions { width: 100%; align-items: stretch; flex-direction: column; }
+  .users-panel-actions .admin-button { justify-content: center; }
   .user-row { grid-template-columns: 40px 1fr auto; gap: 10px; }
   .user-role { grid-column: 2; }
   .user-row > .status-tag { grid-column: 2; grid-row: 3; }

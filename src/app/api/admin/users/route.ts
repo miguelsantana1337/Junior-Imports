@@ -143,7 +143,7 @@ export async function POST(request: Request) {
   }
 
   const [{ error: profileError }, { error: membershipError }] = await Promise.all([
-    supabase.from("profiles").upsert({ id: authUser.id, full_name: parsed.data.fullName, email: parsed.data.email, active: true }),
+    supabase.from("profiles").upsert({ id: authUser.id, full_name: parsed.data.fullName, email: parsed.data.email, active: true, must_change_password: true }),
     supabase.from("tenant_members").upsert({ tenant_id: actor.tenantId, user_id: authUser.id, role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active }),
   ]);
   if (profileError || membershipError) {

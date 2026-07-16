@@ -4,6 +4,13 @@ import { demoAdminCredentials, isSupabaseConfigured } from "@/lib/supabase/confi
 
 export const metadata: Metadata = { title: "Acesso administrativo" };
 
-export default function AdminLoginPage() {
-  return <AdminLoginForm demoEmail={demoAdminCredentials.email} demoPassword={demoAdminCredentials.password} demoMode={!isSupabaseConfigured()} />;
+export default async function AdminLoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ password?: string }>;
+}) {
+  const notice = (await searchParams).password === "updated"
+    ? "Senha alterada com sucesso. Entre novamente para confirmar sua identidade."
+    : "";
+  return <AdminLoginForm demoEmail={demoAdminCredentials.email} demoPassword={demoAdminCredentials.password} demoMode={!isSupabaseConfigured()} notice={notice} />;
 }

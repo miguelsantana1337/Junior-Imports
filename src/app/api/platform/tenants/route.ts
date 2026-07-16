@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     role: "viewer",
     permissions: ["dashboard"],
     active: true,
+    must_change_password: true,
     is_platform_admin: false,
   });
   if (profileError) {

@@ -14,12 +14,15 @@ export default async function AdminMfaPage() {
   if (!user) redirect("/admin/login");
   const { data: profile } = await supabase
     .from("profiles")
-    .select("active")
+    .select("active, must_change_password")
     .eq("id", user.id)
     .maybeSingle();
   if (!profile?.active) {
     await supabase.auth.signOut();
     redirect("/admin/login");
+  }
+  if (profile.must_change_password || user.user_metadata?.must_change_password === true) {
+    redirect("/admin/change-password");
   }
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (assurance.data?.currentLevel === "aal2") redirect("/admin");

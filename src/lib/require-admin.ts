@@ -38,15 +38,17 @@ export async function requireAdmin(requiredPermission?: AdminPermission): Promis
   if (!supabase) redirect("/admin/login");
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/admin/login");
-  if (user.user_metadata?.must_change_password === true) redirect("/admin/change-password");
-  let { data: profile, error: profileError } = await supabase.from("profiles").select("role, permissions, active, full_name, email, is_platform_admin").eq("id", user.id).maybeSingle();
+  let { data: profile, error: profileError } = await supabase.from("profiles").select("role, permissions, active, full_name, email, is_platform_admin, must_change_password").eq("id", user.id).maybeSingle();
   if (profileError?.code === "42703") {
     const legacy = await supabase.from("profiles").select("role, permissions, active, full_name, email").eq("id", user.id).maybeSingle();
-    profile = legacy.data ? { ...legacy.data, is_platform_admin: false } : null;
+    profile = legacy.data ? { ...legacy.data, is_platform_admin: false, must_change_password: false } : null;
     profileError = legacy.error;
   }
   if (profileError) redirect("/admin/login");
   if (!profile?.active) redirect("/admin/login");
+  if (profile.must_change_password || user.user_metadata?.must_change_password === true) {
+    redirect("/admin/change-password");
+  }
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   if (assurance.error || assurance.data?.currentLevel !== "aal2") redirect("/admin/mfa");
   const email = profile.email || user.email || "";

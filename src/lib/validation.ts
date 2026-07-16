@@ -367,6 +367,10 @@ export const adminPasswordChangeSchema = z.object({
   }
 });
 
+export const adminUserPasswordResetSchema = adminPasswordChangeSchema.extend({
+  id: z.string().uuid("Usuário inválido."),
+});
+
 export type CheckoutFormInput = z.input<typeof checkoutSchema>;
 export type CheckoutInput = z.output<typeof checkoutSchema>;
 export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
@@ -386,3 +390,4 @@ export type PageBlockInput = z.infer<typeof pageBlockSchema>;
 export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;
 export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
+export type AdminUserPasswordResetInput = z.infer<typeof adminUserPasswordResetSchema>;

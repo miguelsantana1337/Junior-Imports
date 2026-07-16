@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminUserCreateSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
+import { adminUserCreateSchema, adminUserPasswordResetSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
 
 describe("validacao do checkout", () => {
   const validCheckout = {
@@ -84,5 +84,11 @@ describe("validacao de usuarios administrativos", () => {
 
   it("rejeita senha curta e usuario sem permissoes", () => {
     expect(adminUserCreateSchema.safeParse({ fullName: "Equipe Comercial", email: "equipe@exemplo.com", password: "123", role: "viewer", permissions: [], active: true }).success).toBe(false);
+  });
+
+  it("exige senha forte e confirmação idêntica na redefinição", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "Senha-Forte-2026!" }).success).toBe(true);
+    expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "outra-senha" }).success).toBe(false);
   });
 });

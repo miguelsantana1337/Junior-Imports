@@ -2,6 +2,7 @@
 
 import {
   IconCheck,
+  IconCopy,
   IconKey,
   IconLock,
   IconPencil,
@@ -13,6 +14,7 @@ import {
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAdminData } from "@/components/admin/admin-data-provider";
@@ -21,7 +23,8 @@ import { useAdminDialog } from "@/components/admin/use-admin-dialog";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { adminPermissionCatalog, adminRoleLabels, adminRolePermissions } from "@/lib/admin-permissions";
 import { formatDateTime } from "@/lib/format";
-import { adminUserCreateSchema, adminUserUpdateSchema } from "@/lib/validation";
+import { generateTemporaryPassword } from "@/lib/password";
+import { adminUserCreateSchema, adminUserPasswordResetSchema, adminUserUpdateSchema } from "@/lib/validation";
 import type { AdminPermission, AdminRole, AdminUser } from "@/types/store";
 
 const roles: AdminRole[] = ["owner", "manager", "editor", "support", "viewer"];
@@ -70,7 +73,7 @@ function UserEditor({ user, canCreateOwner, onClose }: { user?: AdminUser; canCr
         }}>
           <label>Nome completo<input value={form.fullName} onChange={(event) => field("fullName", event.target.value)} autoFocus /></label>
           <label>E-mail<input type="email" value={form.email} disabled={Boolean(user)} onChange={(event) => field("email", event.target.value)} /></label>
-          {!user && <label className="full">Senha temporária<input type="password" value={form.password} onChange={(event) => field("password", event.target.value)} placeholder="Mínimo de 8 caracteres" autoComplete="new-password" /><small className="field-hint">Compartilhe esta senha por um canal seguro. O usuário poderá alterá-la depois.</small></label>}
+          {!user && <label className="full">Senha temporária<input type="password" value={form.password} onChange={(event) => field("password", event.target.value)} placeholder="Mínimo de 12 caracteres" autoComplete="new-password" /><small className="field-hint">Compartilhe esta senha por um canal seguro. A troca será obrigatória no primeiro acesso.</small></label>}
           <label>Cargo<select value={form.role} onChange={(event) => { const role = event.target.value as AdminRole; field("role", role); field("permissions", adminRolePermissions[role]); }} disabled={user?.isCurrent}>
             {roles.filter((role) => role !== "owner" || canCreateOwner || user?.role === "owner").map((role) => <option value={role} key={role}>{adminRoleLabels[role]}</option>)}
           </select></label>
@@ -90,6 +93,73 @@ function UserEditor({ user, canCreateOwner, onClose }: { user?: AdminUser; canCr
   );
 }
 
+function PasswordResetDialog({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+  const panelRef = useAdminDialog(onClose);
+  const [password, setPassword] = useState(() => generateTemporaryPassword());
+  const [confirmation, setConfirmation] = useState(password);
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function copyPassword() {
+    await navigator.clipboard.writeText(password);
+    setCopied(true);
+  }
+
+  return (
+    <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="password-reset-title">
+      <button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" />
+      <div className="admin-modal-panel password-reset-modal" ref={panelRef}>
+        <header>
+          <div><span>SEGURANÇA</span><h2 id="password-reset-title">Redefinir senha</h2><small>{user.fullName} · {user.email}</small></div>
+          <button onClick={onClose} aria-label="Fechar"><IconX /></button>
+        </header>
+        <form className="admin-form" onSubmit={async (event) => {
+          event.preventDefault();
+          setError("");
+          setMessage("");
+          const parsed = adminUserPasswordResetSchema.safeParse({ id: user.id, password, confirmation });
+          if (!parsed.success) {
+            setError(parsed.error.issues[0]?.message ?? "Revise a senha temporária.");
+            return;
+          }
+          setSaving(true);
+          try {
+            const response = await fetch("/api/admin/users/password", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(parsed.data),
+            });
+            const payload = await response.json().catch(() => null) as { error?: string; message?: string } | null;
+            if (!response.ok) throw new Error(payload?.error || "Não foi possível redefinir a senha.");
+            setMessage(payload?.message || "Senha redefinida com sucesso.");
+          } catch (caught) {
+            setError(caught instanceof Error ? caught.message : "Não foi possível redefinir a senha.");
+          } finally {
+            setSaving(false);
+          }
+        }}>
+          <div className="admin-inline-note password-reset-warning full">
+            <IconLock />
+            <div><strong>Esta senha será temporária</strong><span>O usuário será bloqueado das áreas administrativas até criar uma senha definitiva no próximo acesso.</span></div>
+          </div>
+          <label className="full">Nova senha temporária<div className="password-reset-field"><input type="text" value={password} disabled={Boolean(message)} onChange={(event) => setPassword(event.target.value)} autoComplete="new-password" /><button type="button" onClick={copyPassword} title="Copiar senha"><IconCopy /></button></div><small className="field-hint">Mínimo de 12 caracteres, com maiúscula, minúscula, número e símbolo.</small></label>
+          <label className="full">Confirmar senha<input type="password" value={confirmation} disabled={Boolean(message)} onChange={(event) => setConfirmation(event.target.value)} autoComplete="new-password" /></label>
+          {!message && <button className="admin-button full" type="button" onClick={() => { const generated = generateTemporaryPassword(); setPassword(generated); setConfirmation(generated); setCopied(false); }}>Gerar outra senha segura</button>}
+          {copied && <p className="admin-data-message full" role="status">Senha copiada. Compartilhe-a por um canal seguro.</p>}
+          {error && <p className="admin-form-error full" role="alert">{error}</p>}
+          {message && <p className="admin-data-message full" role="status">{message}</p>}
+          <div className="admin-form-actions full">
+            <button type="button" className="admin-button" onClick={onClose}>{message ? "Concluir" : "Cancelar"}</button>
+            {!message && <button className="admin-button primary" disabled={saving}>{saving ? "Redefinindo..." : "Redefinir senha"}</button>}
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export function UsersAdmin() {
   const { data, currentUser, refreshTeamMembers, deleteAdminUser } = useAdminData();
   const confirm = useConfirm();
@@ -100,6 +170,7 @@ export function UsersAdmin() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [passwordResetUser, setPasswordResetUser] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -128,7 +199,7 @@ export function UsersAdmin() {
         <article><span>Gestores</span><strong>{privilegedUsers}</strong><small>proprietários e gerentes</small></article>
       </div>
 
-      <AdminPanel title="Equipe da loja" description="Crie usuários, suspenda acessos e personalize as permissões de cada pessoa." action={<button className="admin-button primary" onClick={() => setEditor("new")}><IconPlus /> Novo usuário</button>}>
+      <AdminPanel title="Equipe da loja" description="Crie usuários, suspenda acessos e personalize as permissões de cada pessoa." action={<div className="users-panel-actions"><Link className="admin-button" href="/admin/change-password?mode=personal"><IconKey /> Alterar minha senha</Link><button className="admin-button primary" onClick={() => setEditor("new")}><IconPlus /> Novo usuário</button></div>}>
         <div className="users-toolbar">
           <label><IconSearch /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail ou cargo" aria-label="Buscar usuários" /></label>
           <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} aria-label="Filtrar por cargo"><option value="all">Todos os cargos</option>{roles.map((role) => <option value={role} key={role}>{adminRoleLabels[role]}</option>)}</select>
@@ -144,7 +215,7 @@ export function UsersAdmin() {
               <div className="user-role"><span>{adminRoleLabels[user.role]}</span><small>{user.permissions.length || adminPermissionCatalog.length} módulos</small></div>
               <div className="user-last-access"><span>Último acesso</span><small>{user.lastSignInAt ? formatDateTime(user.lastSignInAt) : "Ainda não acessou"}</small></div>
               <span className={`status-tag ${user.active ? "" : "off"}`}>{user.active ? "Ativo" : "Suspenso"}</span>
-              <div className="admin-actions"><button onClick={() => setEditor(user)} title="Editar usuário" aria-label={`Editar ${user.fullName}`}><IconPencil /></button><button className="danger" title="Excluir" aria-label={`Excluir ${user.fullName}`} disabled={user.isCurrent} onClick={async () => { const accepted = await confirm({ title: "Excluir usuário?", description: `O acesso de ${user.fullName} será removido permanentemente.`, confirmLabel: "Excluir acesso", danger: true }); if (accepted) await deleteAdminUser(user.id); }}><IconTrash /></button></div>
+              <div className="admin-actions"><button onClick={() => setEditor(user)} title="Editar usuário" aria-label={`Editar ${user.fullName}`}><IconPencil /></button><button onClick={() => setPasswordResetUser(user)} title={user.isCurrent ? "Use “Alterar minha senha”" : "Redefinir senha"} aria-label={`Redefinir senha de ${user.fullName}`} disabled={user.isCurrent}><IconKey /></button><button className="danger" title="Excluir" aria-label={`Excluir ${user.fullName}`} disabled={user.isCurrent} onClick={async () => { const accepted = await confirm({ title: "Excluir usuário?", description: `O acesso de ${user.fullName} será removido permanentemente.`, confirmLabel: "Excluir acesso", danger: true }); if (accepted) await deleteAdminUser(user.id); }}><IconTrash /></button></div>
             </article>
           ))}
           {!filtered.length && <div className="admin-empty"><IconUsers /><strong>Nenhum usuário encontrado.</strong><span>Ajuste a busca ou crie um novo acesso.</span></div>}
@@ -158,6 +229,7 @@ export function UsersAdmin() {
       </div>
 
       {editor && <UserEditor user={editor === "new" ? undefined : editor} canCreateOwner={currentUser.role === "owner"} onClose={() => setEditor(null)} />}
+      {passwordResetUser && <PasswordResetDialog user={passwordResetUser} onClose={() => setPasswordResetUser(null)} />}
     </div>
   );
 }
