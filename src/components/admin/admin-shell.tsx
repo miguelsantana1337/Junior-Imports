@@ -16,12 +16,14 @@ import {
   IconLogout,
   IconMenu2,
   IconMessageCircle,
+  IconMoon,
   IconPackage,
   IconPhoto,
   IconPlus,
   IconReceipt2,
   IconSearch,
   IconSettings,
+  IconSun,
   IconTag,
   IconTicket,
   IconUsers,
@@ -30,7 +32,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/auth-actions";
 import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
@@ -122,6 +124,9 @@ const createLinks = [
 ];
 
 type ShellUser = { id: string; fullName: string; email: string; role: AdminRole; permissions: AdminPermission[]; isPlatformAdmin: boolean };
+type AdminTheme = "light" | "dark";
+
+const adminThemeStorageKey = "junior-imports:admin-theme";
 
 export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
   const { data } = useStore();
@@ -131,6 +136,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [createOpen, setCreateOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [theme, setTheme] = useState<AdminTheme>("light");
   const [eyebrow, title] = titles[pathname] ?? titles["/admin"];
   const productEditorPath = pathname === "/admin/products/new" || pathname.startsWith("/admin/products/");
   const isNavigationActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
@@ -165,6 +171,27 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     window.addEventListener("keydown", closeMenus);
     return () => window.removeEventListener("keydown", closeMenus);
   }, []);
+
+  useLayoutEffect(() => {
+    const savedTheme = window.localStorage.getItem(adminThemeStorageKey);
+    const preferredTheme: AdminTheme = savedTheme === "dark" || savedTheme === "light"
+      ? savedTheme
+      : window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
+
+    setTheme(preferredTheme);
+    document.documentElement.dataset.adminTheme = preferredTheme;
+  }, []);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => {
+      const nextTheme: AdminTheme = currentTheme === "dark" ? "light" : "dark";
+      window.localStorage.setItem(adminThemeStorageKey, nextTheme);
+      document.documentElement.dataset.adminTheme = nextTheme;
+      return nextTheme;
+    });
+  };
 
   return (
     <div className={`admin-shell-next ${collapsed ? "is-collapsed" : ""}`}>
@@ -230,6 +257,16 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
               </button>
               {createOpen && <div className="admin-popover admin-create-menu">{visibleCreateLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={label}><Icon />{label}</Link>)}</div>}
             </div>
+            <button
+              className="admin-theme-toggle"
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+              aria-pressed={theme === "dark"}
+              title={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+            >
+              {theme === "dark" ? <IconSun /> : <IconMoon />}
+            </button>
             <div className="admin-popover-wrap">
               <button className="admin-notification-button" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notificações" aria-expanded={notificationsOpen}>
                 <IconBell />{notificationCount > 0 && <span>{notificationCount}</span>}

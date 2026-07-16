@@ -2,7 +2,11 @@ import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.clear());
+  await page.addInitScript(() => {
+    if (window.sessionStorage.getItem("e2e-storage-cleared")) return;
+    window.localStorage.clear();
+    window.sessionStorage.setItem("e2e-storage-cleared", "true");
+  });
 });
 
 async function login(page: Page) {
@@ -16,6 +20,24 @@ async function openSection(page: Page, name: string) {
   if (await menuButton.isVisible()) await menuButton.click();
   await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name, exact: true }).click();
 }
+
+test("alterna e mantém o modo escuro do painel", async ({ page }) => {
+  await login(page);
+
+  const html = page.locator("html");
+  const darkModeButton = page.getByRole("button", { name: "Ativar modo escuro" });
+  await expect(darkModeButton).toBeVisible();
+  await darkModeButton.click();
+
+  await expect(html).toHaveAttribute("data-admin-theme", "dark");
+  await expect(page.locator(".admin-main-next")).toHaveCSS("background-color", "rgb(9, 17, 31)");
+  await expect(page.getByRole("button", { name: "Ativar modo claro" })).toBeVisible();
+
+  await page.reload();
+  await expect(html).toHaveAttribute("data-admin-theme", "dark");
+  await page.getByRole("button", { name: "Ativar modo claro" }).click();
+  await expect(html).toHaveAttribute("data-admin-theme", "light");
+});
 
 test("autentica no modo local e cadastra um produto", async ({ page }) => {
   await login(page);

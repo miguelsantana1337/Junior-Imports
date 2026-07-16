@@ -1767,3 +1767,568 @@ html[data-header-layout="center"] .header-actions { grid-column: 3; grid-row: 1;
   .import-preview > footer .admin-button { width: 100%; }
   .order-management-fields { margin-inline: 12px; }
 }
+
+/* Persistent light/dark appearance for the control center */
+.admin-theme-toggle {
+  width: 36px;
+  height: 36px;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #40536b;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+.admin-theme-toggle:hover {
+  border-color: #9abdec;
+  background: #f3f8ff;
+  color: #1677ff;
+  transform: translateY(-1px);
+}
+.admin-theme-toggle:focus-visible {
+  outline: 3px solid rgb(22 119 255 / 22%);
+  outline-offset: 2px;
+}
+.admin-theme-toggle svg { width: 17px; }
+
+html[data-admin-theme="dark"] .admin-shell-next {
+  --surface: #111c2e;
+  --surface-2: #162338;
+  --surface-3: #1d2c43;
+  --text: #edf4ff;
+  --muted: #9aabc0;
+  --line: #2b3b52;
+  --green: #42d392;
+  --danger: #ff7187;
+  --warning: #ffb454;
+  color-scheme: dark;
+  background: #09111f;
+}
+
+html[data-admin-theme="dark"] .admin-main-next,
+html[data-admin-theme="dark"] .product-editor-page {
+  background: #09111f;
+}
+
+html[data-admin-theme="dark"] .admin-topbar-next {
+  border-color: var(--line);
+  background: rgb(15 24 40 / 96%);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
+}
+
+html[data-admin-theme="dark"] .admin-global-search,
+html[data-admin-theme="dark"] .admin-menu-toggle,
+html[data-admin-theme="dark"] .admin-theme-toggle,
+html[data-admin-theme="dark"] .admin-view-store,
+html[data-admin-theme="dark"] .admin-notification-button,
+html[data-admin-theme="dark"] .admin-popover,
+html[data-admin-theme="dark"] .admin-shell-next .admin-button,
+html[data-admin-theme="dark"] .admin-shell-next .admin-actions button,
+html[data-admin-theme="dark"] .admin-shell-next .admin-actions a,
+html[data-admin-theme="dark"] .admin-shell-next .order-buttons button,
+html[data-admin-theme="dark"] .admin-pagination button,
+html[data-admin-theme="dark"] .admin-bulk-bar button {
+  border-color: var(--line);
+  background: var(--surface);
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] .admin-theme-toggle {
+  border-color: #425773;
+  background: #17263c;
+  color: #ffd36a;
+}
+
+html[data-admin-theme="dark"] .admin-theme-toggle:hover,
+html[data-admin-theme="dark"] .admin-shell-next .admin-button:hover,
+html[data-admin-theme="dark"] .admin-shell-next .admin-actions button:hover,
+html[data-admin-theme="dark"] .admin-shell-next .admin-actions a:hover,
+html[data-admin-theme="dark"] .admin-shell-next .order-buttons button:hover,
+html[data-admin-theme="dark"] .admin-create-menu a:hover,
+html[data-admin-theme="dark"] .admin-priority-list article > a:hover,
+html[data-admin-theme="dark"] .admin-shortcuts a:hover {
+  border-color: #4f8fe6;
+  background: #172b48;
+  color: #79b6ff;
+}
+
+html[data-admin-theme="dark"] .admin-create-button,
+html[data-admin-theme="dark"] .admin-shell-next .admin-button.primary {
+  border-color: #2583ff;
+  background: #1677ff;
+  color: #fff;
+}
+
+html[data-admin-theme="dark"] .admin-global-search {
+  border-color: #334760;
+  background: #0e1a2b;
+  color: #8295ad;
+}
+
+html[data-admin-theme="dark"] .admin-global-search input,
+html[data-admin-theme="dark"] .admin-search-field input,
+html[data-admin-theme="dark"] .admin-list-toolbar select,
+html[data-admin-theme="dark"] .users-toolbar input,
+html[data-admin-theme="dark"] .users-toolbar select,
+html[data-admin-theme="dark"] .admin-shell-next .admin-form input,
+html[data-admin-theme="dark"] .admin-shell-next .admin-form select,
+html[data-admin-theme="dark"] .admin-shell-next .admin-form textarea,
+html[data-admin-theme="dark"] .admin-shell-next .order-status-editor select,
+html[data-admin-theme="dark"] .ops-form input,
+html[data-admin-theme="dark"] .ops-form select,
+html[data-admin-theme="dark"] .ops-form textarea,
+html[data-admin-theme="dark"] .product-editor-fields input,
+html[data-admin-theme="dark"] .product-editor-fields select,
+html[data-admin-theme="dark"] .product-editor-fields textarea,
+html[data-admin-theme="dark"] .product-photo-url input,
+html[data-admin-theme="dark"] .import-step-card select,
+html[data-admin-theme="dark"] .order-management-fields input,
+html[data-admin-theme="dark"] .order-management-fields textarea {
+  border-color: #35475f;
+  background: #0d1828;
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] .admin-global-search input::placeholder,
+html[data-admin-theme="dark"] .admin-search-field input::placeholder,
+html[data-admin-theme="dark"] .admin-shell-next input::placeholder,
+html[data-admin-theme="dark"] .admin-shell-next textarea::placeholder {
+  color: #71839a;
+}
+
+html[data-admin-theme="dark"] .admin-search-submit {
+  border-color: #31445d;
+  background: #17253a;
+  color: #9cafc5;
+}
+
+html[data-admin-theme="dark"] .admin-popover {
+  box-shadow: 0 20px 46px rgb(0 0 0 / 38%);
+}
+
+html[data-admin-theme="dark"] .admin-notification-button > span {
+  border-color: #0f1828;
+}
+
+html[data-admin-theme="dark"] .admin-notifications p,
+html[data-admin-theme="dark"] .admin-account {
+  border-color: var(--line);
+}
+
+html[data-admin-theme="dark"] .admin-account > span {
+  background: #2c7be5;
+}
+
+html[data-admin-theme="dark"] :is(
+  .admin-page-heading h1,
+  .admin-dashboard-hero h1,
+  .admin-command-stats strong,
+  .admin-command-panel h2,
+  .admin-priority-list strong,
+  .admin-activity-list strong,
+  .admin-shortcuts strong,
+  .admin-store-health strong,
+  .admin-progress-copy strong,
+  .admin-panel-head h2,
+  .sortable-main strong,
+  .order-details h3,
+  .data-actions h3,
+  .ops-hero h2,
+  .ops-metric-grid strong,
+  .ops-task-list strong,
+  .ops-timeline strong,
+  .ops-customer-opportunities h3,
+  .ops-lot-list h3,
+  .supplier-list h3,
+  .ops-profitability h3,
+  .finance-list strong,
+  .inventory-movement-list strong,
+  .purchase-order-list strong,
+  .layout-page-select,
+  .layout-empty strong,
+  .admin-form-section,
+  .brand-upload-card strong,
+  .settings-save-bar strong,
+  .banner-mode-choice strong,
+  .message-automation-note strong,
+  .message-stats strong,
+  .message-log-empty strong,
+  .user-main strong,
+  .user-role span,
+  .user-last-access span,
+  .users-guide strong,
+  .product-editor-heading h1,
+  .product-editor-section-heading h2,
+  .product-editor-fields label,
+  .product-photo-dropzone strong,
+  .product-publish-options strong,
+  .product-review-card h3,
+  .product-editor-summary-copy h3,
+  .product-editor-summary-copy > div strong,
+  .product-editor-missing h1,
+  .crm-detail-metrics strong,
+  .crm-order-history h3,
+  .crm-order-history > article b,
+  .import-step-card h3,
+  .import-preview > header h3
+) {
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] :is(
+  .admin-page-heading > div > span,
+  .admin-page-heading > small,
+  .admin-dashboard-subtitle,
+  .admin-dashboard-hero time,
+  .admin-command-stats small,
+  .admin-command-stats p,
+  .admin-command-panel > header p,
+  .admin-priority-list p,
+  .admin-activity-list p,
+  .admin-activity-list time,
+  .admin-shortcuts small,
+  .admin-store-health span,
+  .admin-progress-copy p,
+  .admin-step-list span,
+  .admin-panel-head p,
+  .sortable-main small,
+  .order-details p,
+  .data-actions p,
+  .ops-hero p,
+  .ops-metric-grid small,
+  .ops-metric-grid p,
+  .ops-task-list p,
+  .ops-task-list small,
+  .ops-timeline p,
+  .ops-timeline small,
+  .ops-timeline time,
+  .finance-list small,
+  .inventory-movement-list p,
+  .inventory-movement-list small,
+  .purchase-order-list p,
+  .purchase-order-list small,
+  .layout-page-select small,
+  .layout-empty,
+  .field-hint,
+  .admin-form-section span,
+  .brand-upload-card span,
+  .settings-save-bar span,
+  .banner-mode-choice small,
+  .message-automation-note span,
+  .message-stats span,
+  .message-stats small,
+  .message-log-empty,
+  .table-secondary,
+  .user-main small,
+  .user-role small,
+  .user-last-access small,
+  .users-guide span,
+  .product-editor-back,
+  .product-editor-heading p,
+  .product-editor-steps,
+  .product-editor-steps small,
+  .product-editor-section-heading p,
+  .product-editor-hint,
+  .product-photo-dropzone,
+  .product-photo-dropzone small,
+  .product-photo-add-tile,
+  .product-photo-add-tile small,
+  .product-photo-url summary,
+  .product-publish-options small,
+  .product-review-card p,
+  .product-review-card > div:last-child > small,
+  .product-editor-summary-copy p,
+  .product-editor-summary-copy > small,
+  .product-editor-missing,
+  .crm-detail-metrics span,
+  .crm-order-history > article small,
+  .crm-order-history > p,
+  .import-step-card p,
+  .import-preview > header p,
+  .import-preview > footer p
+) {
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] :is(
+  .admin-command-stats article,
+  .admin-command-panel,
+  .admin-shell-next .admin-panel,
+  .admin-shell-next .sortable-row,
+  .admin-shell-next .admin-modal-panel,
+  .admin-shell-next .admin-modal-panel > header,
+  .admin-shell-next .order-details section,
+  .admin-shell-next .data-actions article,
+  .ops-metric-grid article,
+  .ops-tabs,
+  .ops-consent-grid > label,
+  .ops-customer-opportunities,
+  .ops-lot-list,
+  .supplier-list,
+  .ops-profitability,
+  .purchase-order-list > article,
+  .layout-page-list article,
+  .layout-block-list > article,
+  .brand-upload-card,
+  .message-stats article,
+  .users-guide article,
+  .product-editor-section,
+  .product-photo-card,
+  .product-editor-summary-sticky,
+  .crm-detail-metrics article,
+  .import-step-card,
+  .import-preview
+) {
+  border-color: var(--line);
+  background: var(--surface);
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .admin-table th {
+  border-color: var(--line);
+  background: #142136;
+  color: #a9b7c9;
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .admin-table td {
+  border-color: var(--line);
+  background: var(--surface);
+  color: #cbd6e4;
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .admin-table td strong,
+html[data-admin-theme="dark"] .admin-shell-next .admin-product-cell small {
+  color: inherit;
+}
+
+html[data-admin-theme="dark"] :is(
+  .admin-chart-empty,
+  .admin-list-toolbar,
+  .users-toolbar label,
+  .ops-tabs.compact,
+  .crm-detail-metrics,
+  .order-management-fields
+) {
+  border-color: var(--line);
+  background: #0e192a;
+}
+
+html[data-admin-theme="dark"] :is(
+  .admin-list-toolbar > label,
+  .admin-list-toolbar > strong,
+  .admin-pagination,
+  .users-toolbar,
+  .users-toolbar > span,
+  .ops-form label,
+  .order-management-fields label
+) {
+  border-color: var(--line);
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] .admin-pagination,
+html[data-admin-theme="dark"] .users-toolbar,
+html[data-admin-theme="dark"] .user-row,
+html[data-admin-theme="dark"] .admin-list-toolbar {
+  border-color: var(--line);
+}
+
+html[data-admin-theme="dark"] .admin-bulk-bar {
+  border-color: #315c91;
+  background: #112a48;
+}
+
+html[data-admin-theme="dark"] .admin-bulk-bar strong {
+  color: #8fc2ff;
+}
+
+html[data-admin-theme="dark"] .admin-inline-note,
+html[data-admin-theme="dark"] .coupon-usage-note,
+html[data-admin-theme="dark"] .message-placeholders,
+html[data-admin-theme="dark"] .product-editor-summary-tip,
+html[data-admin-theme="dark"] .crm-favorites {
+  border-color: #315c91;
+  background: #102745;
+  color: #9cc6f5;
+}
+
+html[data-admin-theme="dark"] .ops-hero,
+html[data-admin-theme="dark"] .layout-builder-intro,
+html[data-admin-theme="dark"] .message-automation-note,
+html[data-admin-theme="dark"] .shipping-campaign-preview {
+  border-color: #315478;
+  background: linear-gradient(135deg, #111f34 0%, #132945 70%, #17365b 100%);
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] .settings-save-bar,
+html[data-admin-theme="dark"] .product-editor-header,
+html[data-admin-theme="dark"] .product-editor-footer {
+  border-color: var(--line);
+  background: rgb(15 24 40 / 96%);
+  box-shadow: 0 14px 40px rgb(0 0 0 / 28%);
+}
+
+html[data-admin-theme="dark"] :is(
+  .layout-page-list article.active,
+  .banner-mode-choice label:has(input:checked),
+  .product-publish-options label:has(input:checked)
+) {
+  border-color: #4e8edc;
+  background: #132a49;
+}
+
+html[data-admin-theme="dark"] :is(
+  .banner-mode-choice label,
+  .product-publish-options label,
+  .product-photo-dropzone,
+  .product-photo-add-tile
+) {
+  border-color: #3a4f69;
+  background: #101e31;
+}
+
+html[data-admin-theme="dark"] .product-photo-dropzone:hover,
+html[data-admin-theme="dark"] .product-photo-add-tile:hover,
+html[data-admin-theme="dark"] .product-editor-steps button:hover:not(:disabled) {
+  border-color: #4d93ec;
+  background: #142d4d;
+}
+
+html[data-admin-theme="dark"] .product-editor-steps button.active {
+  border-color: #3f73b5;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 24%);
+}
+
+html[data-admin-theme="dark"] .product-editor-steps button > span,
+html[data-admin-theme="dark"] .product-photo-card-footer > div button {
+  border-color: var(--line);
+  background: #17253a;
+  color: #9fb0c6;
+}
+
+html[data-admin-theme="dark"] .product-editor-steps button.active > span {
+  border-color: #1677ff;
+  background: #1677ff;
+  color: #fff;
+}
+
+html[data-admin-theme="dark"] .product-editor-progress,
+html[data-admin-theme="dark"] .product-photo-image,
+html[data-admin-theme="dark"] .product-review-image {
+  background: #172338;
+}
+
+html[data-admin-theme="dark"] .product-review-card,
+html[data-admin-theme="dark"] .product-editor-summary-image {
+  border-color: var(--line);
+  background-color: #111d30;
+}
+
+html[data-admin-theme="dark"] .product-editor-discount {
+  border-color: #286b51;
+  background: #102d25;
+  color: #72d9aa;
+}
+
+html[data-admin-theme="dark"] .product-review-card {
+  background: #0e192a;
+}
+
+html[data-admin-theme="dark"] .brand-preview,
+html[data-admin-theme="dark"] .favicon-preview,
+html[data-admin-theme="dark"] .admin-product-thumb {
+  border-color: var(--line);
+  background-color: #e9eef5;
+}
+
+html[data-admin-theme="dark"] .catalog-import-tabs {
+  border-color: var(--line);
+  background: #0d1828;
+}
+
+html[data-admin-theme="dark"] .catalog-import-tabs button {
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] .catalog-import-tabs button.active {
+  background: #1a2b43;
+  color: #79b6ff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 28%);
+}
+
+html[data-admin-theme="dark"] .import-step-card.upload {
+  border-color: #315c91;
+  background: #102745;
+}
+
+html[data-admin-theme="dark"] .import-step-card > span,
+html[data-admin-theme="dark"] .shipping-campaign-form code {
+  background: #1c2d44;
+  color: #9cb4d0;
+}
+
+html[data-admin-theme="dark"] .import-preview > header,
+html[data-admin-theme="dark"] .import-preview > footer,
+html[data-admin-theme="dark"] .crm-customer-form,
+html[data-admin-theme="dark"] .crm-order-history > article {
+  border-color: var(--line);
+}
+
+html[data-admin-theme="dark"] .admin-chart-empty {
+  box-shadow: 0 12px 34px rgb(0 0 0 / 24%);
+}
+
+html[data-admin-theme="dark"] .admin-weekly-chart::before,
+html[data-admin-theme="dark"] .admin-activity-list article:not(:last-child)::after {
+  background: var(--line);
+}
+
+html[data-admin-theme="dark"] .admin-activity-list article::before {
+  border-color: var(--surface);
+}
+
+html[data-admin-theme="dark"] .admin-dashboard-subtitle strong {
+  border-color: #80602f;
+  background: #2a2114;
+  color: #f0c778;
+}
+
+html[data-admin-theme="dark"] .admin-store-health article b {
+  border-color: #397759;
+  background: #102d25;
+  color: #70d5a6;
+}
+
+html[data-admin-theme="dark"] .admin-step-list span b {
+  background: #223147;
+  color: #b4c1d1;
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .upload-label {
+  border-color: #3a516d;
+  background: #101e31;
+  color: #9fc0e8;
+}
+
+html[data-admin-theme="dark"] .purchase-total {
+  background: #102745;
+  color: #9fc0e7;
+}
+
+html[data-admin-theme="dark"] .crm-card-metrics span {
+  background: #142136;
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] .crm-card-metrics b {
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] .admin-shell-next ::selection {
+  background: #2b73ce;
+  color: #fff;
+}
