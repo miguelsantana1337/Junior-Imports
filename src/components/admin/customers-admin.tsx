@@ -77,6 +77,9 @@ function CustomerDetail({ customer, onClose }: { customer: CustomerInsight; onCl
     source: customer.source,
     tags: customer.tags,
     notes: customer.notes,
+    assignedTo: customer.assignedTo,
+    whatsappConsent: customer.whatsappConsent,
+    emailConsent: customer.emailConsent,
     createdAt: customer.createdAt || new Date().toISOString(),
     updatedAt: customer.updatedAt || new Date().toISOString(),
   });
@@ -98,7 +101,12 @@ function CustomerDetail({ customer, onClose }: { customer: CustomerInsight; onCl
         <label>Cidade<input value={form.city} onChange={(event) => field("city", event.target.value)} /></label>
         <label>Estado<input value={form.state} maxLength={2} onChange={(event) => field("state", event.target.value.toUpperCase())} /></label>
         <label className="full">Origem<select value={form.source} onChange={(event) => field("source", event.target.value as Customer["source"])}>{Object.entries(sourceLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+        <label className="full">Responsável pelo relacionamento<input value={form.assignedTo} onChange={(event) => field("assignedTo", event.target.value)} placeholder="Nome ou e-mail do responsável" /></label>
         <label className="full">Etiquetas<input value={tags} onChange={(event) => setTags(event.target.value)} placeholder="VIP, indicação, recompra" /><small>Separe as etiquetas por vírgulas.</small></label>
+        <div className="ops-consent-grid full">
+          <label><input type="checkbox" checked={form.whatsappConsent} onChange={(event) => field("whatsappConsent", event.target.checked)} /><span><strong>WhatsApp autorizado</strong><small>Permite contatos comerciais por WhatsApp.</small></span></label>
+          <label><input type="checkbox" checked={form.emailConsent} onChange={(event) => field("emailConsent", event.target.checked)} /><span><strong>E-mail autorizado</strong><small>Permite campanhas e contatos por e-mail.</small></span></label>
+        </div>
         <label className="full">Observações internas<textarea rows={5} value={form.notes} onChange={(event) => field("notes", event.target.value)} placeholder="Preferências, contexto do atendimento e próximos passos" /></label>
         {error && <p className="admin-form-error full" role="alert">{error}</p>}
         <div className="admin-form-actions full"><a className="admin-button" href={whatsappUrl(form.phone, `Olá, ${form.name}! Tudo bem?`)} target="_blank" rel="noreferrer"><MessageCircle /> Abrir WhatsApp</a><button className="admin-button primary" disabled={saving}>{saving ? "Salvando..." : "Salvar cliente"}</button></div>

@@ -30,8 +30,8 @@ const regulatoryAliases: Record<string, RegulatoryStatus> = {
   blocked: "blocked",
 };
 
-export const productImportTemplate = `sku;nome;categoria;marca;preco;preco_comparacao;estoque;descricao;ativo;destaque;imagem_url;tipo_produto;status_regulatorio;principio_ativo;registro_anvisa;apresentacao;advertencia;revisado_farmaceutico
-JI-A05;Produto exemplo;Acessórios de cuidado;Junior Imports;49,90;59,90;20;Descrição completa do produto;nao;nao;;nao_medicamento;pendente;;;;;nao`;
+export const productImportTemplate = `sku;nome;categoria;marca;preco;preco_comparacao;custo;estoque;estoque_minimo;descricao;ativo;destaque;imagem_url;tipo_produto;status_regulatorio;principio_ativo;registro_anvisa;apresentacao;advertencia;revisado_farmaceutico
+JI-A05;Produto exemplo;Acessórios de cuidado;Junior Imports;49,90;59,90;25,00;20;5;Descrição completa do produto;nao;nao;;nao_medicamento;pendente;;;;;nao`;
 
 export const stockImportTemplate = `sku;quantidade
 JI-A04;25`;
@@ -100,9 +100,13 @@ export function parseProductImport(text: string, existing: Product[], categories
     const category = categories.find((item) => [item.id, item.name.toLocaleLowerCase("pt-BR"), item.slug].includes(categoryValue));
     if (!category && !current) { errors.push({ row, message: `Categoria “${record.categoria || "vazia"}” não encontrada.` }); return; }
     const price = record.preco ? numberValue(record.preco) : current?.price ?? Number.NaN;
+    const costPrice = record.custo ? numberValue(record.custo) : current?.costPrice ?? 0;
     const stock = record.estoque ? numberValue(record.estoque) : current?.stock ?? 0;
+    const minStock = record.estoque_minimo ? numberValue(record.estoque_minimo) : current?.minStock ?? 0;
     if (!Number.isFinite(price) || price < 0) { errors.push({ row, message: "Preço inválido." }); return; }
+    if (!Number.isFinite(costPrice) || costPrice < 0) { errors.push({ row, message: "Custo inválido." }); return; }
     if (!Number.isInteger(stock) || stock < 0) { errors.push({ row, message: "Estoque deve ser um número inteiro maior ou igual a zero." }); return; }
+    if (!Number.isInteger(minStock) || minStock < 0) { errors.push({ row, message: "Estoque mínimo deve ser um número inteiro maior ou igual a zero." }); return; }
     const productType = productTypeAliases[(record.tipo_produto ?? "").trim().toLocaleLowerCase("pt-BR")];
     const regulatoryStatus = regulatoryAliases[(record.status_regulatorio ?? "").trim().toLocaleLowerCase("pt-BR")];
     if (!productType) { errors.push({ row, message: "Tipo de produto inválido." }); return; }
@@ -118,7 +122,9 @@ export function parseProductImport(text: string, existing: Product[], categories
       brand: record.marca?.trim() || current?.brand || "Junior Imports",
       price,
       compareAt: record.preco_comparacao ? numberValue(record.preco_comparacao) : current?.compareAt ?? 0,
+      costPrice,
       stock,
+      minStock,
       badge: current?.badge ?? "",
       accent: current?.accent ?? "#1677ff",
       description: record.descricao?.trim() || current?.description || "Produto importado por planilha para o catálogo.",

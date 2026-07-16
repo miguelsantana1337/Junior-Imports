@@ -1,4 +1,4 @@
-import type { Product, ProductType, RegulatoryStatus } from "@/types/store";
+import type { CheckoutMode, Product, ProductType, RegulatoryStatus } from "@/types/store";
 
 export const productTypeLabels: Record<ProductType, string> = {
   unclassified: "Sem classificação",
@@ -46,6 +46,17 @@ export function getProductComplianceIssues(product: Product): string[] {
 
 export function isProductPubliclySellable(product: Product): boolean {
   return product.active && getProductComplianceIssues(product).length === 0;
+}
+
+/**
+ * O catálogo da Junior Imports finaliza solicitações pelo WhatsApp. Nesse modo,
+ * um produto ativo e com estoque pode entrar no carrinho mesmo quando ainda
+ * exige confirmação das informações pela loja. Itens bloqueados continuam fora
+ * do fluxo e o modo demonstrativo mantém a regra regulatória mais restritiva.
+ */
+export function canAddProductToCart(product: Product, checkoutMode: CheckoutMode): boolean {
+  if (!product.active || product.stock <= 0 || product.regulatoryStatus === "blocked") return false;
+  return isProductPubliclySellable(product) || checkoutMode === "whatsapp";
 }
 
 export function isProductVisibleInCatalog(product: Product): boolean {

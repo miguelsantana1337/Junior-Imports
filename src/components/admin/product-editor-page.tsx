@@ -39,8 +39,8 @@ const steps = [
 const stepFields: Array<Array<keyof Product>> = [
   ["name", "sku", "categoryId", "brand", "description"],
   ["imageUrl", "imageUrls"],
-  ["price", "compareAt", "stock", "badge", "rating", "reviews", "accent"],
-  ["name", "sku", "categoryId", "brand", "description", "imageUrl", "imageUrls", "price", "compareAt", "stock", "badge", "rating", "reviews", "accent", "featured", "active"],
+  ["price", "compareAt", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent"],
+  ["name", "sku", "categoryId", "brand", "description", "imageUrl", "imageUrls", "price", "compareAt", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent", "featured", "active"],
 ];
 
 function withGallery(product: Product): Product {
@@ -64,7 +64,9 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
     brand: "",
     price: 0,
     compareAt: 0,
+    costPrice: 0,
     stock: 0,
+    minStock: 5,
     badge: "",
     accent: data.settings.primaryColor,
     description: "",
@@ -400,11 +402,14 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
               <div className="product-editor-fields">
                 <label>Preço de venda (R$)<input type="number" step="0.01" min="0" value={form.price} aria-invalid={Boolean(fieldErrors.price)} onChange={(event) => field("price", Number(event.target.value))} autoFocus />{issue("price")}</label>
                 <label>Preço anterior (R$)<input type="number" step="0.01" min="0" value={form.compareAt} aria-invalid={Boolean(fieldErrors.compareAt)} onChange={(event) => field("compareAt", Number(event.target.value))} />{issue("compareAt")}</label>
+                <label>Custo do produto (R$)<input type="number" step="0.01" min="0" value={form.costPrice} aria-invalid={Boolean(fieldErrors.costPrice)} onChange={(event) => field("costPrice", Number(event.target.value))} />{issue("costPrice")}<small>Usado para calcular margem e lucro.</small></label>
                 <label>Quantidade em estoque<input type="number" min="0" value={form.stock} aria-invalid={Boolean(fieldErrors.stock)} onChange={(event) => field("stock", Number(event.target.value))} />{issue("stock")}</label>
+                <label>Estoque mínimo<input type="number" min="0" value={form.minStock} aria-invalid={Boolean(fieldErrors.minStock)} onChange={(event) => field("minStock", Number(event.target.value))} />{issue("minStock")}<small>Gera alerta de reposição.</small></label>
                 <label>Cor do mockup<input className="product-color-input" type="color" value={form.accent} aria-invalid={Boolean(fieldErrors.accent)} onChange={(event) => field("accent", event.target.value)} />{issue("accent")}</label>
                 <label>Avaliação<input type="number" min="0" max="5" step="0.1" value={form.rating} aria-invalid={Boolean(fieldErrors.rating)} onChange={(event) => field("rating", Number(event.target.value))} />{issue("rating")}</label>
                 <label>Número de avaliações<input type="number" min="0" value={form.reviews} aria-invalid={Boolean(fieldErrors.reviews)} onChange={(event) => field("reviews", Number(event.target.value))} />{issue("reviews")}</label>
               </div>
+              {form.price > 0 && <div className="product-profit-preview"><span>Lucro bruto por unidade</span><strong>{formatMoney(Math.max(0, form.price - form.costPrice))}</strong><small>{form.price ? `${(((form.price - form.costPrice) / form.price) * 100).toFixed(1)}% de margem antes das demais despesas` : "Defina o preço de venda"}</small></div>}
               {form.compareAt > form.price && form.price > 0 && <div className="product-editor-discount"><IconCheck /><div><strong>Oferta configurada</strong><small>O cliente verá {Math.round((1 - form.price / form.compareAt) * 100)}% de desconto.</small></div></div>}
             </section>
           )}

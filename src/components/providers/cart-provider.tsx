@@ -10,7 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { calculateCart } from "@/lib/commerce";
-import { isProductPubliclySellable } from "@/lib/product-compliance";
+import { canAddProductToCart } from "@/lib/product-compliance";
 import type { CartLine, Coupon, PaymentMethod } from "@/types/store";
 import { useStore } from "./store-provider";
 
@@ -19,6 +19,7 @@ interface CartContextValue {
   favorites: string[];
   coupon: Coupon | null;
   drawerOpen: boolean;
+  ready: boolean;
   itemCount: number;
   addItem: (productId: string, quantity?: number) => void;
   updateItem: (productId: string, quantity: number) => void;
@@ -72,7 +73,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addItem = useCallback(
     (productId: string, quantity = 1) => {
       const product = data.products.find((item) => item.id === productId);
-      if (!product || !isProductPubliclySellable(product) || product.stock <= 0) return;
+      if (!product || !canAddProductToCart(product, data.settings.checkoutMode)) return;
       setLines((current) => {
         const existing = current.find((line) => line.productId === productId);
         if (existing) {
@@ -88,13 +89,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
         ];
       });
     },
-    [data.products],
+    [data.products, data.settings.checkoutMode],
   );
 
   const updateItem = useCallback(
     (productId: string, quantity: number) => {
       const product = data.products.find((item) => item.id === productId);
-      if (!product || !isProductPubliclySellable(product)) {
+      if (!product || !canAddProductToCart(product, data.settings.checkoutMode)) {
         setLines((current) => current.filter((line) => line.productId !== productId));
         return;
       }
@@ -108,7 +109,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
             ),
       );
     },
-    [data.products],
+    [data.products, data.settings.checkoutMode],
   );
 
   const removeItem = useCallback(
@@ -157,6 +158,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       favorites,
       coupon,
       drawerOpen,
+      ready: hydrated,
       itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
       addItem,
       updateItem,
@@ -172,6 +174,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       favorites,
       coupon,
       drawerOpen,
+      hydrated,
       addItem,
       updateItem,
       removeItem,

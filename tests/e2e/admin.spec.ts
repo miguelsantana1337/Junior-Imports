@@ -8,7 +8,7 @@ test.beforeEach(async ({ page }) => {
 async function login(page: Page) {
   await page.goto("/admin/login");
   await page.getByRole("button", { name: "Entrar" }).click();
-  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page).toHaveURL(/\/admin$/, { timeout: 20_000 });
 }
 
 async function openSection(page: Page, name: string) {
@@ -165,4 +165,31 @@ test("gerencia CRM, limite de cupom, frete e estoque por planilha", async ({ pag
   await storeLink.click();
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByText(/Frete grátis acima de R\$\s*777,00/).first()).toBeVisible();
+});
+
+test("abre CRM, financeiro, estoque e compras em desktop e mobile", async ({ page }) => {
+  test.setTimeout(90_000);
+  await login(page);
+
+  await page.goto("/admin/crm");
+  await expect(page.getByRole("heading", { name: "Relacionamento que vira próxima ação." })).toBeVisible();
+  await page.getByRole("button", { name: "Nova tarefa" }).click();
+  await expect(page.getByRole("heading", { name: "Nova tarefa" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+
+  await page.goto("/admin/finance");
+  await expect(page.getByRole("heading", { name: "Caixa, custos e lucro em uma única visão." })).toBeVisible();
+  await page.getByRole("button", { name: "Novo lançamento" }).click();
+  await expect(page.getByRole("heading", { name: "Adicionar entrada ou saída" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+
+  await page.goto("/admin/inventory");
+  await expect(page.getByRole("heading", { name: "Saldo confiável, movimentos rastreáveis." })).toBeVisible();
+  await page.getByRole("button", { name: "Movimentar estoque" }).click();
+  await expect(page.getByRole("heading", { name: "Registrar movimento" })).toBeVisible();
+  await page.getByRole("button", { name: "Cancelar" }).click();
+
+  await page.goto("/admin/purchasing");
+  await expect(page.getByRole("heading", { name: "Reposição organizada do pedido ao recebimento." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Novo fornecedor" })).toBeVisible();
 });

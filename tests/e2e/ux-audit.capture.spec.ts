@@ -17,7 +17,7 @@ test("captura o painel atual em desktop", async ({ page }) => {
   await expect(page).toHaveURL(/\/admin$/);
   await page.screenshot({ path: path.join(auditDir, "02-admin-desktop.png"), fullPage: false });
   await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name: "Banners", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Banners rotativos" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Banners rotativos", level: 1 })).toBeVisible();
   await page.screenshot({ path: path.join(auditDir, "03-banners-desktop.png"), fullPage: false });
 });
 

@@ -70,6 +70,7 @@ export function CheckoutScreen() {
       name: product!.name,
       quantity: line.quantity,
       unitPrice: product!.price,
+      unitCost: product!.costPrice,
     }));
     const nextNumber = data.orders.reduce((max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000), 1000) + 1;
     let persisted: PersistedOrder | null = null;

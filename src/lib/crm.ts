@@ -43,6 +43,9 @@ function derivedCustomer(order: Order): Customer {
     source: "other",
     tags: [],
     notes: "",
+    assignedTo: "",
+    whatsappConsent: false,
+    emailConsent: false,
     createdAt: order.createdAt,
     updatedAt: order.createdAt,
   };

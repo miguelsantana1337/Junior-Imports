@@ -8,18 +8,19 @@ import { useStore } from "@/components/providers/store-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { discountPercent, stockLabel } from "@/lib/commerce";
 import { formatMoney } from "@/lib/format";
-import { isProductPubliclySellable } from "@/lib/product-compliance";
+import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { Product } from "@/types/store";
 
 export function ProductCard({ product }: { product: Product }) {
-  const { favorites, toggleFavorite, addItem, setDrawerOpen } = useCart();
+  const { favorites, toggleFavorite, addItem, setDrawerOpen, ready: cartReady } = useCart();
   const { data } = useStore();
   const toast = useToast();
   const stock = stockLabel(product);
   const discount = discountPercent(product);
   const favorite = favorites.includes(product.id);
   const orderable = isProductPubliclySellable(product);
+  const cartEligible = canAddProductToCart(product, data.settings.checkoutMode);
   const detailHref = withStorefrontPath(data.tenant.storefrontPath, `/produtos/${product.slug}`);
 
   return (
@@ -43,11 +44,11 @@ export function ProductCard({ product }: { product: Product }) {
           <div className="price-stack">
             {product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}
             <strong>{formatMoney(product.price)}</strong>
-            <small>{orderable ? `${data.settings.pixDiscount}% OFF no Pix` : "Consulte a disponibilidade"}</small>
+            <small>{orderable ? `${data.settings.pixDiscount}% OFF no Pix` : cartEligible ? "Confirmação pelo WhatsApp" : "Consulte a disponibilidade"}</small>
           </div>
-          {orderable ? <button
+          {cartEligible ? <button
               className="add-button"
-              disabled={product.stock <= 0}
+              disabled={!cartReady || product.stock <= 0}
               onClick={() => {
                 addItem(product.id);
                 toast(`${product.name} adicionado ao carrinho.`);

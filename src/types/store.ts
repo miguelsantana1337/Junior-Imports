@@ -76,7 +76,9 @@ export interface Product {
   brand: string;
   price: number;
   compareAt: number;
+  costPrice: number;
   stock: number;
+  minStock: number;
   badge: string;
   accent: string;
   description: string;
@@ -215,8 +217,40 @@ export interface Customer {
   source: CustomerSource;
   tags: string[];
   notes: string;
+  assignedTo: string;
+  whatsappConsent: boolean;
+  emailConsent: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export type CustomerTaskPriority = "low" | "medium" | "high" | "urgent";
+export type CustomerTaskStatus = "open" | "completed" | "cancelled";
+
+export interface CustomerTask {
+  id: string;
+  customerId: string;
+  title: string;
+  dueAt: string;
+  priority: CustomerTaskPriority;
+  status: CustomerTaskStatus;
+  assignedTo: string;
+  notes: string;
+  createdAt: string;
+  completedAt: string;
+}
+
+export type CustomerContactChannel = "whatsapp" | "phone" | "instagram" | "email" | "other";
+
+export interface CustomerContact {
+  id: string;
+  customerId: string;
+  channel: CustomerContactChannel;
+  result: "answered" | "no_answer" | "sale" | "follow_up" | "opt_out";
+  summary: string;
+  nextStepAt: string;
+  actorEmail: string;
+  createdAt: string;
 }
 
 export type CustomerSegment = "new" | "active" | "recurring" | "vip" | "at_risk" | "inactive";
@@ -288,6 +322,7 @@ export interface OrderItem {
   name: string;
   quantity: number;
   unitPrice: number;
+  unitCost: number;
 }
 
 export interface OrderCustomer {
@@ -318,6 +353,90 @@ export interface Order {
   couponCode: string;
   internalNotes: string;
   trackingCode: string;
+}
+
+export type FinancialTransactionType = "income" | "expense";
+export type FinancialTransactionStatus = "pending" | "paid" | "cancelled";
+
+export interface FinancialTransaction {
+  id: string;
+  type: FinancialTransactionType;
+  status: FinancialTransactionStatus;
+  description: string;
+  amount: number;
+  category: string;
+  account: string;
+  costCenter: string;
+  dueDate: string;
+  paidAt: string;
+  orderId: string;
+  purchaseOrderId: string;
+  recurring: boolean;
+  notes: string;
+  createdAt: string;
+}
+
+export type InventoryMovementType = "opening" | "purchase" | "sale" | "return" | "adjustment" | "loss" | "transfer";
+
+export interface InventoryMovement {
+  id: string;
+  productId: string;
+  type: InventoryMovementType;
+  quantity: number;
+  balanceAfter: number;
+  unitCost: number;
+  referenceType: string;
+  referenceId: string;
+  note: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
+export interface ProductLot {
+  id: string;
+  productId: string;
+  code: string;
+  expiryDate: string;
+  quantity: number;
+  status: "available" | "blocked" | "expired";
+  createdAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  taxId: string;
+  email: string;
+  phone: string;
+  leadTimeDays: number;
+  notes: string;
+  active: boolean;
+  createdAt: string;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  unitCost: number;
+  lotCode: string;
+  expiryDate: string;
+}
+
+export type PurchaseOrderStatus = "draft" | "ordered" | "partial" | "received" | "cancelled";
+
+export interface PurchaseOrder {
+  id: string;
+  code: string;
+  supplierId: string;
+  status: PurchaseOrderStatus;
+  expectedAt: string;
+  receivedAt: string;
+  total: number;
+  notes: string;
+  items: PurchaseOrderItem[];
+  createdAt: string;
 }
 
 export type MessageChannel = "whatsapp" | "email";
@@ -351,8 +470,12 @@ export type AdminRole = "owner" | "manager" | "editor" | "support" | "viewer";
 
 export type AdminPermission =
   | "dashboard"
+  | "crm"
   | "customers"
   | "orders"
+  | "finance"
+  | "inventory"
+  | "purchasing"
   | "catalog"
   | "store"
   | "marketing"
@@ -396,12 +519,19 @@ export interface StoreData {
   pageBlocks: PageBlock[];
   coupons: Coupon[];
   customers: Customer[];
+  customerTasks: CustomerTask[];
+  customerContacts: CustomerContact[];
   couponRedemptions: CouponRedemption[];
   catalogImports: CatalogImportRun[];
   trustItems: TrustItem[];
   benefits: Benefit[];
   faqs: Faq[];
   orders: Order[];
+  financialTransactions: FinancialTransaction[];
+  inventoryMovements: InventoryMovement[];
+  productLots: ProductLot[];
+  suppliers: Supplier[];
+  purchaseOrders: PurchaseOrder[];
   messageAutomations: MessageAutomation[];
   messageLogs: MessageLog[];
   teamMembers: AdminUser[];

@@ -36,10 +36,17 @@ function normalizeData(candidate: StoreData, fallback: StoreData): StoreData {
     messageAutomations: candidate.messageAutomations ?? fallback.messageAutomations,
     messageLogs: candidate.messageLogs ?? fallback.messageLogs,
     customers: candidate.customers ?? fallback.customers,
+    customerTasks: candidate.customerTasks ?? fallback.customerTasks,
+    customerContacts: candidate.customerContacts ?? fallback.customerContacts,
     couponRedemptions: candidate.couponRedemptions ?? fallback.couponRedemptions,
     catalogImports: candidate.catalogImports ?? fallback.catalogImports,
     teamMembers: candidate.teamMembers ?? fallback.teamMembers,
     auditLogs: candidate.auditLogs ?? fallback.auditLogs,
+    financialTransactions: candidate.financialTransactions ?? fallback.financialTransactions,
+    inventoryMovements: candidate.inventoryMovements ?? fallback.inventoryMovements,
+    productLots: candidate.productLots ?? fallback.productLots,
+    suppliers: candidate.suppliers ?? fallback.suppliers,
+    purchaseOrders: candidate.purchaseOrders ?? fallback.purchaseOrders,
   };
 }
 
@@ -99,7 +106,7 @@ export function StoreProvider({
       const storedOrder = { ...order, customerId };
       const customer: Customer = existingCustomer
         ? { ...existingCustomer, name: order.customer.name, email: order.customer.email, phone: order.customer.phone, city: order.customer.city, state: order.customer.state, updatedAt: now }
-        : { id: customerId, name: order.customer.name, email: order.customer.email, phone: order.customer.phone, city: order.customer.city, state: order.customer.state, source: "whatsapp", tags: [], notes: "", createdAt: now, updatedAt: now };
+        : { id: customerId, name: order.customer.name, email: order.customer.email, phone: order.customer.phone, city: order.customer.city, state: order.customer.state, source: "whatsapp", tags: [], notes: "", assignedTo: "", whatsappConsent: true, emailConsent: false, createdAt: now, updatedAt: now };
       const customers = existingCustomer
         ? current.customers.map((item) => item.id === existingCustomer.id ? customer : item)
         : [customer, ...current.customers];
@@ -110,10 +117,32 @@ export function StoreProvider({
         const redemption: CouponRedemption = { id: `redemption-${crypto.randomUUID()}`, couponId: coupon.id, couponCode: coupon.code, customerId, orderId: order.id, normalizedEmail: email, normalizedPhone: phone, discount: couponDiscount, status: order.status === "Cancelado" ? "released" : "used", usedAt: now };
         couponRedemptions = [redemption, ...couponRedemptions];
       }
+      const products = current.products.map((product) => {
+        const item = storedOrder.items.find((candidate) => candidate.productId === product.id);
+        return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
+      });
+      const inventoryMovements = storedOrder.items.map((item) => {
+        const product = products.find((candidate) => candidate.id === item.productId);
+        return {
+          id: `sale-${storedOrder.id}-${item.productId}`,
+          productId: item.productId,
+          type: "sale" as const,
+          quantity: -item.quantity,
+          balanceAfter: product?.stock ?? 0,
+          unitCost: item.unitCost,
+          referenceType: "order",
+          referenceId: storedOrder.id,
+          note: `Reserva automática do pedido ${storedOrder.code}.`,
+          actorEmail: "",
+          createdAt: now,
+        };
+      });
       return {
         ...current,
+        products,
         customers,
         couponRedemptions,
+        inventoryMovements: [...inventoryMovements, ...current.inventoryMovements],
         orders: [storedOrder, ...current.orders],
         messageLogs: [
           ...createMessageLogs(storedOrder, current.messageAutomations ?? []),

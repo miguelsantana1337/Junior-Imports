@@ -42,8 +42,17 @@ const navigationGroups = [
     label: "Operação",
     items: [
       { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
-      { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
+      { href: "/admin/crm", label: "CRM", icon: IconUsers, permission: "crm" },
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
+    ],
+  },
+  {
+    label: "Gestão",
+    items: [
+      { href: "/admin/finance", label: "Financeiro", icon: IconReceipt2, permission: "finance" },
+      { href: "/admin/inventory", label: "Estoque e lotes", icon: IconBox, permission: "inventory" },
+      { href: "/admin/purchasing", label: "Compras", icon: IconCloudCheck, permission: "purchasing" },
+      { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
     ],
   },
   {
@@ -92,7 +101,11 @@ const titles: Record<string, [string, string]> = {
   "/admin/coupons": ["MARKETING", "Cupons"],
   "/admin/messages": ["MARKETING", "Mensagens automáticas"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos demonstrativos"],
+  "/admin/crm": ["CRM", "Relacionamento e tarefas"],
   "/admin/customers": ["CRM", "Clientes e relacionamento"],
+  "/admin/finance": ["FINANCEIRO", "Caixa e resultados"],
+  "/admin/inventory": ["ERP", "Estoque e lotes"],
+  "/admin/purchasing": ["ERP", "Compras e fornecedores"],
   "/admin/settings": ["SISTEMA", "Configurações"],
   "/admin/users": ["SISTEMA", "Usuários e permissões"],
   "/admin/data": ["SISTEMA", "Dados e backup"],
@@ -125,7 +138,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const can = (permission: string) => hasAdminPermission(user.role, user.permissions, permission as AdminPermission);
   const visibleNavigation = navigation.filter((item) => can(item.permission));
   const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
-  const lowStockCount = data.products.filter((product) => product.active && product.stock <= 10).length;
+  const lowStockCount = data.products.filter((product) => product.active && product.stock <= product.minStock).length;
   const pendingOrderCount = data.orders.filter((order) => ["Novo", "Aguardando pagamento", "Pago", "Preparando"].includes(order.status)).length;
   const notificationCount = Number(lowStockCount > 0) + Number(pendingOrderCount > 0);
   const searchDestination = useMemo(() => {

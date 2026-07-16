@@ -6,8 +6,12 @@ export const adminPermissionCatalog: Array<{
   description: string;
 }> = [
   { key: "dashboard", label: "Visão geral", description: "Indicadores, prioridades e atividade recente." },
+  { key: "crm", label: "CRM operacional", description: "Tarefas, contatos, carteira, segmentos e acompanhamento diário." },
   { key: "customers", label: "Clientes e CRM", description: "Cadastro, histórico, recorrência e relacionamento com clientes." },
   { key: "orders", label: "Pedidos", description: "Consultar pedidos e atualizar seus status." },
+  { key: "finance", label: "Financeiro", description: "Custos, lançamentos, contas, margem, caixa e relatórios." },
+  { key: "inventory", label: "Estoque e lotes", description: "Movimentos, saldos, inventário, estoque mínimo e validade." },
+  { key: "purchasing", label: "Compras e fornecedores", description: "Fornecedores, ordens de compra e recebimentos." },
   { key: "catalog", label: "Catálogo", description: "Produtos, categorias, estoque e ordenação." },
   { key: "store", label: "Loja e layout", description: "Páginas, containers, banners e conteúdo da home." },
   { key: "marketing", label: "Marketing", description: "Cupons e mensagens automáticas." },
@@ -28,15 +32,19 @@ export const adminRoleLabels: Record<AdminRole, string> = {
 
 export const adminRolePermissions: Record<AdminRole, AdminPermission[]> = {
   owner: allAdminPermissions,
-  manager: ["dashboard", "customers", "orders", "catalog", "store", "marketing", "settings", "data"],
+  manager: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data"],
   editor: ["dashboard", "catalog", "store", "marketing"],
-  support: ["dashboard", "customers", "orders"],
+  support: ["dashboard", "crm", "customers", "orders"],
   viewer: ["dashboard"],
 };
 
 export const sectionPermissions: Record<string, AdminPermission> = {
   customers: "customers",
+  crm: "crm",
   orders: "orders",
+  finance: "finance",
+  inventory: "inventory",
+  purchasing: "purchasing",
   import: "catalog",
   products: "catalog",
   categories: "catalog",

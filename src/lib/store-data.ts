@@ -14,17 +14,24 @@ import type {
   Coupon,
   CouponRedemption,
   Customer,
+  CustomerContact,
+  CustomerTask,
   Faq,
+  FinancialTransaction,
   HomeSection,
+  InventoryMovement,
   MessageAutomation,
   MessageLog,
   Order,
   PageBlock,
   Product,
+  ProductLot,
+  PurchaseOrder,
   StoreData,
   StorePage,
   StoreSettings,
   StoreTenant,
+  Supplier,
   TrustItem,
 } from "@/types/store";
 import { createClient } from "@/lib/supabase/server";
@@ -58,7 +65,9 @@ function mapProduct(row: Row, categories: Category[]): Product {
     brand: str(row.brand),
     price: num(row.price),
     compareAt: num(row.compare_at),
+    costPrice: num(row.cost_price),
     stock: num(row.stock),
+    minStock: num(row.min_stock),
     badge: str(row.badge),
     accent: str(row.accent) || "#1677ff",
     description: str(row.description),
@@ -179,8 +188,117 @@ function mapCustomer(row: Row): Customer {
     source: (str(row.source) || "other") as Customer["source"],
     tags: stringList(row.tags),
     notes: str(row.notes),
+    assignedTo: str(row.assigned_to),
+    whatsappConsent: Boolean(row.whatsapp_consent),
+    emailConsent: Boolean(row.email_consent),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
+  };
+}
+
+function mapCustomerTask(row: Row): CustomerTask {
+  return {
+    id: str(row.id),
+    customerId: str(row.customer_id),
+    title: str(row.title),
+    dueAt: str(row.due_at),
+    priority: (str(row.priority) || "medium") as CustomerTask["priority"],
+    status: (str(row.status) || "open") as CustomerTask["status"],
+    assignedTo: str(row.assigned_to),
+    notes: str(row.notes),
+    createdAt: str(row.created_at),
+    completedAt: str(row.completed_at),
+  };
+}
+
+function mapCustomerContact(row: Row): CustomerContact {
+  return {
+    id: str(row.id),
+    customerId: str(row.customer_id),
+    channel: (str(row.channel) || "other") as CustomerContact["channel"],
+    result: (str(row.result) || "answered") as CustomerContact["result"],
+    summary: str(row.summary),
+    nextStepAt: str(row.next_step_at),
+    actorEmail: str(row.actor_email),
+    createdAt: str(row.created_at),
+  };
+}
+
+function mapFinancialTransaction(row: Row): FinancialTransaction {
+  return {
+    id: str(row.id),
+    type: str(row.type) as FinancialTransaction["type"],
+    status: str(row.status) as FinancialTransaction["status"],
+    description: str(row.description),
+    amount: num(row.amount),
+    category: str(row.category),
+    account: str(row.account),
+    costCenter: str(row.cost_center),
+    dueDate: str(row.due_date),
+    paidAt: str(row.paid_at),
+    orderId: str(row.order_id),
+    purchaseOrderId: str(row.purchase_order_id),
+    recurring: Boolean(row.recurring),
+    notes: str(row.notes),
+    createdAt: str(row.created_at),
+  };
+}
+
+function mapInventoryMovement(row: Row): InventoryMovement {
+  return {
+    id: str(row.id),
+    productId: str(row.product_id),
+    type: str(row.type) as InventoryMovement["type"],
+    quantity: num(row.quantity),
+    balanceAfter: num(row.balance_after),
+    unitCost: num(row.unit_cost),
+    referenceType: str(row.reference_type),
+    referenceId: str(row.reference_id),
+    note: str(row.note),
+    actorEmail: str(row.actor_email),
+    createdAt: str(row.created_at),
+  };
+}
+
+function mapProductLot(row: Row): ProductLot {
+  return {
+    id: str(row.id),
+    productId: str(row.product_id),
+    code: str(row.code),
+    expiryDate: str(row.expiry_date),
+    quantity: num(row.quantity),
+    status: (str(row.status) || "available") as ProductLot["status"],
+    createdAt: str(row.created_at),
+  };
+}
+
+function mapSupplier(row: Row): Supplier {
+  return {
+    id: str(row.id),
+    name: str(row.name),
+    taxId: str(row.tax_id),
+    email: str(row.email),
+    phone: str(row.phone),
+    leadTimeDays: num(row.lead_time_days),
+    notes: str(row.notes),
+    active: Boolean(row.active),
+    createdAt: str(row.created_at),
+  };
+}
+
+function mapPurchaseOrder(row: Row): PurchaseOrder {
+  const items = Array.isArray(row.purchase_order_items) ? row.purchase_order_items as Row[] : [];
+  return {
+    id: str(row.id),
+    code: str(row.code),
+    supplierId: str(row.supplier_id),
+    status: str(row.status) as PurchaseOrder["status"],
+    expectedAt: str(row.expected_at),
+    receivedAt: str(row.received_at),
+    total: num(row.total),
+    notes: str(row.notes),
+    items: items.map((item) => ({ id: str(item.id), productId: str(item.product_id), name: str(item.product_name), quantity: num(item.quantity), unitCost: num(item.unit_cost), lotCode: str(item.lot_code), expiryDate: str(item.expiry_date) })),
+    createdAt: str(row.created_at),
   };
 }
 
@@ -334,6 +452,7 @@ function mapOrder(row: Row): Order {
       name: str(item.product_name),
       quantity: num(item.quantity),
       unitPrice: num(item.unit_price),
+      unitCost: num(item.unit_cost),
     })),
     subtotal: num(row.subtotal),
     discount: num(row.discount),
@@ -451,6 +570,27 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     options.admin
       ? scopeTenant(supabase.from("catalog_imports").select("*"), tenantId).order("created_at", { ascending: false }).limit(50)
       : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("customer_tasks").select("*"), tenantId).order("due_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("customer_contacts").select("*"), tenantId).order("created_at", { ascending: false }).limit(300)
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("financial_transactions").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("inventory_movements").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("product_lots").select("*"), tenantId).order("expiry_date", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("suppliers").select("*"), tenantId).order("name")
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("purchase_orders").select("*, purchase_order_items(*)"), tenantId).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (resolution.persisted) {
@@ -498,12 +638,19 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     sections: queries[4].error ? fallback.sections : ((queries[4].data ?? []) as Row[]).map(mapSection),
     coupons,
     customers: options.admin && !queries[16].error ? ((queries[16].data ?? []) as Row[]).map(mapCustomer) : [],
+    customerTasks: options.admin && !queries[19].error ? ((queries[19].data ?? []) as Row[]).map(mapCustomerTask) : fallback.customerTasks,
+    customerContacts: options.admin && !queries[20].error ? ((queries[20].data ?? []) as Row[]).map(mapCustomerContact) : fallback.customerContacts,
     couponRedemptions,
     catalogImports: options.admin && !queries[18].error ? ((queries[18].data ?? []) as Row[]).map(mapCatalogImport) : [],
     trustItems: queries[6].error ? fallback.trustItems : ((queries[6].data ?? []) as Row[]).map((row) => mapSimpleOrdered<TrustItem>(row)),
     benefits: queries[7].error ? fallback.benefits : ((queries[7].data ?? []) as Row[]).map((row) => mapSimpleOrdered<Benefit>(row)),
     faqs: queries[8].error ? fallback.faqs : ((queries[8].data ?? []) as Row[]).map((row) => mapSimpleOrdered<Faq>(row)),
     orders: queries[9].error ? fallback.orders : ((queries[9].data ?? []) as Row[]).map(mapOrder),
+    financialTransactions: options.admin && !queries[21].error ? ((queries[21].data ?? []) as Row[]).map(mapFinancialTransaction) : fallback.financialTransactions,
+    inventoryMovements: options.admin && !queries[22].error ? ((queries[22].data ?? []) as Row[]).map(mapInventoryMovement) : fallback.inventoryMovements,
+    productLots: options.admin && !queries[23].error ? ((queries[23].data ?? []) as Row[]).map(mapProductLot) : fallback.productLots,
+    suppliers: options.admin && !queries[24].error ? ((queries[24].data ?? []) as Row[]).map(mapSupplier) : fallback.suppliers,
+    purchaseOrders: options.admin && !queries[25].error ? ((queries[25].data ?? []) as Row[]).map(mapPurchaseOrder) : fallback.purchaseOrders,
     pages: queries[10].error || (!resolution.persisted && !queries[10].data?.length) ? fallback.pages : ((queries[10].data ?? []) as Row[]).map(mapPage),
     pageBlocks: queries[11].error || (!resolution.persisted && !queries[11].data?.length) ? fallback.pageBlocks : ((queries[11].data ?? []) as Row[]).map(mapPageBlock),
     messageAutomations: options.admin

@@ -31,7 +31,9 @@ const products = productRows.map((row, index) => {
     brand: row[3],
     price: row[4],
     compareAt: row[5],
+    costPrice: 0,
     stock: row[6],
+    minStock: 5,
     badge: row[7],
     accent: row[8],
     description: `${row[1]} disponível no catálogo demonstrativo da ${platformConfig.storeName}.`,
@@ -176,9 +178,16 @@ export const seedData: StoreData = {
     { id: "coupon-1", code: couponCode, type: "percent", value: 10, minimum: 0, active: true, startsAt: "", expiresAt: "", totalUsageLimit: 100, perCustomerLimit: 1, firstOrderOnly: true, usageCount: 0 },
   ],
   customers: [],
+  customerTasks: [],
+  customerContacts: [],
   couponRedemptions: [],
   catalogImports: [],
   orders: [],
+  financialTransactions: [],
+  inventoryMovements: [],
+  productLots: [],
+  suppliers: [],
+  purchaseOrders: [],
   messageAutomations: [
     { id: "automation-new", name: "Pedido recebido", triggerStatus: "Novo", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Recebemos o pedido demonstrativo {{pedido}} no valor de {{total}}.", active: true, order: 1 },
     { id: "automation-paid", name: "Pagamento confirmado", triggerStatus: "Pago", channel: "email", subject: "Pagamento confirmado — {{pedido}}", message: "Olá, {{cliente}}! O pagamento demonstrativo do pedido {{pedido}} foi marcado como confirmado.", active: true, order: 2 },
@@ -186,7 +195,7 @@ export const seedData: StoreData = {
   messageLogs: [],
   auditLogs: [],
   teamMembers: [
-    { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "customers", "orders", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: new Date().toISOString(), lastSignInAt: "", isCurrent: true },
+    { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: new Date().toISOString(), lastSignInAt: "", isCurrent: true },
   ],
 };
 

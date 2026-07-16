@@ -24,7 +24,9 @@ export const productSchema = z.object({
   brand: z.string().trim().min(2, "Informe a marca."),
   price: money,
   compareAt: money,
+  costPrice: money,
   stock: z.coerce.number().int().min(0),
+  minStock: z.coerce.number().int().min(0),
   badge: z.string().trim().max(40),
   accent: z.string().regex(/^#[0-9a-f]{6}$/i),
   description: z.string().trim().min(10, "Descreva o produto."),
@@ -132,12 +134,77 @@ export const customerSchema = z.object({
   source: z.enum(["whatsapp", "instagram", "referral", "other"]),
   tags: z.array(z.string().trim().min(1).max(40)).max(20),
   notes: z.string().trim().max(2000, "Use no máximo 2.000 caracteres."),
+  assignedTo: z.string().trim().max(160),
+  whatsappConsent: z.boolean(),
+  emailConsent: z.boolean(),
   createdAt: z.string(),
   updatedAt: z.string(),
 }).superRefine((customer, context) => {
   if (!customer.email && !customer.phone) {
     context.addIssue({ code: "custom", path: ["email"], message: "Informe o e-mail ou o WhatsApp do cliente." });
   }
+});
+
+export const customerTaskSchema = z.object({
+  id: z.string().min(1),
+  customerId: z.string().min(1, "Selecione o cliente."),
+  title: z.string().trim().min(3, "Descreva a tarefa."),
+  dueAt: z.string().min(1, "Informe o prazo."),
+  priority: z.enum(["low", "medium", "high", "urgent"]),
+  status: z.enum(["open", "completed", "cancelled"]),
+  assignedTo: z.string().trim().min(3, "Informe o responsável."),
+  notes: z.string().trim().max(1000),
+  createdAt: z.string(),
+  completedAt: z.string(),
+});
+
+export const customerContactSchema = z.object({
+  id: z.string().min(1),
+  customerId: z.string().min(1, "Selecione o cliente."),
+  channel: z.enum(["whatsapp", "phone", "instagram", "email", "other"]),
+  result: z.enum(["answered", "no_answer", "sale", "follow_up", "opt_out"]),
+  summary: z.string().trim().min(5, "Registre um resumo do contato.").max(1500),
+  nextStepAt: z.string(),
+  actorEmail: z.string().trim().email(),
+  createdAt: z.string(),
+});
+
+export const financialTransactionSchema = z.object({
+  id: z.string().min(1),
+  type: z.enum(["income", "expense"]),
+  status: z.enum(["pending", "paid", "cancelled"]),
+  description: z.string().trim().min(3, "Informe a descrição."),
+  amount: z.coerce.number().positive("Informe um valor maior que zero."),
+  category: z.string().trim().min(2, "Informe a categoria."),
+  account: z.string().trim().min(2, "Informe a conta."),
+  costCenter: z.string().trim().min(2, "Informe o centro de custo."),
+  dueDate: z.string().min(1, "Informe o vencimento."),
+  paidAt: z.string(),
+  orderId: z.string(),
+  purchaseOrderId: z.string(),
+  recurring: z.boolean(),
+  notes: z.string().trim().max(1000),
+  createdAt: z.string(),
+});
+
+export const inventoryMovementSchema = z.object({
+  productId: z.string().min(1, "Selecione o produto."),
+  type: z.enum(["opening", "purchase", "sale", "return", "adjustment", "loss", "transfer"]),
+  quantity: z.coerce.number().int().positive("Informe uma quantidade maior que zero."),
+  unitCost: money,
+  note: z.string().trim().min(3, "Informe o motivo do movimento."),
+});
+
+export const supplierSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(2, "Informe o fornecedor."),
+  taxId: z.string().trim().max(30),
+  email: z.union([z.literal(""), z.string().trim().email("Informe um e-mail válido.")]),
+  phone: z.string().trim().max(30),
+  leadTimeDays: z.coerce.number().int().min(0).max(365),
+  notes: z.string().trim().max(1000),
+  active: z.boolean(),
+  createdAt: z.string(),
 });
 
 export const settingsSchema = z.object({
@@ -217,7 +284,7 @@ export const messageAutomationSchema = z.object({
 });
 
 const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
-const adminPermissionSchema = z.enum(["dashboard", "customers", "orders", "catalog", "store", "marketing", "settings", "data", "users"]);
+const adminPermissionSchema = z.enum(["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"]);
 
 export const adminUserCreateSchema = z.object({
   fullName: z.string().trim().min(3, "Informe o nome completo."),
@@ -261,6 +328,11 @@ export type BannerInput = z.infer<typeof bannerSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;
 export type CouponInput = z.infer<typeof couponSchema>;
 export type CustomerInput = z.infer<typeof customerSchema>;
+export type CustomerTaskInput = z.infer<typeof customerTaskSchema>;
+export type CustomerContactInput = z.infer<typeof customerContactSchema>;
+export type FinancialTransactionInput = z.infer<typeof financialTransactionSchema>;
+export type InventoryMovementInput = z.infer<typeof inventoryMovementSchema>;
+export type SupplierInput = z.infer<typeof supplierSchema>;
 export type SettingsInput = z.infer<typeof settingsSchema>;
 export type StorePageInput = z.infer<typeof storePageSchema>;
 export type PageBlockInput = z.infer<typeof pageBlockSchema>;

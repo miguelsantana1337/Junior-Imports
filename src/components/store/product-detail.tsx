@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { ChevronLeft, Heart, MessageCircle, Minus, Plus, ShieldCheck, Truck } from "lucide-react";
+import { ChevronLeft, Heart, MessageCircle, Minus, Plus, ShieldCheck, ShoppingCart, Truck } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
@@ -10,14 +10,14 @@ import { useToast } from "@/components/providers/toast-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { stockLabel } from "@/lib/commerce";
 import { formatMoney, whatsappUrl } from "@/lib/format";
-import { isProductPubliclySellable } from "@/lib/product-compliance";
+import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { normalizeProductImages } from "@/lib/product-images";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { ProductCard } from "./product-card";
 
 export function ProductDetail({ slug }: { slug: string }) {
   const { data } = useStore();
-  const { addItem, favorites, toggleFavorite, setDrawerOpen } = useCart();
+  const { addItem, favorites, toggleFavorite, setDrawerOpen, ready: cartReady } = useCart();
   const toast = useToast();
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState("");
@@ -36,7 +36,13 @@ export function ProductDetail({ slug }: { slug: string }) {
   const stock = stockLabel(product);
   const favorite = favorites.includes(product.id);
   const orderable = isProductPubliclySellable(product);
+  const cartEligible = canAddProductToCart(product, data.settings.checkoutMode);
   const visibleImage = selectedImage && gallery.includes(selectedImage) ? selectedImage : product.imageUrl || gallery[0] || "";
+  const addToCart = () => {
+    addItem(product.id, quantity);
+    toast(`${product.name} adicionado ao carrinho.`);
+    setDrawerOpen(true);
+  };
 
   return (
     <>
@@ -53,16 +59,19 @@ export function ProductDetail({ slug }: { slug: string }) {
             <div className="rating">★★★★★ <span>{product.rating} · {product.reviews} avaliações</span></div>
             <p className="product-long-description">{product.description}</p>
             <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong><small>{data.settings.pixDiscount}% OFF no Pix</small></div>
-            <dl className="product-facts"><div><dt>SKU</dt><dd>{product.sku}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{orderable ? "Disponível" : "Aguardando validação"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
-            {orderable ? <div className="quantity-buy">
+            <dl className="product-facts"><div><dt>SKU</dt><dd>{product.sku}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{orderable ? "Disponível" : cartEligible ? "Confirmação no WhatsApp" : product.stock <= 0 ? "Indisponível" : "Aguardando validação"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
+            {cartEligible ? <div className="product-order-stack">
+              {!orderable && <div className="catalog-validation-notice compact"><ShieldCheck /><div><strong>Solicitação sujeita a confirmação</strong><p>Adicione ao carrinho normalmente. A loja confirma disponibilidade, condições e entrega no WhatsApp.</p></div></div>}
+              <div className="quantity-buy">
                 <div className="quantity-picker"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Diminuir quantidade"><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity((value) => Math.min(product.stock, value + 1))} aria-label="Aumentar quantidade"><Plus /></button></div>
-                <button className="button button-primary button-large" disabled={product.stock <= 0} onClick={() => { addItem(product.id, quantity); toast(`${product.name} adicionado ao carrinho.`); setDrawerOpen(true); }}>Adicionar ao carrinho</button>
-              </div>
-              : <div className="catalog-validation-notice"><div><strong>Produto visível para consulta</strong><p>A liberação para pedido depende da validação das informações no painel.</p></div><a className="button button-primary" href={whatsappUrl(data.settings.whatsapp, `Olá! Gostaria de consultar a disponibilidade de ${product.name}.`)} target="_blank" rel="noreferrer"><MessageCircle /> Consultar no WhatsApp</a></div>}
+                <button className="button button-primary button-large" disabled={!cartReady} onClick={addToCart}><ShoppingCart /> {cartReady ? "Adicionar ao carrinho" : "Preparando carrinho..."}</button>
+              </div></div>
+              : <div className="catalog-validation-notice"><div><strong>{product.stock <= 0 ? "Produto esgotado" : "Produto visível para consulta"}</strong><p>{product.stock <= 0 ? "Consulte a loja para saber quando haverá reposição." : "A liberação para pedido depende da validação das informações no painel."}</p></div><a className="button button-primary" href={whatsappUrl(data.settings.whatsapp, `Olá! Gostaria de consultar a disponibilidade de ${product.name}.`)} target="_blank" rel="noreferrer"><MessageCircle /> Consultar no WhatsApp</a></div>}
             <div className="detail-assurances"><span><ShieldCheck /> {data.settings.checkoutMode === "whatsapp" ? "Pedido enviado direto para a loja" : "Pedido 100% demonstrativo"}</span><span><Truck /> Frete confirmado no atendimento</span></div>
           </div>
         </div>
       </section>
+      {cartEligible && <div className="product-mobile-purchase" aria-label="Compra rápida"><div><small>{quantity} {quantity === 1 ? "unidade" : "unidades"}</small><strong>{formatMoney(product.price * quantity)}</strong></div><button className="button button-primary" disabled={!cartReady} onClick={addToCart} aria-label={`Compra rápida: adicionar ${product.name}`}><ShoppingCart /> Adicionar</button></div>}
       {related.length > 0 && <section className="section related-section"><div className="container"><h2>Produtos relacionados.</h2><div className="product-grid">{related.map((item) => <ProductCard product={item} key={item.id} />)}</div></div></section>}
     </>
   );

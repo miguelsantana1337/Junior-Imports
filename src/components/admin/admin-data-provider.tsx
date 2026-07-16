@@ -32,15 +32,22 @@ import type {
   Category,
   Coupon,
   Customer,
+  CustomerContact,
+  CustomerTask,
+  FinancialTransaction,
   HomeSection,
+  InventoryMovement,
   MessageAutomation,
   OrderStatus,
   PageBlock,
   Product,
+  ProductLot,
+  PurchaseOrder,
   StorePage,
   StoreData,
   StoreSettings,
   StockImportMode,
+  Supplier,
 } from "@/types/store";
 import type { AdminUserCreateInput, AdminUserUpdateInput } from "@/lib/validation";
 
@@ -68,6 +75,16 @@ interface AdminDataContextValue {
   saveCoupon: (coupon: Coupon) => Promise<void>;
   deleteCoupon: (id: string) => Promise<void>;
   saveCustomer: (customer: Customer) => Promise<void>;
+  saveCustomerTask: (task: CustomerTask) => Promise<void>;
+  deleteCustomerTask: (id: string) => Promise<void>;
+  saveCustomerContact: (contact: CustomerContact) => Promise<void>;
+  saveFinancialTransaction: (transaction: FinancialTransaction) => Promise<void>;
+  deleteFinancialTransaction: (id: string) => Promise<void>;
+  recordInventoryMovement: (movement: InventoryMovement) => Promise<void>;
+  saveProductLot: (lot: ProductLot) => Promise<void>;
+  saveSupplier: (supplier: Supplier) => Promise<void>;
+  savePurchaseOrder: (order: PurchaseOrder) => Promise<void>;
+  receivePurchaseOrder: (id: string) => Promise<void>;
   importProducts: (products: Product[], filename: string) => Promise<void>;
   importStock: (rows: StockImportRow[], mode: StockImportMode, filename: string) => Promise<void>;
   moveItem: (key: OrderedKey, id: string, direction: -1 | 1) => Promise<void>;
@@ -88,7 +105,7 @@ interface AdminDataContextValue {
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 function productRecord(product: Product) {
-  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, stock: product.stock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
+  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
 }
 
 export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
@@ -368,10 +385,137 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
           ? current.customers.map((item) => item.id === customer.id ? customer : item)
           : [...current.customers, customer],
       }),
-      () => persist("customers", { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone, normalized_email: normalizeCustomerEmail(customer.email), normalized_phone: normalizeCustomerPhone(customer.phone), city: customer.city, state: customer.state, source: customer.source, tags: customer.tags, notes: customer.notes, updated_at: new Date().toISOString() }),
+      () => persist("customers", { id: customer.id, name: customer.name, email: customer.email, phone: customer.phone, normalized_email: normalizeCustomerEmail(customer.email), normalized_phone: normalizeCustomerPhone(customer.phone), city: customer.city, state: customer.state, source: customer.source, tags: customer.tags, notes: customer.notes, assigned_to: customer.assignedTo, whatsapp_consent: customer.whatsappConsent, email_consent: customer.emailConsent, updated_at: new Date().toISOString() }),
       "Cliente atualizado.",
     );
   }, [commitMutation, persist]);
+
+  const saveCustomerTask = useCallback(async (task: CustomerTask) => {
+    await commitMutation(
+      (current) => ({ ...current, customerTasks: current.customerTasks.some((item) => item.id === task.id) ? current.customerTasks.map((item) => item.id === task.id ? task : item) : [task, ...current.customerTasks] }),
+      () => persist("customer_tasks", { id: task.id, customer_id: task.customerId, title: task.title, due_at: task.dueAt || null, priority: task.priority, status: task.status, assigned_to: task.assignedTo, notes: task.notes, completed_at: task.completedAt || null, created_at: task.createdAt }),
+      task.status === "completed" ? "Tarefa concluída." : "Tarefa salva.",
+    );
+  }, [commitMutation, persist]);
+
+  const deleteCustomerTask = useCallback(async (id: string) => {
+    await commitMutation((current) => ({ ...current, customerTasks: current.customerTasks.filter((task) => task.id !== id) }), () => remove("customer_tasks", id), "Tarefa excluída.");
+  }, [commitMutation, remove]);
+
+  const saveCustomerContact = useCallback(async (contact: CustomerContact) => {
+    await commitMutation(
+      (current) => ({ ...current, customerContacts: [contact, ...current.customerContacts.filter((item) => item.id !== contact.id)] }),
+      () => persist("customer_contacts", { id: contact.id, customer_id: contact.customerId, channel: contact.channel, result: contact.result, summary: contact.summary, next_step_at: contact.nextStepAt || null, actor_email: contact.actorEmail, created_at: contact.createdAt }),
+      "Contato registrado na timeline.",
+    );
+  }, [commitMutation, persist]);
+
+  const saveFinancialTransaction = useCallback(async (transaction: FinancialTransaction) => {
+    await commitMutation(
+      (current) => ({ ...current, financialTransactions: current.financialTransactions.some((item) => item.id === transaction.id) ? current.financialTransactions.map((item) => item.id === transaction.id ? transaction : item) : [transaction, ...current.financialTransactions] }),
+      () => persist("financial_transactions", { id: transaction.id, type: transaction.type, status: transaction.status, description: transaction.description, amount: transaction.amount, category: transaction.category, account: transaction.account, cost_center: transaction.costCenter, due_date: transaction.dueDate || null, paid_at: transaction.paidAt || null, order_id: transaction.orderId || null, purchase_order_id: transaction.purchaseOrderId || null, recurring: transaction.recurring, notes: transaction.notes, created_at: transaction.createdAt }),
+      "Lançamento financeiro salvo.",
+    );
+  }, [commitMutation, persist]);
+
+  const deleteFinancialTransaction = useCallback(async (id: string) => {
+    await commitMutation((current) => ({ ...current, financialTransactions: current.financialTransactions.filter((item) => item.id !== id) }), () => remove("financial_transactions", id), "Lançamento excluído.");
+  }, [commitMutation, remove]);
+
+  const recordInventoryMovement = useCallback(async (movement: InventoryMovement) => {
+    await commitMutation(
+      (current) => ({
+        ...current,
+        products: current.products.map((product) => product.id === movement.productId ? { ...product, stock: movement.balanceAfter } : product),
+        inventoryMovements: [movement, ...current.inventoryMovements],
+      }),
+      async () => {
+        if (!supabase) return;
+        const { error } = await supabase.rpc("record_inventory_movement", {
+          p_tenant_id: dataRef.current.tenant.id,
+          p_product_id: movement.productId,
+          p_type: movement.type,
+          p_quantity: Math.abs(movement.quantity),
+          p_unit_cost: movement.unitCost,
+          p_note: movement.note,
+          p_reference_type: movement.referenceType,
+          p_reference_id: movement.referenceId,
+          p_actor_email: movement.actorEmail,
+        });
+        if (!error) return;
+        if (error.code !== "PGRST202" && error.code !== "42883") throw new Error(error.message);
+        await update("products", movement.productId, { stock: movement.balanceAfter });
+        await persist("inventory_movements", { id: movement.id, product_id: movement.productId, type: movement.type, quantity: movement.quantity, balance_after: movement.balanceAfter, unit_cost: movement.unitCost, reference_type: movement.referenceType, reference_id: movement.referenceId, note: movement.note, actor_email: movement.actorEmail, created_at: movement.createdAt });
+      },
+      "Movimento de estoque registrado.",
+    );
+  }, [commitMutation, persist, supabase, update]);
+
+  const saveProductLot = useCallback(async (lot: ProductLot) => {
+    await commitMutation(
+      (current) => ({ ...current, productLots: current.productLots.some((item) => item.id === lot.id) ? current.productLots.map((item) => item.id === lot.id ? lot : item) : [lot, ...current.productLots] }),
+      () => persist("product_lots", { id: lot.id, product_id: lot.productId, code: lot.code, expiry_date: lot.expiryDate || null, quantity: lot.quantity, status: lot.status, created_at: lot.createdAt }),
+      "Lote salvo.",
+    );
+  }, [commitMutation, persist]);
+
+  const saveSupplier = useCallback(async (supplier: Supplier) => {
+    await commitMutation(
+      (current) => ({ ...current, suppliers: current.suppliers.some((item) => item.id === supplier.id) ? current.suppliers.map((item) => item.id === supplier.id ? supplier : item) : [...current.suppliers, supplier] }),
+      () => persist("suppliers", { id: supplier.id, name: supplier.name, tax_id: supplier.taxId, email: supplier.email, phone: supplier.phone, lead_time_days: supplier.leadTimeDays, notes: supplier.notes, active: supplier.active, created_at: supplier.createdAt }),
+      "Fornecedor salvo.",
+    );
+  }, [commitMutation, persist]);
+
+  const savePurchaseOrder = useCallback(async (order: PurchaseOrder) => {
+    await commitMutation(
+      (current) => ({ ...current, purchaseOrders: current.purchaseOrders.some((item) => item.id === order.id) ? current.purchaseOrders.map((item) => item.id === order.id ? order : item) : [order, ...current.purchaseOrders] }),
+      async () => {
+        await persist("purchase_orders", { id: order.id, code: order.code, supplier_id: order.supplierId, status: order.status, expected_at: order.expectedAt || null, received_at: order.receivedAt || null, total: order.total, notes: order.notes, created_at: order.createdAt });
+        if (!supabase) return;
+        const { error: deleteError } = await supabase.from("purchase_order_items").delete().eq("tenant_id", dataRef.current.tenant.id).eq("purchase_order_id", order.id);
+        if (deleteError) throw new Error(deleteError.message);
+        if (!order.items.length) return;
+        const { error } = await supabase.from("purchase_order_items").insert(order.items.map((item) => ({ tenant_id: dataRef.current.tenant.id, id: item.id, purchase_order_id: order.id, product_id: item.productId, product_name: item.name, quantity: item.quantity, unit_cost: item.unitCost, lot_code: item.lotCode, expiry_date: item.expiryDate || null })));
+        if (error) throw new Error(error.message);
+      },
+      "Ordem de compra salva.",
+    );
+  }, [commitMutation, persist, supabase]);
+
+  const receivePurchaseOrder = useCallback(async (id: string) => {
+    await commitMutation(
+      (current) => {
+        const order = current.purchaseOrders.find((item) => item.id === id);
+        if (!order || order.status === "received" || order.status === "cancelled") return current;
+        const receivedAt = new Date().toISOString();
+        const products = current.products.map((product) => {
+          const item = order.items.find((candidate) => candidate.productId === product.id);
+          return item ? { ...product, stock: product.stock + item.quantity, costPrice: item.unitCost } : product;
+        });
+        const movements: InventoryMovement[] = order.items.map((item) => {
+          const product = products.find((candidate) => candidate.id === item.productId)!;
+          return { id: `purchase-${order.id}-${item.id}`, productId: item.productId, type: "purchase", quantity: item.quantity, balanceAfter: product.stock, unitCost: item.unitCost, referenceType: "purchase_order", referenceId: order.id, note: `Recebimento da ${order.code}.`, actorEmail: currentUser.email, createdAt: receivedAt };
+        });
+        const newLots: ProductLot[] = order.items.filter((item) => item.lotCode).map((item) => ({ id: `lot-${order.id}-${item.id}`, productId: item.productId, code: item.lotCode, expiryDate: item.expiryDate, quantity: item.quantity, status: "available", createdAt: receivedAt }));
+        const payable: FinancialTransaction = { id: `purchase-payable-${order.id}`, type: "expense", status: "pending", description: `Compra ${order.code}`, amount: order.total, category: "Compras", account: "Conta principal", costCenter: "Estoque", dueDate: order.expectedAt, paidAt: "", orderId: "", purchaseOrderId: order.id, recurring: false, notes: "Gerado pelo recebimento da ordem de compra.", createdAt: receivedAt };
+        return {
+          ...current,
+          products,
+          purchaseOrders: current.purchaseOrders.map((item) => item.id === id ? { ...item, status: "received", receivedAt } : item),
+          inventoryMovements: [...movements, ...current.inventoryMovements],
+          productLots: [...newLots, ...current.productLots.filter((lot) => !newLots.some((item) => item.id === lot.id))],
+          financialTransactions: current.financialTransactions.some((item) => item.id === payable.id) ? current.financialTransactions : [payable, ...current.financialTransactions],
+        };
+      },
+      async () => {
+        if (!supabase) return;
+        const { error } = await supabase.rpc("receive_purchase_order", { p_tenant_id: dataRef.current.tenant.id, p_purchase_order_id: id, p_actor_email: currentUser.email });
+        if (error) throw new Error(error.message);
+      },
+      "Compra recebida: estoque, lote e financeiro atualizados.",
+    );
+  }, [commitMutation, currentUser.email, supabase]);
 
   const importProducts = useCallback(async (products: Product[], filename: string) => {
     const run: CatalogImportRun = { id: crypto.randomUUID(), kind: "products", filename, mode: "upsert", totalRows: products.length, successRows: products.length, errorRows: 0, createdAt: new Date().toISOString(), actorEmail: currentUser.email };
@@ -435,15 +579,54 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
 
   const updateOrderStatus = useCallback(async (id: string, status: OrderStatus) => {
     await commitMutation((current) => {
+      const previousOrder = current.orders.find((order) => order.id === id);
       const nextOrders = current.orders.map((order) => order.id === id ? { ...order, status } : order);
       const changedOrder = nextOrders.find((order) => order.id === id);
-      const generatedLogs = changedOrder && changedOrder.status !== current.orders.find((order) => order.id === id)?.status
+      const generatedLogs = changedOrder && changedOrder.status !== previousOrder?.status
         ? createMessageLogs(changedOrder, current.messageAutomations)
         : [];
       const couponRedemptions = current.couponRedemptions.map((redemption) => redemption.orderId === id
         ? { ...redemption, status: status === "Cancelado" ? "released" as const : "used" as const }
         : redemption);
-      return { ...current, orders: nextOrders, couponRedemptions, messageLogs: [...generatedLogs, ...current.messageLogs] };
+      let products = current.products;
+      let inventoryMovements = current.inventoryMovements;
+      let financialTransactions = current.financialTransactions;
+      const changedAt = new Date().toISOString();
+
+      if (previousOrder && status === "Cancelado" && previousOrder.status !== "Cancelado") {
+        products = current.products.map((product) => {
+          const item = previousOrder.items.find((candidate) => candidate.productId === product.id);
+          return item ? { ...product, stock: product.stock + item.quantity } : product;
+        });
+        const returns: InventoryMovement[] = previousOrder.items
+          .filter((item) => !inventoryMovements.some((movement) => movement.id === `cancel-${id}-${item.productId}`))
+          .map((item) => ({
+            id: `cancel-${id}-${item.productId}`,
+            productId: item.productId,
+            type: "return",
+            quantity: item.quantity,
+            balanceAfter: products.find((product) => product.id === item.productId)?.stock ?? 0,
+            unitCost: item.unitCost,
+            referenceType: "order",
+            referenceId: id,
+            note: `Estoque devolvido pelo cancelamento de ${previousOrder.code}.`,
+            actorEmail: currentUser.email,
+            createdAt: changedAt,
+          }));
+        inventoryMovements = [...returns, ...inventoryMovements];
+        financialTransactions = financialTransactions.map((transaction) => transaction.orderId === id
+          ? { ...transaction, status: "cancelled" as const }
+          : transaction);
+      }
+
+      if (previousOrder && status === "Pago" && previousOrder.status !== "Pago") {
+        const cost = previousOrder.items.reduce((sum, item) => sum + item.unitCost * item.quantity, 0);
+        const income: FinancialTransaction = { id: `order-income-${id}`, type: "income", status: "paid", description: `Venda ${previousOrder.code}`, amount: previousOrder.total, category: "Vendas", account: "Conta principal", costCenter: "Comercial", dueDate: changedAt.slice(0, 10), paidAt: changedAt, orderId: id, purchaseOrderId: "", recurring: false, notes: "Gerado automaticamente ao marcar o pedido como pago.", createdAt: changedAt };
+        const cogs: FinancialTransaction = { id: `order-cogs-${id}`, type: "expense", status: "paid", description: `Custo dos produtos - ${previousOrder.code}`, amount: cost, category: "CMV", account: "Estoque", costCenter: "Operação", dueDate: changedAt.slice(0, 10), paidAt: changedAt, orderId: id, purchaseOrderId: "", recurring: false, notes: "Custo congelado nos itens do pedido.", createdAt: changedAt };
+        financialTransactions = [income, ...(cost > 0 ? [cogs] : []), ...financialTransactions.filter((transaction) => transaction.id !== income.id && transaction.id !== cogs.id)];
+      }
+
+      return { ...current, products, inventoryMovements, financialTransactions, orders: nextOrders, couponRedemptions, messageLogs: [...generatedLogs, ...current.messageLogs] };
     }, async (next, previous) => {
       const generatedCount = Math.max(0, next.messageLogs.length - previous.messageLogs.length);
       const generatedLogs = next.messageLogs.slice(0, generatedCount);
@@ -454,7 +637,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       await update("orders", id, { status });
       await Promise.all(generatedLogs.map((log) => persist("message_logs", { id: log.id, order_id: log.orderId, order_code: log.orderCode, automation_id: log.automationId, automation_name: log.automationName, channel: log.channel, recipient: log.recipient, subject: log.subject, message: log.message, status: log.status, created_at: log.createdAt })));
     }, "Status atualizado.");
-  }, [commitMutation, persist, supabase, update]);
+  }, [commitMutation, currentUser.email, persist, supabase, update]);
 
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
@@ -562,6 +745,16 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     saveCoupon,
     deleteCoupon,
     saveCustomer,
+    saveCustomerTask,
+    deleteCustomerTask,
+    saveCustomerContact,
+    saveFinancialTransaction,
+    deleteFinancialTransaction,
+    recordInventoryMovement,
+    saveProductLot,
+    saveSupplier,
+    savePurchaseOrder,
+    receivePurchaseOrder,
     importProducts,
     importStock,
     moveItem,
@@ -577,7 +770,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData: store.resetData,
     importData: store.importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

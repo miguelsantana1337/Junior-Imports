@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Product } from "@/types/store";
-import { getProductComplianceIssues, isProductPubliclySellable, isProductVisibleInCatalog, productPublicationLabel } from "./product-compliance";
+import { canAddProductToCart, getProductComplianceIssues, isProductPubliclySellable, isProductVisibleInCatalog, productPublicationLabel } from "./product-compliance";
 
 const base: Product = {
   id: "produto",
@@ -11,7 +11,9 @@ const base: Product = {
   brand: "Marca",
   price: 10,
   compareAt: 0,
+  costPrice: 6,
   stock: 1,
+  minStock: 1,
   badge: "",
   accent: "#1677ff",
   description: "Descrição suficiente para o produto.",
@@ -42,6 +44,17 @@ describe("publicação responsável de produtos", () => {
     expect(isProductVisibleInCatalog(pending)).toBe(true);
     expect(isProductPubliclySellable(pending)).toBe(false);
     expect(productPublicationLabel(pending)).toBe("Visível para consulta");
+    expect(canAddProductToCart(pending, "demo")).toBe(false);
+  });
+
+  it("permite organizar no carrinho uma solicitação que será confirmada pelo WhatsApp", () => {
+    const pending = { ...base, productType: "unclassified" as const, regulatoryStatus: "pending" as const };
+    expect(canAddProductToCart(pending, "whatsapp")).toBe(true);
+  });
+
+  it("mantém produtos bloqueados ou sem estoque fora do carrinho", () => {
+    expect(canAddProductToCart({ ...base, regulatoryStatus: "blocked" }, "whatsapp")).toBe(false);
+    expect(canAddProductToCart({ ...base, stock: 0 }, "whatsapp")).toBe(false);
   });
 
   it("mantém produtos ocultos fora do catálogo", () => {

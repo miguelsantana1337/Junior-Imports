@@ -29,6 +29,15 @@ test("abre uma pagina individual de produto", async ({ page }) => {
   await expect(page.getByRole("button", { name: /Adicionar ao carrinho/ })).toBeVisible();
 });
 
+test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsApp", async ({ page }) => {
+  await page.goto("/produtos/t-g-15");
+  await expect(page.getByText("Solicitação sujeita a confirmação")).toBeVisible();
+  await page.getByRole("button", { name: "Adicionar ao carrinho", exact: true }).click();
+  const cart = page.getByRole("dialog", { name: "Carrinho" });
+  await expect(cart).toBeVisible();
+  await expect(cart.getByRole("heading", { name: "T.G. 15" })).toBeVisible();
+});
+
 test("conclui carrinho, cupom e envia o pedido para o WhatsApp", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Adicionar Organizador semanal premium ao carrinho" }).first().click();
