@@ -55,7 +55,7 @@ export async function consumeStorefrontRateLimit(
   input: {
     tenantId: string;
     fingerprint: string;
-    action: "order" | "coupon";
+    action: "order" | "coupon" | "password_reset" | "password_verify";
     limit: number;
     windowSeconds: number;
   },

@@ -352,6 +352,14 @@ export const adminLoginSchema = z.object({
   password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
 
+export const passwordRecoveryRequestSchema = z.object({
+  email: z.string().trim().toLowerCase().email("Informe um e-mail válido."),
+});
+
+export const passwordRecoveryVerifySchema = passwordRecoveryRequestSchema.extend({
+  code: z.string().trim().regex(/^\d{6}$/, "Informe o código de 6 dígitos."),
+});
+
 export const adminPasswordChangeSchema = z.object({
   password: z.string()
     .min(12, "A nova senha deve ter pelo menos 12 caracteres.")

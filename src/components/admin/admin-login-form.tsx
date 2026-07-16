@@ -14,7 +14,13 @@ export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "" 
         <h1>Administracao da loja</h1>
         <p>{demoMode ? "Use as credenciais abaixo para testar o painel local." : "Entre com o administrador cadastrado no Supabase Auth."}</p>
         <label>E-mail<input name="email" type="email" required defaultValue={demoMode ? demoEmail : ""} autoComplete="email" /></label>
-        <label>Senha<input name="password" type="password" required defaultValue={demoMode ? demoPassword : ""} autoComplete="current-password" /></label>
+        <label>
+          <span className="admin-login-label-row">
+            Senha
+            {!demoMode && <Link href="/admin/forgot-password">Esqueci a senha</Link>}
+          </span>
+          <input name="password" type="password" required defaultValue={demoMode ? demoPassword : ""} autoComplete="current-password" />
+        </label>
         {demoMode && <div className="demo-credentials"><strong>Acesso demonstrativo</strong><span>{demoEmail}</span><span>{demoPassword}</span></div>}
         {notice && <p className="admin-data-message" role="status">{notice}</p>}
         {state.error && <p className="admin-form-error" role="alert">{state.error}</p>}

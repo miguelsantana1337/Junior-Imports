@@ -4,6 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { adminLoginSchema, adminPasswordChangeSchema } from "@/lib/validation";
 import { platformRuntimeKeys } from "@/config/platform";
+import {
+  hasValidPasswordRecoveryProof,
+  passwordRecoveryCookie,
+  passwordRecoveryCookieOptions,
+} from "@/lib/password-recovery-session";
 import { demoAdminCredentials, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -95,6 +100,49 @@ export async function changeTemporaryPasswordAction(_previous: { error: string }
     redirect("/admin/login?password=updated");
   }
   redirect("/admin/mfa");
+}
+
+export async function completeRecoveredPasswordAction(_previous: { error: string }, formData: FormData) {
+  if (!isSupabaseConfigured()) redirect("/admin/login");
+  const parsed = adminPasswordChangeSchema.safeParse({
+    password: formData.get("password"),
+    confirmation: formData.get("confirmation"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revise a nova senha." };
+
+  const supabase = await createClient();
+  const admin = createAdminClient();
+  if (!supabase || !admin) return { error: "Recuperação de senha indisponível no momento." };
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/forgot-password");
+  const cookieStore = await cookies();
+  const proof = cookieStore.get(passwordRecoveryCookie)?.value;
+  if (!hasValidPasswordRecoveryProof(proof, user.id)) redirect("/admin/forgot-password");
+
+  const { data: profile } = await admin.from("profiles").select("active").eq("id", user.id).maybeSingle();
+  if (!profile?.active) redirect("/admin/forgot-password");
+
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+    data: { ...user.user_metadata, must_change_password: false },
+  });
+  if (error) return { error: "Não foi possível redefinir a senha. Solicite um novo código e tente novamente." };
+
+  const { error: profileError } = await admin
+    .from("profiles")
+    .update({ must_change_password: false })
+    .eq("id", user.id);
+  if (profileError) {
+    return { error: "A senha foi alterada, mas a conta precisa de revisão administrativa antes do acesso." };
+  }
+
+  await supabase.auth.signOut({ scope: "global" });
+  cookieStore.set(passwordRecoveryCookie, "", {
+    ...passwordRecoveryCookieOptions,
+    maxAge: 0,
+  });
+  redirect("/admin/login?password=recovered");
 }
 
 export async function logoutAction() {
