@@ -46,6 +46,8 @@ export function HeroCarousel() {
           const [before, after] = banner.highlight
             ? banner.title.split(banner.highlight)
             : [banner.title, ""];
+          const desktopImage = banner.imageUrl || banner.mobileImageUrl;
+          const mobileImage = banner.mobileImageUrl || banner.imageUrl;
           return (
             <article
               className={`hero-slide ${banner.imageOnly ? "image-only" : ""} ${index === visibleIndex ? "active" : ""}`}
@@ -57,11 +59,11 @@ export function HeroCarousel() {
               aria-hidden={index !== visibleIndex}
               inert={index !== visibleIndex}
             >
-              {banner.imageUrl && (
-                <div className="hero-image hero-image-desktop" style={{ backgroundImage: `url(${banner.imageUrl})` }} role="img" aria-label={banner.altText || undefined} />
+              {desktopImage && (
+                <div className="hero-image hero-image-desktop" style={{ backgroundImage: `url(${desktopImage})` }} role="img" aria-label={banner.altText || undefined} />
               )}
-              {(banner.mobileImageUrl || banner.imageUrl) && (
-                <div className="hero-image hero-image-mobile" style={{ backgroundImage: `url(${banner.mobileImageUrl || banner.imageUrl})` }} role="img" aria-label={banner.altText || undefined} />
+              {mobileImage && (
+                <div className="hero-image hero-image-mobile" style={{ backgroundImage: `url(${mobileImage})` }} role="img" aria-label={banner.altText || undefined} />
               )}
               {banner.imageOnly && <Link className="hero-image-link" href={storeHref(banner.buttonLink || "#catalogo")} aria-label={banner.altText || banner.title || `Abrir banner ${index + 1}`} />}
               {!banner.imageOnly && <div className="container hero-content">
