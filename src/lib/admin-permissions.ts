@@ -6,6 +6,7 @@ export const adminPermissionCatalog: Array<{
   description: string;
 }> = [
   { key: "dashboard", label: "Visão geral", description: "Indicadores, prioridades e atividade recente." },
+  { key: "audit", label: "Auditoria de segurança", description: "Consultar eventos administrativos minimizados e rastreáveis." },
   { key: "crm", label: "CRM operacional", description: "Tarefas, contatos, carteira, segmentos e acompanhamento diário." },
   { key: "customers", label: "Clientes e CRM", description: "Cadastro, histórico, recorrência e relacionamento com clientes." },
   { key: "orders", label: "Pedidos", description: "Consultar pedidos e atualizar seus status." },

@@ -22,6 +22,7 @@ export function CartDrawer() {
   } = useCart();
   const [couponCode, setCouponCode] = useState("");
   const [couponMessage, setCouponMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  const [couponApplying, setCouponApplying] = useState(false);
   const calculation = calculate();
 
   return (
@@ -70,14 +71,19 @@ export function CartDrawer() {
         <div className="drawer-footer">
           <form
             className="coupon-box"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              const result = applyCoupon(couponCode);
-              setCouponMessage({ ok: result.ok, text: result.message });
+              setCouponApplying(true);
+              try {
+                const result = await applyCoupon(couponCode);
+                setCouponMessage({ ok: result.ok, text: result.message });
+              } finally {
+                setCouponApplying(false);
+              }
             }}
           >
             <label htmlFor="cart-coupon">Cupom de desconto</label>
-            <div><input id="cart-coupon" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder={`Ex.: ${data.coupons[0]?.code ?? "CUPOM10"}`} /><button type="submit">Aplicar</button></div>
+            <div><input id="cart-coupon" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="Digite o código" /><button type="submit" disabled={couponApplying}>{couponApplying ? "Validando..." : "Aplicar"}</button></div>
             <small className={couponMessage?.ok ? "success-text" : "error-text"}>{couponMessage?.text}</small>
           </form>
           <div className="total-line"><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>

@@ -67,6 +67,8 @@ type PersistedOrder = {
   shipping: number;
   total: number;
   status: OrderStatus;
+  order_source?: Order["orderSource"];
+  reservation_expires_at?: string;
 };
 
 interface AdminDataContextValue {
@@ -127,13 +129,27 @@ function productRecord(product: Product) {
 export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
   const store = useStore();
   const toast = useToast();
-  const [remoteData, setRemoteData] = useState(initialData);
+  const [data, setData] = useState(initialData);
   const demoMode = store.demoMode;
-  const data = demoMode ? store.data : remoteData;
-  const setData = demoMode ? store.setData : setRemoteData;
   const supabase = useMemo(() => createClient(), []);
   const dataRef = useRef(data);
+  const initialDataRef = useRef(initialData);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
+  const demoDataKey = `${initialData.tenant.id}:store-data:v1`;
+
+  useEffect(() => {
+    if (!demoMode) return;
+    try {
+      const stored = window.localStorage.getItem(demoDataKey);
+      if (stored) setData(JSON.parse(stored) as StoreData);
+    } catch {
+      window.localStorage.removeItem(demoDataKey);
+    }
+  }, [demoDataKey, demoMode]);
+
+  useEffect(() => {
+    if (demoMode) window.localStorage.setItem(demoDataKey, JSON.stringify(data));
+  }, [data, demoDataKey, demoMode]);
 
   useEffect(() => {
     dataRef.current = data;
@@ -643,24 +659,14 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     let persisted: PersistedOrder | null = null;
 
     if (!demoMode) {
-      if (!supabase) throw new Error("Não foi possível conectar ao banco de dados.");
-      let result = await supabase.rpc("create_tenant_order", {
-        p_tenant_id: current.tenant.id,
-        p_customer: customer,
-        p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-        p_payment: input.payment,
-        p_coupon_code: coupon?.code ?? "",
+      const response = await fetch("/api/admin/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
       });
-      if (result.error?.code === "PGRST202" || result.error?.code === "42883") {
-        result = await supabase.rpc("create_demo_order", {
-          p_customer: customer,
-          p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-          p_payment: input.payment,
-          p_coupon_code: coupon?.code ?? "",
-        });
-      }
-      if (result.error || !result.data) throw new Error(result.error?.message ?? "Não foi possível registrar o pedido.");
-      persisted = result.data as PersistedOrder;
+      const payload = await response.json().catch(() => null) as { order?: PersistedOrder; error?: string } | null;
+      if (!response.ok || !payload?.order) throw new Error(payload?.error ?? "Não foi possível registrar o pedido.");
+      persisted = payload.order;
     }
 
     const order: Order = {
@@ -679,6 +685,8 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       couponCode: coupon?.code ?? "",
       internalNotes: input.internalNotes,
       trackingCode: "",
+      orderSource: persisted?.order_source ?? "admin",
+      reservationExpiresAt: persisted?.reservation_expires_at ?? "",
     };
     const generatedLogs = createMessageLogs(order, current.messageAutomations);
     const next = applyCreatedOrder(current, order, {
@@ -714,7 +722,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
 
     toast("Pedido criado.");
     return order;
-  }, [currentUser.email, demoMode, persist, setData, supabase, toast, update]);
+  }, [currentUser.email, demoMode, persist, setData, toast, update]);
 
   const updateOrderStatus = useCallback(async (id: string, status: OrderStatus) => {
     await commitMutation((current) => {
@@ -731,8 +739,37 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       let inventoryMovements = current.inventoryMovements;
       let financialTransactions = current.financialTransactions;
       const changedAt = new Date().toISOString();
+      const committedStatuses: OrderStatus[] = ["Pago", "Preparando", "Enviado", "Entregue"];
+      const wasCommitted = Boolean(previousOrder && (
+        (previousOrder.orderSource ?? "legacy") === "legacy"
+        || committedStatuses.includes(previousOrder.status)
+      ));
+      const shouldCommit = Boolean(previousOrder && committedStatuses.includes(status) && !wasCommitted);
 
-      if (previousOrder && status === "Cancelado" && previousOrder.status !== "Cancelado") {
+      if (previousOrder && shouldCommit) {
+        products = current.products.map((product) => {
+          const item = previousOrder.items.find((candidate) => candidate.productId === product.id);
+          return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
+        });
+        const sales: InventoryMovement[] = previousOrder.items
+          .filter((item) => !inventoryMovements.some((movement) => movement.id === `sale-${id}-${item.productId}`))
+          .map((item) => ({
+            id: `sale-${id}-${item.productId}`,
+            productId: item.productId,
+            type: "sale",
+            quantity: -item.quantity,
+            balanceAfter: products.find((product) => product.id === item.productId)?.stock ?? 0,
+            unitCost: item.unitCost,
+            referenceType: "order",
+            referenceId: id,
+            note: `Baixa confirmada do pedido ${previousOrder.code}.`,
+            actorEmail: currentUser.email,
+            createdAt: changedAt,
+          }));
+        inventoryMovements = [...sales, ...inventoryMovements];
+      }
+
+      if (previousOrder && status === "Cancelado" && previousOrder.status !== "Cancelado" && wasCommitted) {
         products = current.products.map((product) => {
           const item = previousOrder.items.find((candidate) => candidate.productId === product.id);
           return item ? { ...product, stock: product.stock + item.quantity } : product;
@@ -863,6 +900,17 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     toast("Usuário excluído.");
   }, [applyTeamResponse, demoMode, setData, toast]);
 
+  const resetData = useCallback(() => {
+    const next = structuredClone(initialDataRef.current);
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
+  const importData = useCallback((next: StoreData) => {
+    dataRef.current = next;
+    setData(next);
+  }, []);
+
   const value = useMemo<AdminDataContextValue>(() => ({
     data,
     demoMode,
@@ -908,9 +956,9 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     createAdminUser,
     updateAdminUser,
     deleteAdminUser,
-    resetData: store.resetData,
-    importData: store.importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, store.resetData, store.importData]);
+    resetData,
+    importData,
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

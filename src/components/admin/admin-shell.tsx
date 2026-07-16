@@ -36,7 +36,7 @@ import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "r
 import { logoutAction } from "@/app/admin/auth-actions";
 import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
-import { useStore } from "@/components/providers/store-provider";
+import { useAdminData } from "@/components/admin/admin-data-provider";
 import { platformConfig } from "@/config/platform";
 
 const navigationGroups = [
@@ -130,7 +130,7 @@ const adminThemeStorageKey = "junior-imports:admin-theme";
 const adminSidebarStorageKey = "junior-imports:admin-sidebar";
 
 export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
-  const { data } = useStore();
+  const { data } = useAdminData();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);

@@ -4,14 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, CheckCircle2, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
+import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { formatMoney, whatsappUrl } from "@/lib/format";
-import { validateCouponForCustomer } from "@/lib/coupon-rules";
-import { createClient } from "@/lib/supabase/client";
-import { checkoutSchema, type CheckoutInput } from "@/lib/validation";
+import { checkoutSchema, type CheckoutFormInput, type CheckoutInput } from "@/lib/validation";
 import { renderWhatsappOrderMessage } from "@/lib/whatsapp-order";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { Order } from "@/types/store";
@@ -28,6 +27,8 @@ type PersistedOrder = {
   shipping: number;
   total: number;
   status: Order["status"];
+  order_source?: Order["orderSource"];
+  reservation_expires_at?: string;
 };
 
 export function CheckoutScreen() {
@@ -35,14 +36,18 @@ export function CheckoutScreen() {
   const { lines, coupon, calculate, clearCart } = useCart();
   const router = useRouter();
   const [submitError, setSubmitError] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [startedAt] = useState(() => Date.now());
+  const handleTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<CheckoutInput>({
+  } = useForm<CheckoutFormInput, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { payment: "Pix", complement: "", consent: false },
+    defaultValues: { payment: "Pix", complement: "", consent: false, botField: "", startedAt },
   });
   const payment = useWatch({ control, name: "payment" });
   const calculation = calculate(payment);
@@ -70,45 +75,36 @@ export function CheckoutScreen() {
       name: product!.name,
       quantity: line.quantity,
       unitPrice: product!.price,
-      unitCost: product!.costPrice,
+      unitCost: 0,
     }));
     const nextNumber = data.orders.reduce((max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000), 1000) + 1;
     let persisted: PersistedOrder | null = null;
 
-    if (demoMode && coupon) {
-      const eligibility = validateCouponForCustomer(coupon, customer, data.orders, data.couponRedemptions);
-      if (!eligibility.valid) {
-        setSubmitError(eligibility.message);
-        return;
-      }
-    }
-
     if (!demoMode) {
-      const supabase = createClient();
-      if (!supabase) {
-        setSubmitError("Não foi possível conectar ao banco de dados.");
-        return;
-      }
-      let result = await supabase.rpc("create_tenant_order", {
-        p_tenant_id: data.tenant.id,
-        p_customer: customer,
-        p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-        p_payment: values.payment,
-        p_coupon_code: coupon?.code ?? "",
+      const requestId = idempotencyKey || crypto.randomUUID();
+      if (!idempotencyKey) setIdempotencyKey(requestId);
+      const response = await fetch("/api/storefront/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId: data.tenant.id,
+          customer,
+          items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+          payment: values.payment,
+          couponCode: coupon?.code ?? "",
+          idempotencyKey: requestId,
+          botField: values.botField,
+          startedAt: values.startedAt,
+          turnstileToken,
+        }),
       });
-      if (result.error?.code === "PGRST202" || result.error?.code === "42883") {
-        result = await supabase.rpc("create_demo_order", {
-          p_customer: customer,
-          p_items: items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
-          p_payment: values.payment,
-          p_coupon_code: coupon?.code ?? "",
-        });
-      }
-      if (result.error || !result.data) {
-        setSubmitError(result.error?.message ?? "Não foi possível registrar o pedido.");
+      const payload = await response.json().catch(() => null) as { order?: PersistedOrder; error?: string } | null;
+      if (!response.ok || !payload?.order) {
+        setSubmitError(payload?.error ?? "Não foi possível registrar o pedido.");
         return;
       }
-      persisted = result.data as PersistedOrder;
+      persisted = payload.order;
+      setIdempotencyKey("");
     }
 
     const code = persisted?.code ?? `${data.settings.orderPrefix || "PED"}-${nextNumber}`;
@@ -128,6 +124,8 @@ export function CheckoutScreen() {
       couponCode: coupon?.code ?? "",
       internalNotes: "",
       trackingCode: "",
+      orderSource: persisted?.order_source ?? "storefront",
+      reservationExpiresAt: persisted?.reservation_expires_at ?? "",
     };
     addOrder(order);
     clearCart();
@@ -151,7 +149,10 @@ export function CheckoutScreen() {
           <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field></div></fieldset>
           <fieldset><legend>2. Entrega simulada</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" placeholder="00000-000" {...register("zip")} /></Field><Field label="Cidade" error={errors.city?.message}><input {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Endereço" error={errors.address?.message} full><input {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input {...register("complement")} /></Field></div></fieldset>
           <fieldset><legend>3. Pagamento simulado</legend><div className="payment-options">{(["Pix", "Cartao", "Boleto"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto demonstrativo` : method === "Cartao" ? "Até 6x sem juros" : "Vencimento em 1 dia útil"}</small></span></label>)}</div></fieldset>
+          <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
+          <input type="hidden" {...register("startedAt")} />
           <label className="consent-line"><input type="checkbox" {...register("consent")} /><span>{data.settings.checkoutMode === "whatsapp" ? "Concordo em enviar estes dados para o atendimento da loja pelo WhatsApp." : "Concordo que esta é uma simulação e nenhum pagamento será realizado."}</span></label>{errors.consent && <small className="field-error">{errors.consent.message}</small>}
+          <TurnstileWidget onToken={handleTurnstileToken} />
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {data.settings.checkoutMode === "whatsapp" ? "Enviar pedido pelo WhatsApp" : "Criar pedido demonstrativo"}</button>
         </form>

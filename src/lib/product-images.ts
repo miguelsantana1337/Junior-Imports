@@ -1,6 +1,6 @@
-import type { Product } from "@/types/store";
+import type { StorefrontProduct } from "@/types/store";
 
-type ProductImages = Pick<Product, "imageUrl" | "imageUrls">;
+type ProductImages = Pick<StorefrontProduct, "imageUrl" | "imageUrls">;
 
 export function normalizeProductImages(product: Partial<ProductImages>): string[] {
   const images = Array.isArray(product.imageUrls) ? product.imageUrls : [];

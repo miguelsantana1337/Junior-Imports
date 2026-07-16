@@ -28,6 +28,8 @@ import type {
   ProductLot,
   PurchaseOrder,
   StoreData,
+  StorefrontData,
+  StorefrontProduct,
   StorePage,
   StoreSettings,
   StoreTenant,
@@ -35,6 +37,7 @@ import type {
   TrustItem,
 } from "@/types/store";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeProductForStorefront } from "@/lib/storefront-product";
 
 type Row = Record<string, unknown>;
 
@@ -208,6 +211,40 @@ function mapCustomerTask(row: Row): CustomerTask {
     notes: str(row.notes),
     createdAt: str(row.created_at),
     completedAt: str(row.completed_at),
+  };
+}
+
+function mapStorefrontProduct(row: Row, categories: Category[]): StorefrontProduct {
+  const categoryId = str(row.category_id);
+  const imageUrl = str(row.image_url);
+  const imageUrls = [...new Set([...stringList(row.image_urls), imageUrl].filter(Boolean))];
+  return {
+    id: str(row.id),
+    slug: str(row.slug),
+    name: str(row.name),
+    categoryId,
+    category: categories.find((item) => item.id === categoryId)?.name ?? "Sem categoria",
+    brand: str(row.brand),
+    price: num(row.price),
+    compareAt: num(row.compare_at),
+    stock: num(row.purchase_limit),
+    badge: str(row.badge),
+    accent: str(row.accent) || "#1677ff",
+    description: str(row.description),
+    rating: num(row.rating),
+    reviews: num(row.reviews),
+    featured: Boolean(row.featured),
+    active: Boolean(row.active),
+    order: num(row.order_index),
+    imageUrl,
+    imageUrls,
+    productType: (str(row.product_type) || "unclassified") as StorefrontProduct["productType"],
+    regulatoryStatus: (str(row.regulatory_status) || "pending") as StorefrontProduct["regulatoryStatus"],
+    activeIngredient: str(row.active_ingredient),
+    anvisaRegistration: str(row.anvisa_registration),
+    presentation: str(row.presentation),
+    regulatoryWarning: str(row.regulatory_warning),
+    pharmacistReviewed: Boolean(row.pharmacist_reviewed),
   };
 }
 
@@ -463,6 +500,8 @@ function mapOrder(row: Row): Order {
     couponCode: str(row.coupon_code),
     internalNotes: str(row.internal_notes),
     trackingCode: str(row.tracking_code),
+    orderSource: (str(row.order_source) || "legacy") as Order["orderSource"],
+    reservationExpiresAt: str(row.reservation_expires_at),
   };
 }
 
@@ -516,13 +555,39 @@ export async function getTenantBySlug(slug: string): Promise<StoreTenant | null>
   return resolution.tenant;
 }
 
-export async function getStoreData(options: { admin?: boolean; tenantSlug?: string; storefrontPath?: string } = {}): Promise<StoreData> {
+type StoreDataOptions = { tenantSlug?: string; storefrontPath?: string };
+type AdminStoreDataOptions = StoreDataOptions & { admin: true; includeAudit?: boolean };
+type PublicStoreDataOptions = StoreDataOptions & { admin?: false };
+
+export function getStoreData(options: AdminStoreDataOptions): Promise<StoreData>;
+export function getStoreData(options?: PublicStoreDataOptions): Promise<StorefrontData>;
+export async function getStoreData(options: AdminStoreDataOptions | PublicStoreDataOptions = {}): Promise<StoreData | StorefrontData> {
   const fallback = cloneSeedData();
   const supabase = await createClient();
   if (!supabase) {
+    if (!options.admin) {
+      return {
+        tenant: {
+          id: fallback.tenant.id,
+          slug: fallback.tenant.slug,
+          name: fallback.tenant.name,
+          storefrontPath: options.storefrontPath ?? (options.tenantSlug ? `/loja/${fallback.tenant.slug}` : ""),
+        },
+        settings: fallback.settings,
+        products: fallback.products.filter(isProductVisibleInCatalog).map((product) => sanitizeProductForStorefront(product)),
+        categories: fallback.categories,
+        banners: fallback.banners,
+        sections: fallback.sections,
+        pages: fallback.pages,
+        pageBlocks: fallback.pageBlocks,
+        trustItems: fallback.trustItems,
+        benefits: fallback.benefits,
+        faqs: fallback.faqs,
+        orders: [],
+      };
+    }
     return {
       ...fallback,
-      products: options.admin ? fallback.products : fallback.products.filter(isProductVisibleInCatalog),
       tenant: {
         ...fallback.tenant,
         storefrontPath: options.storefrontPath ?? (options.tenantSlug ? `/loja/${fallback.tenant.slug}` : ""),
@@ -537,10 +602,14 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     // @ts-expect-error Supabase's chained generic exceeds TypeScript's instantiation depth after tenant scoping.
     scopeTenant(supabase.from("store_settings").select("*"), tenantId).eq("id", "default").maybeSingle(),
     scopeTenant(supabase.from("categories").select("*"), tenantId).order("order_index"),
-    scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index"),
+    options.admin
+      ? scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index")
+      : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
     scopeTenant(supabase.from("banners").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("home_sections").select("*"), tenantId).order("order_index"),
-    scopeTenant(supabase.from("coupons").select("*"), tenantId).order("code"),
+    options.admin
+      ? scopeTenant(supabase.from("coupons").select("*"), tenantId).order("code")
+      : Promise.resolve({ data: [], error: null }),
     scopeTenant(supabase.from("trust_items").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("benefits").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("faqs").select("*"), tenantId).order("order_index"),
@@ -558,7 +627,7 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     options.admin && !tenantId
       ? supabase.from("profiles").select("id, full_name, email, role, permissions, active, created_at").order("created_at")
       : Promise.resolve({ data: [], error: null }),
-    options.admin
+    options.admin && options.includeAudit
       ? scopeTenant(supabase.from("audit_logs").select("*"), tenantId).order("created_at", { ascending: false }).limit(100)
       : Promise.resolve({ data: [], error: null }),
     options.admin
@@ -619,7 +688,9 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
     : ((queries[1].data ?? []) as Row[]).map(mapCategory);
   const mappedProducts = queries[2].error
     ? fallback.products
-    : ((queries[2].data ?? []) as Row[]).map((row) => mapProduct(row, categories));
+    : options.admin
+      ? ((queries[2].data ?? []) as Row[]).map((row) => mapProduct(row, categories))
+      : ((queries[2].data ?? []) as Row[]).map((row) => mapStorefrontProduct(row, categories));
   const couponRedemptions = options.admin && !queries[17].error
     ? ((queries[17].data ?? []) as Row[]).map(mapCouponRedemption)
     : [];
@@ -629,11 +700,35 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
       usageCount: couponRedemptions.filter((redemption) => redemption.couponId === coupon.id && redemption.status === "used").length,
     }));
 
+  if (!options.admin) {
+    return {
+      tenant: {
+        id: resolution.tenant.id,
+        slug: resolution.tenant.slug,
+        name: resolution.tenant.name,
+        storefrontPath: resolution.tenant.storefrontPath,
+      },
+      settings: queries[0].data && !queries[0].error ? mapSettings(queries[0].data as Row, fallback.settings) : fallback.settings,
+      categories,
+      products: (queries[2].error
+        ? fallback.products.filter(isProductVisibleInCatalog).map((product) => sanitizeProductForStorefront(product))
+        : mappedProducts as StorefrontProduct[]),
+      banners: queries[3].error ? fallback.banners : ((queries[3].data ?? []) as Row[]).map(mapBanner),
+      sections: queries[4].error ? fallback.sections : ((queries[4].data ?? []) as Row[]).map(mapSection),
+      trustItems: queries[6].error ? fallback.trustItems : ((queries[6].data ?? []) as Row[]).map((row) => mapSimpleOrdered<TrustItem>(row)),
+      benefits: queries[7].error ? fallback.benefits : ((queries[7].data ?? []) as Row[]).map((row) => mapSimpleOrdered<Benefit>(row)),
+      faqs: queries[8].error ? fallback.faqs : ((queries[8].data ?? []) as Row[]).map((row) => mapSimpleOrdered<Faq>(row)),
+      orders: [],
+      pages: queries[10].error || (!resolution.persisted && !queries[10].data?.length) ? fallback.pages : ((queries[10].data ?? []) as Row[]).map(mapPage),
+      pageBlocks: queries[11].error || (!resolution.persisted && !queries[11].data?.length) ? fallback.pageBlocks : ((queries[11].data ?? []) as Row[]).map(mapPageBlock),
+    };
+  }
+
   return {
     tenant: resolution.tenant,
     settings: queries[0].data && !queries[0].error ? mapSettings(queries[0].data as Row, fallback.settings) : fallback.settings,
     categories,
-    products: options.admin ? mappedProducts : mappedProducts.filter(isProductVisibleInCatalog),
+    products: mappedProducts as Product[],
     banners: queries[3].error ? fallback.banners : ((queries[3].data ?? []) as Row[]).map(mapBanner),
     sections: queries[4].error ? fallback.sections : ((queries[4].data ?? []) as Row[]).map(mapSection),
     coupons,
@@ -658,7 +753,7 @@ export async function getStoreData(options: { admin?: boolean; tenantSlug?: stri
       : [],
     messageLogs: options.admin && !queries[13].error ? ((queries[13].data ?? []) as Row[]).map(mapMessageLog) : [],
     teamMembers: options.admin && !queries[14].error ? ((queries[14].data ?? []) as Row[]).map(mapAdminUser) : [],
-    auditLogs: options.admin && !queries[15].error ? ((queries[15].data ?? []) as Row[]).map(mapAuditLog) : [],
+    auditLogs: options.includeAudit && !queries[15].error ? ((queries[15].data ?? []) as Row[]).map(mapAuditLog) : [],
   };
 }
 

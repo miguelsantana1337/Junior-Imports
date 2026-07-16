@@ -72,7 +72,17 @@ function guard(request: Request, actorId: string) {
   }
 }
 
-async function recordUserAudit(actor: AdminSessionUser, action: "insert" | "update" | "delete", user: { id: string; email?: string }, beforeData?: unknown, afterData?: unknown) {
+function safeMembershipAudit(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+  const row = value as { role?: unknown; permissions?: unknown; active?: unknown };
+  return {
+    role: row.role ?? null,
+    permissions: Array.isArray(row.permissions) ? row.permissions : [],
+    active: Boolean(row.active),
+  };
+}
+
+async function recordUserAudit(actor: AdminSessionUser, action: "insert" | "update" | "delete", userId: string, beforeData?: unknown, afterData?: unknown) {
   const supabase = createAdminClient();
   if (!supabase) return;
   await supabase.from("audit_logs").insert({
@@ -81,10 +91,10 @@ async function recordUserAudit(actor: AdminSessionUser, action: "insert" | "upda
     actor_email: actor.email,
     action,
     entity_type: "tenant_members",
-    entity_id: user.id,
-    entity_label: user.email ?? user.id,
-    before_data: beforeData ?? null,
-    after_data: afterData ?? null,
+    entity_id: userId,
+    entity_label: `Usuário ${userId.slice(0, 8)}`,
+    before_data: safeMembershipAudit(beforeData),
+    after_data: safeMembershipAudit(afterData),
   });
 }
 
@@ -125,7 +135,7 @@ export async function POST(request: Request) {
       email: parsed.data.email,
       password: parsed.data.password,
       email_confirm: true,
-      user_metadata: { full_name: parsed.data.fullName },
+      user_metadata: { full_name: parsed.data.fullName, must_change_password: true },
     });
     if (error || !data.user) return NextResponse.json({ error: "Não foi possível criar o usuário." }, { status: 400 });
     authUser = data.user;
@@ -140,7 +150,7 @@ export async function POST(request: Request) {
     if (created) await supabase.auth.admin.deleteUser(authUser.id);
     return NextResponse.json({ error: "A conta foi revertida porque o acesso à loja não pôde ser salvo." }, { status: 500 });
   }
-  await recordUserAudit(actor, "insert", { id: authUser.id, email: parsed.data.email }, null, { fullName: parsed.data.fullName, role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active });
+  await recordUserAudit(actor, "insert", authUser.id, null, { role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active });
   return NextResponse.json({ users: await listUsers(actor.id, actor.tenantId) }, { status: 201 });
 }
 
@@ -153,7 +163,6 @@ export async function PATCH(request: Request) {
   const parsed = adminUserUpdateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revise os dados." }, { status: 400 });
   const { data: membership } = await supabase.from("tenant_members").select("role, permissions, active").eq("tenant_id", actor.tenantId).eq("user_id", parsed.data.id).maybeSingle();
-  const { data: profile } = await supabase.from("profiles").select("full_name, email").eq("id", parsed.data.id).maybeSingle();
   if (!membership) return NextResponse.json({ error: "Usuário não encontrado nesta loja." }, { status: 404 });
   if ((membership.role === "owner" || parsed.data.role === "owner") && actor.role !== "owner" && !actor.isPlatformAdmin) return NextResponse.json({ error: "Somente o proprietário pode alterar este perfil." }, { status: 403 });
   if (parsed.data.id === actor.id && (parsed.data.role !== actor.role || !parsed.data.active)) return NextResponse.json({ error: "Você não pode remover o próprio acesso ou cargo." }, { status: 400 });
@@ -165,7 +174,7 @@ export async function PATCH(request: Request) {
     supabase.auth.admin.updateUserById(parsed.data.id, { user_metadata: { full_name: parsed.data.fullName } }),
   ]);
   if (membershipError || profileError || authError) return NextResponse.json({ error: "Não foi possível atualizar o usuário." }, { status: 500 });
-  await recordUserAudit(actor, "update", { id: parsed.data.id, email: profile?.email }, { ...membership, fullName: profile?.full_name }, parsed.data);
+  await recordUserAudit(actor, "update", parsed.data.id, membership, parsed.data);
   return NextResponse.json({ users: await listUsers(actor.id, actor.tenantId) });
 }
 
@@ -178,12 +187,11 @@ export async function DELETE(request: Request) {
   const id = new URL(request.url).searchParams.get("id") ?? "";
   if (id === actor.id) return NextResponse.json({ error: "Você não pode excluir o próprio acesso." }, { status: 400 });
   const { data: membership } = await supabase.from("tenant_members").select("role, permissions, active").eq("tenant_id", actor.tenantId).eq("user_id", id).maybeSingle();
-  const { data: profile } = await supabase.from("profiles").select("email, full_name").eq("id", id).maybeSingle();
   if (!membership) return NextResponse.json({ error: "Usuário não encontrado nesta loja." }, { status: 404 });
   if (membership.role === "owner" && actor.role !== "owner" && !actor.isPlatformAdmin) return NextResponse.json({ error: "Somente o proprietário pode excluir outro proprietário." }, { status: 403 });
   if (await isLastOwner(id, actor.tenantId)) return NextResponse.json({ error: "A loja precisa manter ao menos um proprietário ativo." }, { status: 400 });
   const { error } = await supabase.from("tenant_members").delete().eq("tenant_id", actor.tenantId).eq("user_id", id);
   if (error) return NextResponse.json({ error: "Não foi possível excluir o acesso." }, { status: 500 });
-  await recordUserAudit(actor, "delete", { id, email: profile?.email }, { ...membership, fullName: profile?.full_name }, null);
+  await recordUserAudit(actor, "delete", id, membership, null);
   return NextResponse.json({ users: await listUsers(actor.id, actor.tenantId) });
 }

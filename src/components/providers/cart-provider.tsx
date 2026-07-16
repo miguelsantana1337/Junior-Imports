@@ -26,7 +26,7 @@ interface CartContextValue {
   removeItem: (productId: string) => void;
   clearCart: () => void;
   toggleFavorite: (productId: string) => void;
-  applyCoupon: (code: string) => { ok: boolean; message: string };
+  applyCoupon: (code: string) => Promise<{ ok: boolean; message: string }>;
   setDrawerOpen: (open: boolean) => void;
   calculate: (payment?: PaymentMethod) => ReturnType<typeof calculateCart>;
 }
@@ -74,6 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (productId: string, quantity = 1) => {
       const product = data.products.find((item) => item.id === productId);
       if (!product || !canAddProductToCart(product, data.settings.checkoutMode)) return;
+      setCoupon(null);
       setLines((current) => {
         const existing = current.find((line) => line.productId === productId);
         if (existing) {
@@ -95,6 +96,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const updateItem = useCallback(
     (productId: string, quantity: number) => {
       const product = data.products.find((item) => item.id === productId);
+      setCoupon(null);
       if (!product || !canAddProductToCart(product, data.settings.checkoutMode)) {
         setLines((current) => current.filter((line) => line.productId !== productId));
         return;
@@ -113,8 +115,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const removeItem = useCallback(
-    (productId: string) =>
-      setLines((current) => current.filter((line) => line.productId !== productId)),
+    (productId: string) => {
+      setCoupon(null);
+      setLines((current) => current.filter((line) => line.productId !== productId));
+    },
     [],
   );
 
@@ -138,18 +142,43 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const applyCoupon = useCallback(
-    (code: string) => {
+    async (code: string) => {
       const normalized = code.trim().toUpperCase();
-      const found = data.coupons.find((item) => item.code.toUpperCase() === normalized);
-      const result = calculateCart(lines, data.products, data.settings, found ?? null);
-      if (!found || result.couponDiscount <= 0) {
+      if (!normalized || !lines.length) {
         setCoupon(null);
-        return { ok: false, message: "Cupom inválido, expirado ou abaixo do valor mínimo." };
+        return { ok: false, message: "Informe um cupom e adicione produtos ao carrinho." };
       }
-      setCoupon(found);
-      return { ok: true, message: `Cupom ${found.code} aplicado.` };
+      const response = await fetch("/api/storefront/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tenantId: data.tenant.id,
+          code: normalized,
+          items: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+        }),
+      });
+      const payload = await response.json().catch(() => null) as { valid?: boolean; code?: string; discount?: number; message?: string; error?: string } | null;
+      if (!response.ok || !payload?.valid || !payload.code || !payload.discount) {
+        setCoupon(null);
+        return { ok: false, message: payload?.message || payload?.error || "Cupom inválido ou expirado." };
+      }
+      setCoupon({
+        id: `applied-${payload.code}`,
+        code: payload.code,
+        type: "fixed",
+        value: payload.discount,
+        minimum: 0,
+        active: true,
+        startsAt: "",
+        expiresAt: "",
+        totalUsageLimit: 0,
+        perCustomerLimit: 0,
+        firstOrderOnly: false,
+        usageCount: 0,
+      });
+      return { ok: true, message: `Cupom ${payload.code} aplicado.` };
     },
-    [data.coupons, data.products, data.settings, lines],
+    [data.tenant.id, lines],
   );
 
   const value = useMemo(

@@ -16,6 +16,6 @@ export async function POST(request: Request) {
     if (!membership?.active) return NextResponse.json({ error: "Você não possui acesso a esta loja." }, { status: 403 });
   }
   const cookieStore = await cookies();
-  cookieStore.set("saas-tenant", tenant.slug, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+  cookieStore.set("saas-tenant", tenant.slug, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
   return NextResponse.json({ ok: true });
 }

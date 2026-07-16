@@ -10,42 +10,34 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { Order, StoreData } from "@/types/store";
-import { applyCreatedOrder } from "@/lib/order-state";
+import type { Order, StorefrontData } from "@/types/store";
+import { sanitizeProductForStorefront } from "@/lib/storefront-product";
 
 interface StoreContextValue {
-  data: StoreData;
+  data: StorefrontData;
   demoMode: boolean;
-  setData: React.Dispatch<React.SetStateAction<StoreData>>;
+  setData: React.Dispatch<React.SetStateAction<StorefrontData>>;
   addOrder: (order: Order) => void;
   resetData: () => void;
-  importData: (data: StoreData) => void;
+  importData: (data: StorefrontData) => void;
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null);
 
-function normalizeData(candidate: StoreData, fallback: StoreData): StoreData {
+function normalizeData(candidate: StorefrontData, fallback: StorefrontData): StorefrontData {
   return {
-    ...fallback,
-    ...candidate,
     tenant: { ...fallback.tenant, ...candidate.tenant },
     settings: { ...fallback.settings, ...candidate.settings },
+    products: (candidate.products ?? fallback.products).map((product) => sanitizeProductForStorefront(product, product.stock, false)),
+    categories: candidate.categories ?? fallback.categories,
+    banners: candidate.banners ?? fallback.banners,
+    sections: candidate.sections ?? fallback.sections,
     pages: candidate.pages ?? fallback.pages,
     pageBlocks: candidate.pageBlocks ?? fallback.pageBlocks,
-    messageAutomations: candidate.messageAutomations ?? fallback.messageAutomations,
-    messageLogs: candidate.messageLogs ?? fallback.messageLogs,
-    customers: candidate.customers ?? fallback.customers,
-    customerTasks: candidate.customerTasks ?? fallback.customerTasks,
-    customerContacts: candidate.customerContacts ?? fallback.customerContacts,
-    couponRedemptions: candidate.couponRedemptions ?? fallback.couponRedemptions,
-    catalogImports: candidate.catalogImports ?? fallback.catalogImports,
-    teamMembers: candidate.teamMembers ?? fallback.teamMembers,
-    auditLogs: candidate.auditLogs ?? fallback.auditLogs,
-    financialTransactions: candidate.financialTransactions ?? fallback.financialTransactions,
-    inventoryMovements: candidate.inventoryMovements ?? fallback.inventoryMovements,
-    productLots: candidate.productLots ?? fallback.productLots,
-    suppliers: candidate.suppliers ?? fallback.suppliers,
-    purchaseOrders: candidate.purchaseOrders ?? fallback.purchaseOrders,
+    trustItems: candidate.trustItems ?? fallback.trustItems,
+    benefits: candidate.benefits ?? fallback.benefits,
+    faqs: candidate.faqs ?? fallback.faqs,
+    orders: candidate.orders ?? fallback.orders,
   };
 }
 
@@ -53,7 +45,7 @@ export function StoreProvider({
   initialData,
   children,
 }: {
-  initialData: StoreData;
+  initialData: StorefrontData;
   children: ReactNode;
 }) {
   const demoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -66,7 +58,7 @@ export function StoreProvider({
     if (demoMode) {
       try {
         const stored = window.localStorage.getItem(demoDataKey);
-        if (stored) setData(normalizeData(JSON.parse(stored) as StoreData, initialRef.current));
+        if (stored) setData(normalizeData(JSON.parse(stored) as StorefrontData, initialRef.current));
       } catch {
         window.localStorage.removeItem(demoDataKey);
       }
@@ -93,11 +85,11 @@ export function StoreProvider({
   }, [data.settings]);
 
   const addOrder = useCallback((order: Order) => {
-    setData((current) => applyCreatedOrder(current, order));
+    setData((current) => ({ ...current, orders: [order, ...current.orders.filter((item) => item.id !== order.id)] }));
   }, []);
 
   const resetData = useCallback(() => setData(structuredClone(initialRef.current)), []);
-  const importData = useCallback((next: StoreData) => setData(normalizeData(next, initialRef.current)), []);
+  const importData = useCallback((next: StorefrontData) => setData(normalizeData(next, initialRef.current)), []);
 
   const value = useMemo(
     () => ({ data, demoMode, setData, addOrder, resetData, importData }),

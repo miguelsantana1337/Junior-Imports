@@ -2,7 +2,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { adminLoginSchema } from "@/lib/validation";
+import { adminLoginSchema, adminPasswordChangeSchema } from "@/lib/validation";
 import { platformRuntimeKeys } from "@/config/platform";
 import { demoAdminCredentials, isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +19,7 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
       return { error: "Credenciais demonstrativas incorretas." };
     }
     const cookieStore = await cookies();
-    cookieStore.set(platformRuntimeKeys.adminCookie, "1", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
+    cookieStore.set(platformRuntimeKeys.adminCookie, "1", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
     redirect("/admin");
   }
 
@@ -37,15 +37,38 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
     const { data: tenant } = await supabase.from("tenants").select("slug").eq("id", membership.tenant_id).maybeSingle();
     if (tenant?.slug) {
       const cookieStore = await cookies();
-      cookieStore.set("saas-tenant", tenant.slug, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
+      cookieStore.set("saas-tenant", tenant.slug, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 30 });
     }
   }
-  redirect("/admin");
+  if (data.user.user_metadata?.must_change_password === true) redirect("/admin/change-password");
+  const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  redirect(assurance.data?.currentLevel === "aal2" ? "/admin" : "/admin/mfa");
+}
+
+export async function changeTemporaryPasswordAction(_previous: { error: string }, formData: FormData) {
+  if (!isSupabaseConfigured()) redirect("/admin");
+  const parsed = adminPasswordChangeSchema.safeParse({
+    password: formData.get("password"),
+    confirmation: formData.get("confirmation"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revise a nova senha." };
+
+  const supabase = await createClient();
+  if (!supabase) return { error: "Supabase não configurado." };
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/admin/login");
+  const { error } = await supabase.auth.updateUser({
+    password: parsed.data.password,
+    data: { ...user.user_metadata, must_change_password: false },
+  });
+  if (error) return { error: "Não foi possível trocar a senha. Entre novamente e tente de novo." };
+  redirect("/admin/mfa");
 }
 
 export async function logoutAction() {
   const cookieStore = await cookies();
   cookieStore.delete(platformRuntimeKeys.adminCookie);
+  cookieStore.delete("saas-tenant");
   const supabase = await createClient();
   if (supabase) await supabase.auth.signOut();
   redirect("/admin/login");

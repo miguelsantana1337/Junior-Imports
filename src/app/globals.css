@@ -448,6 +448,35 @@ img { display: block; max-width: 100%; }
 .payment-options strong, .payment-options small { display: block; }
 .payment-options small { color: var(--muted); font-size: 9px; }
 .consent-line { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 17px; color: var(--muted); font-size: 10px; }
+.checkout-honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
+.turnstile-field { display: grid; gap: 8px; margin: 4px 0 18px; }
+.turnstile-field small { color: var(--muted); font-size: 11px; }
+
+.mfa-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: #f4f7fb; color: #172033; }
+.mfa-card { width: min(100%, 460px); display: grid; gap: 16px; padding: 32px; border: 1px solid #dfe6ef; border-radius: 20px; background: #fff; box-shadow: 0 24px 70px rgb(23 32 51 / 12%); text-align: center; }
+.mfa-card > span { color: #1677ff; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.mfa-card h1, .mfa-card p { margin: 0; }
+.mfa-card p { color: #64748b; line-height: 1.6; }
+.mfa-icon { width: 54px; height: 54px; display: grid; place-items: center; margin: 0 auto; border-radius: 16px; background: #eaf3ff; color: #1677ff; }
+.mfa-icon svg { width: 28px; height: 28px; }
+.mfa-qr { width: min(240px, 100%); margin: 0 auto; border: 10px solid #fff; border-radius: 14px; box-shadow: 0 0 0 1px #dfe6ef; }
+.mfa-secret { display: grid; gap: 5px; padding: 12px; border-radius: 10px; background: #f7f9fc; }
+.mfa-secret small { color: #64748b; }
+.mfa-secret code { overflow-wrap: anywhere; color: #172033; font-size: 12px; }
+.mfa-card form { display: grid; gap: 14px; text-align: left; }
+.mfa-card form label { display: grid; gap: 7px; color: #344054; font-size: 13px; font-weight: 700; }
+.mfa-code-field { display: flex; align-items: center; gap: 10px; padding: 0 14px; border: 1px solid #cad5e2; border-radius: 10px; background: #fff; }
+.mfa-code-field svg { width: 18px; color: #1677ff; }
+.mfa-code-field input { width: 100%; padding: 14px 0; border: 0; outline: 0; background: transparent; color: #172033; font-size: 24px; font-weight: 700; letter-spacing: .3em; }
+.mfa-signout { display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; background: transparent; color: #64748b; cursor: pointer; }
+.mfa-signout svg { width: 16px; }
+.password-change-card { text-align: left; }
+.password-change-card > span,
+.password-change-card > h1,
+.password-change-card > p { text-align: center; }
+.password-change-card > label { display: grid; gap: 7px; color: #344054; font-size: 13px; font-weight: 700; }
+.password-change-card > label input { width: 100%; padding: 13px 14px; border: 1px solid #cad5e2; border-radius: 10px; background: #fff; color: #172033; }
+.password-change-card > label small { color: #64748b; font-weight: 500; line-height: 1.45; }
 .checkout-summary { position: sticky; top: 100px; padding: 24px; border: 1px solid var(--line); border-radius: 17px; background: #080b10; }
 .checkout-summary > span { color: var(--primary-2); font-size: 9px; font-weight: 900; letter-spacing: .13em; }
 .summary-item { display: grid; grid-template-columns: 45px 1fr auto; gap: 9px; padding: 13px 0; border-bottom: 1px solid var(--line); font-size: 10px; }

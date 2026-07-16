@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const money = z.coerce.number().min(0, "Informe um valor válido.");
 
-export const checkoutSchema = z.object({
+export const checkoutCustomerSchema = z.object({
   name: z.string().trim().min(3, "Informe o nome completo."),
   phone: z.string().trim().regex(/^\D*(?:\d\D*){10,11}$/, "Informe um WhatsApp válido."),
   email: z.string().trim().email("Informe um e-mail válido."),
@@ -12,8 +12,13 @@ export const checkoutSchema = z.object({
   address: z.string().trim().min(3, "Informe o endereço."),
   number: z.string().trim().min(1, "Informe o número."),
   complement: z.string().trim().max(120),
+});
+
+export const checkoutSchema = checkoutCustomerSchema.extend({
   payment: z.enum(["Pix", "Cartao", "Boleto"]),
-  consent: z.boolean().refine(Boolean, "Confirme que este pedido é apenas uma simulação."),
+  consent: z.boolean().refine(Boolean, "Confirme que autoriza o envio dos dados para atendimento."),
+  botField: z.string().max(0, "Solicitação inválida."),
+  startedAt: z.coerce.number().int().positive(),
 });
 
 export const manualOrderSchema = z.object({
@@ -309,12 +314,12 @@ export const messageAutomationSchema = z.object({
 });
 
 const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
-const adminPermissionSchema = z.enum(["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"]);
+const adminPermissionSchema = z.enum(["dashboard", "audit", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"]);
 
 export const adminUserCreateSchema = z.object({
   fullName: z.string().trim().min(3, "Informe o nome completo."),
   email: z.string().trim().email("Informe um e-mail válido."),
-  password: z.string().min(8, "A senha temporária deve ter pelo menos 8 caracteres."),
+  password: z.string().min(12, "A senha temporária deve ter pelo menos 12 caracteres.").max(72),
   role: adminRoleSchema,
   permissions: z.array(adminPermissionSchema).min(1, "Selecione pelo menos uma permissão."),
   active: z.boolean(),
@@ -333,7 +338,7 @@ export const tenantCreateSchema = z.object({
   orderPrefix: z.string().trim().min(2).max(5).regex(/^[A-Za-z0-9]+$/).transform((value) => value.toUpperCase()),
   ownerName: z.string().trim().min(2).max(100),
   ownerEmail: z.string().trim().email(),
-  ownerPassword: z.string().min(8).max(72),
+  ownerPassword: z.string().min(12).max(72),
 });
 
 export const tenantUpdateSchema = z.object({
@@ -344,10 +349,26 @@ export const tenantUpdateSchema = z.object({
 
 export const adminLoginSchema = z.object({
   email: z.string().trim().email("Informe um e-mail válido."),
-  password: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
+  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
 });
 
-export type CheckoutInput = z.infer<typeof checkoutSchema>;
+export const adminPasswordChangeSchema = z.object({
+  password: z.string()
+    .min(12, "A nova senha deve ter pelo menos 12 caracteres.")
+    .max(72)
+    .regex(/[a-z]/, "Inclua uma letra minúscula.")
+    .regex(/[A-Z]/, "Inclua uma letra maiúscula.")
+    .regex(/\d/, "Inclua um número.")
+    .regex(/[^A-Za-z0-9]/, "Inclua um caractere especial."),
+  confirmation: z.string(),
+}).superRefine((value, context) => {
+  if (value.password !== value.confirmation) {
+    context.addIssue({ code: "custom", path: ["confirmation"], message: "As senhas não coincidem." });
+  }
+});
+
+export type CheckoutFormInput = z.input<typeof checkoutSchema>;
+export type CheckoutInput = z.output<typeof checkoutSchema>;
 export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
 export type ProductInput = z.infer<typeof productSchema>;
 export type BannerInput = z.infer<typeof bannerSchema>;

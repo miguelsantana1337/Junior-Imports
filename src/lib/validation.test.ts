@@ -14,6 +14,8 @@ describe("validacao do checkout", () => {
     complement: "",
     payment: "Pix",
     consent: true,
+    botField: "",
+    startedAt: Date.now(),
   };
 
   it("aceita dados completos", () => {

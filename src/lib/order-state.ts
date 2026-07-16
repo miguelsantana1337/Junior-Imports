@@ -80,34 +80,12 @@ export function applyCreatedOrder(
     }, ...couponRedemptions];
   }
 
-  const products = current.products.map((product) => {
-    const item = storedOrder.items.find((candidate) => candidate.productId === product.id);
-    return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
-  });
-  const inventoryMovements = storedOrder.items.map((item) => {
-    const product = products.find((candidate) => candidate.id === item.productId);
-    return {
-      id: `sale-${storedOrder.id}-${item.productId}`,
-      productId: item.productId,
-      type: "sale" as const,
-      quantity: -item.quantity,
-      balanceAfter: product?.stock ?? 0,
-      unitCost: item.unitCost,
-      referenceType: "order",
-      referenceId: storedOrder.id,
-      note: `Reserva automática do pedido ${storedOrder.code}.`,
-      actorEmail: options.actorEmail ?? "",
-      createdAt: now,
-    };
-  });
   const generatedLogs = options.generatedLogs ?? createMessageLogs(storedOrder, current.messageAutomations ?? []);
 
   return {
     ...current,
-    products,
     customers,
     couponRedemptions,
-    inventoryMovements: [...inventoryMovements, ...current.inventoryMovements],
     orders: [storedOrder, ...current.orders],
     messageLogs: [...generatedLogs, ...(current.messageLogs ?? [])],
   };

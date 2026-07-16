@@ -17,7 +17,7 @@ function isStoreDataBackup(value: unknown): value is StoreData {
 }
 
 export function DataAdmin() {
-  const { data, demoMode, clearOrders, resetData, importData } = useAdminData();
+  const { data, demoMode, currentUser, clearOrders, resetData, importData } = useAdminData();
   const confirm = useConfirm();
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
@@ -65,7 +65,7 @@ export function DataAdmin() {
         {message && <p className="admin-data-message" role="status">{message}</p>}
       </AdminPanel>
 
-      <AdminPanel title="Auditoria administrativa" description="Histórico das alterações feitas pela equipe no Supabase.">
+      {(currentUser.role === "owner" || currentUser.permissions.includes("audit")) && <AdminPanel title="Auditoria administrativa" description="Histórico minimizado das alterações feitas pela equipe no Supabase.">
         <div className="admin-table-wrap">
           <table className="admin-table audit-table">
             <thead><tr><th>Data</th><th>Usuário</th><th>Ação</th><th>Tipo</th><th>Item</th></tr></thead>
@@ -75,7 +75,7 @@ export function DataAdmin() {
             </tbody>
           </table>
         </div>
-      </AdminPanel>
+      </AdminPanel>}
     </>
   );
 }

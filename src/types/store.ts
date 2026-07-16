@@ -21,6 +21,8 @@ export interface StoreTenant {
   storefrontPath: string;
 }
 
+export type StorefrontTenant = Pick<StoreTenant, "id" | "slug" | "name" | "storefrontPath">;
+
 export interface SaasTenant extends Omit<StoreTenant, "storefrontPath"> {
   createdAt: string;
 }
@@ -67,7 +69,7 @@ export interface StoreSettings {
   whatsappMessage: string;
 }
 
-export interface Product {
+export interface StorefrontProduct {
   id: string;
   slug: string;
   name: string;
@@ -76,13 +78,10 @@ export interface Product {
   brand: string;
   price: number;
   compareAt: number;
-  costPrice: number;
   stock: number;
-  minStock: number;
   badge: string;
   accent: string;
   description: string;
-  sku: string;
   rating: number;
   reviews: number;
   featured: boolean;
@@ -97,6 +96,12 @@ export interface Product {
   presentation: string;
   regulatoryWarning: string;
   pharmacistReviewed: boolean;
+}
+
+export interface Product extends StorefrontProduct {
+  costPrice: number;
+  minStock: number;
+  sku: string;
 }
 
 export interface Category {
@@ -353,6 +358,8 @@ export interface Order {
   couponCode: string;
   internalNotes: string;
   trackingCode: string;
+  orderSource?: "legacy" | "storefront" | "admin";
+  reservationExpiresAt?: string;
 }
 
 export type FinancialTransactionType = "income" | "expense";
@@ -470,6 +477,7 @@ export type AdminRole = "owner" | "manager" | "editor" | "support" | "viewer";
 
 export type AdminPermission =
   | "dashboard"
+  | "audit"
   | "crm"
   | "customers"
   | "orders"
@@ -536,6 +544,21 @@ export interface StoreData {
   messageLogs: MessageLog[];
   teamMembers: AdminUser[];
   auditLogs: AuditLog[];
+}
+
+export interface StorefrontData {
+  tenant: StorefrontTenant;
+  settings: StoreSettings;
+  products: StorefrontProduct[];
+  categories: Category[];
+  banners: Banner[];
+  sections: HomeSection[];
+  pages: StorePage[];
+  pageBlocks: PageBlock[];
+  trustItems: TrustItem[];
+  benefits: Benefit[];
+  faqs: Faq[];
+  orders: Order[];
 }
 
 export interface CartLine {

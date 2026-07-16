@@ -28,7 +28,7 @@ export function CatalogSection({ section }: { section: HomeSection }) {
       .filter((product) => product.active)
       .filter((product) => category === "Todos" || product.category === category)
       .filter((product) =>
-        !term || [product.name, product.category, product.brand, product.description, product.sku]
+        !term || [product.name, product.category, product.brand, product.description]
           .some((value) => value.toLocaleLowerCase("pt-BR").includes(term)),
       )
       .sort((a, b) => {

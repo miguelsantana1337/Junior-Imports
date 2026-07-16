@@ -10,9 +10,9 @@ import { discountPercent, stockLabel } from "@/lib/commerce";
 import { formatMoney } from "@/lib/format";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
-import type { Product } from "@/types/store";
+import type { StorefrontProduct } from "@/types/store";
 
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({ product }: { product: StorefrontProduct }) {
   const { favorites, toggleFavorite, addItem, setDrawerOpen, ready: cartReady } = useCart();
   const { data } = useStore();
   const toast = useToast();

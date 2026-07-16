@@ -1,4 +1,4 @@
-import type { CheckoutMode, Product, ProductType, RegulatoryStatus } from "@/types/store";
+import type { CheckoutMode, StorefrontProduct, ProductType, RegulatoryStatus } from "@/types/store";
 
 export const productTypeLabels: Record<ProductType, string> = {
   unclassified: "Sem classificação",
@@ -16,7 +16,7 @@ export const regulatoryStatusLabels: Record<RegulatoryStatus, string> = {
 
 const anvisaRegistrationPattern = /^1[0-9.\/-]{8,}$/;
 
-export function getProductComplianceIssues(product: Product): string[] {
+export function getProductComplianceIssues(product: StorefrontProduct): string[] {
   const issues: string[] = [];
 
   if (product.regulatoryStatus !== "approved") {
@@ -44,7 +44,7 @@ export function getProductComplianceIssues(product: Product): string[] {
   return [...new Set(issues)];
 }
 
-export function isProductPubliclySellable(product: Product): boolean {
+export function isProductPubliclySellable(product: StorefrontProduct): boolean {
   return product.active && getProductComplianceIssues(product).length === 0;
 }
 
@@ -54,16 +54,16 @@ export function isProductPubliclySellable(product: Product): boolean {
  * exige confirmação das informações pela loja. Itens bloqueados continuam fora
  * do fluxo e o modo demonstrativo mantém a regra regulatória mais restritiva.
  */
-export function canAddProductToCart(product: Product, checkoutMode: CheckoutMode): boolean {
+export function canAddProductToCart(product: StorefrontProduct, checkoutMode: CheckoutMode): boolean {
   if (!product.active || product.stock <= 0 || product.regulatoryStatus === "blocked") return false;
   return isProductPubliclySellable(product) || checkoutMode === "whatsapp";
 }
 
-export function isProductVisibleInCatalog(product: Product): boolean {
+export function isProductVisibleInCatalog(product: StorefrontProduct): boolean {
   return product.active;
 }
 
-export function productPublicationLabel(product: Product): string {
+export function productPublicationLabel(product: StorefrontProduct): string {
   if (!product.active) return "Oculto";
   if (isProductPubliclySellable(product)) return "Disponível para pedido";
   return "Visível para consulta";

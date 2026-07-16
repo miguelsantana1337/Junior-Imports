@@ -66,7 +66,7 @@ export async function POST(request: Request) {
     email: input.ownerEmail,
     password: input.ownerPassword,
     email_confirm: true,
-    user_metadata: { full_name: input.ownerName },
+    user_metadata: { full_name: input.ownerName, must_change_password: true },
   });
 
   if (created.data.user) {

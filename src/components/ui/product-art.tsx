@@ -1,6 +1,6 @@
-import type { Product } from "@/types/store";
+import type { StorefrontProduct } from "@/types/store";
 
-export function ProductArt({ product, large = false }: { product: Product; large?: boolean }) {
+export function ProductArt({ product, large = false }: { product: StorefrontProduct; large?: boolean }) {
   if (product.imageUrl) {
     return (
       // User-managed URLs come from Supabase Storage or the demo form.

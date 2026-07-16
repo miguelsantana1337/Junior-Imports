@@ -3,7 +3,7 @@ import type {
   CartLine,
   Coupon,
   PaymentMethod,
-  Product,
+  StorefrontProduct,
   StoreSettings,
 } from "@/types/store";
 
@@ -18,7 +18,7 @@ export function isCouponValid(coupon: Coupon, subtotal: number, now = new Date()
 
 export function calculateCart(
   lines: CartLine[],
-  products: Product[],
+  products: StorefrontProduct[],
   settings: StoreSettings,
   coupon: Coupon | null = null,
   payment?: PaymentMethod,
@@ -67,14 +67,14 @@ export function calculateCart(
   };
 }
 
-export function stockLabel(product: Product) {
+export function stockLabel(product: StorefrontProduct) {
   if (product.stock <= 0) return { label: "Esgotado", tone: "out" } as const;
-  if (product.stock <= 10)
-    return { label: `Só ${product.stock} unidades`, tone: "low" } as const;
+  if (product.stock <= 5)
+    return { label: "Últimas unidades", tone: "low" } as const;
   return { label: "Em estoque", tone: "ok" } as const;
 }
 
-export function discountPercent(product: Product) {
+export function discountPercent(product: StorefrontProduct) {
   if (product.compareAt <= product.price) return 0;
   return Math.round((1 - product.price / product.compareAt) * 100);
 }
