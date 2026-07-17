@@ -43,6 +43,7 @@ const auditEntityLabels: Record<string, string> = {
   message_automations: "Automação",
   orders: "Pedido",
   profiles: "Usuário",
+  auth_mfa_factors: "Autenticador",
   store_settings: "Configurações",
 };
 

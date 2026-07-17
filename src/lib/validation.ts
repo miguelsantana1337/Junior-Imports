@@ -379,6 +379,12 @@ export const adminUserPasswordResetSchema = adminPasswordChangeSchema.extend({
   id: z.string().uuid("Usuário inválido."),
 });
 
+export const adminMfaAuditSchema = z.object({
+  action: z.enum(["enroll", "remove"]),
+  factorId: z.string().uuid("Autenticador inválido."),
+  friendlyName: z.string().trim().min(3).max(50),
+});
+
 export type CheckoutFormInput = z.input<typeof checkoutSchema>;
 export type CheckoutInput = z.output<typeof checkoutSchema>;
 export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
@@ -399,3 +405,4 @@ export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;
 export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
 export type AdminUserPasswordResetInput = z.infer<typeof adminUserPasswordResetSchema>;
+export type AdminMfaAuditInput = z.infer<typeof adminMfaAuditSchema>;

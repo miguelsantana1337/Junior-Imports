@@ -55,6 +55,18 @@ test("instala o painel como PWA sem armazenar páginas administrativas", async (
   expect(manifest.start_url).toMatch(/^\/admin/);
 });
 
+test("abre o gerenciamento de MFA com troca segura de dispositivo", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/security");
+
+  await expect(page.getByRole("heading", { name: "Segurança e MFA" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Seus acessos em duas etapas, sob controle." })).toBeVisible();
+  await expect(page.getByText("Cadastre o celular novo", { exact: true })).toBeVisible();
+  await expect(page.getByText("Confirme e teste o acesso", { exact: true })).toBeVisible();
+  await expect(page.getByText("Remova o celular antigo", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Adicionar autenticador" })).toBeDisabled();
+});
+
 test("alterna e mantém o modo escuro do painel", async ({ page }) => {
   await login(page);
 

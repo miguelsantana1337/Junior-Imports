@@ -23,6 +23,7 @@ import {
   IconReceipt2,
   IconSearch,
   IconSettings,
+  IconShieldLock,
   IconSun,
   IconTag,
   IconTicket,
@@ -86,6 +87,7 @@ const navigationGroups = [
     label: "Sistema",
     items: [
       { href: "/admin/users", label: "Usuários", icon: IconUsers, permission: "users" },
+      { href: "/admin/security", label: "Segurança e MFA", icon: IconShieldLock, permission: null },
       { href: "/admin/settings", label: "Configurações", icon: IconSettings, permission: "settings" },
       { href: "/admin/data", label: "Dados", icon: IconDatabase, permission: "data" },
     ],
@@ -112,6 +114,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/purchasing": ["ERP", "Compras e fornecedores"],
   "/admin/settings": ["SISTEMA", "Configurações"],
   "/admin/users": ["SISTEMA", "Usuários e permissões"],
+  "/admin/security": ["SISTEMA", "Segurança e MFA"],
   "/admin/data": ["SISTEMA", "Dados e backup"],
 };
 
@@ -145,7 +148,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const isNavigationActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
   const accountName = user.fullName || user.email.split("@")[0] || "Administrador";
   const can = (permission: string) => hasAdminPermission(user.role, user.permissions, permission as AdminPermission);
-  const visibleNavigation = navigation.filter((item) => can(item.permission));
+  const visibleNavigation = navigation.filter((item) => item.permission === null || can(item.permission));
   const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
   const lowStockCount = data.products.filter((product) => product.active && product.stock <= product.minStock).length;
   const pendingOrderCount = data.orders.filter((order) => ["Novo", "Aguardando pagamento", "Pago", "Preparando"].includes(order.status)).length;
@@ -218,7 +221,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           </div>
 
           <nav className="admin-nav-groups" aria-label="Navegação administrativa">
-            {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => can(item.permission)) })).filter((group) => group.items.length).map((group) => (
+            {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => item.permission === null || can(item.permission)) })).filter((group) => group.items.length).map((group) => (
               <div className="admin-nav-group" key={group.label}>
                 <span>{group.label}</span>
                 {group.items.map(({ href, label, icon: Icon }) => (

@@ -14,6 +14,7 @@ import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ProductsAdmin } from "@/components/admin/products-admin";
 import { PurchasingAdmin } from "@/components/admin/purchasing-admin";
 import { SectionsAdmin } from "@/components/admin/sections-admin";
+import { SecurityMfaAdmin } from "@/components/admin/security-mfa-admin";
 import { SettingsAdmin } from "@/components/admin/settings-admin";
 import { UsersAdmin } from "@/components/admin/users-admin";
 import { sectionPermissions } from "@/lib/admin-permissions";
@@ -34,6 +35,7 @@ const sections = {
   inventory: InventoryAdmin,
   purchasing: PurchasingAdmin,
   messages: MessagesAdmin,
+  security: SecurityMfaAdmin,
   settings: SettingsAdmin,
   users: UsersAdmin,
   data: DataAdmin,

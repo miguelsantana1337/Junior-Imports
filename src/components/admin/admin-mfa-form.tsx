@@ -2,18 +2,14 @@
 
 import { KeyRound, LogOut, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { mfaFactorName, type AdminMfaFactor } from "@/lib/admin-mfa";
 import { createClient } from "@/lib/supabase/client";
 
 type MfaMode = "loading" | "enroll" | "verify";
 
-type ListedFactor = {
-  id: string;
-  status?: string;
-  factor_type?: string;
-};
-
 export function AdminMfaForm() {
   const [mode, setMode] = useState<MfaMode>("loading");
+  const [factors, setFactors] = useState<AdminMfaFactor[]>([]);
   const [factorId, setFactorId] = useState("");
   const [qrCode, setQrCode] = useState("");
   const [secret, setSecret] = useState("");
@@ -26,16 +22,19 @@ export function AdminMfaForm() {
     async function prepare() {
       const supabase = createClient();
       if (!supabase) return;
-      const factors = await supabase.auth.mfa.listFactors();
+      const factorResponse = await supabase.auth.mfa.listFactors();
       if (!active) return;
-      if (factors.error) {
+      if (factorResponse.error) {
         setError("Não foi possível carregar a verificação em duas etapas.");
         return;
       }
-      const listed = ((factors.data as { totp?: ListedFactor[] } | null)?.totp ?? []);
-      const verified = listed.find((factor) => factor.status === "verified");
-      if (verified) {
-        setFactorId(verified.id);
+      const listed = ((factorResponse.data as { all?: AdminMfaFactor[]; totp?: AdminMfaFactor[] } | null)?.all
+        ?? (factorResponse.data as { totp?: AdminMfaFactor[] } | null)?.totp
+        ?? []).filter((factor) => factor.factor_type === "totp");
+      const verified = listed.filter((factor) => factor.status === "verified");
+      if (verified.length) {
+        setFactors(verified);
+        setFactorId(verified[0].id);
         setMode("verify");
         return;
       }
@@ -47,7 +46,8 @@ export function AdminMfaForm() {
       );
       const enrolled = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "Junior Imports",
+        friendlyName: "Dispositivo principal",
+        issuer: "Junior Imports",
       });
       if (!active) return;
       if (enrolled.error || !enrolled.data) {
@@ -81,7 +81,11 @@ export function AdminMfaForm() {
       setBusy(false);
       return;
     }
-    window.location.assign("/admin");
+    const requestedPath = new URLSearchParams(window.location.search).get("returnTo");
+    const destination = requestedPath?.startsWith("/admin/") && !requestedPath.startsWith("//")
+      ? requestedPath
+      : "/admin";
+    window.location.assign(destination);
   }
 
   async function signOut() {
@@ -109,6 +113,24 @@ export function AdminMfaForm() {
         {mode === "verify" && <p>Digite o código atual do seu aplicativo autenticador para acessar o painel.</p>}
         {mode !== "loading" && (
           <form onSubmit={verify}>
+            {mode === "verify" && factors.length > 1 && (
+              <label>
+                Dispositivo autenticador
+                <select
+                  value={factorId}
+                  onChange={(event) => {
+                    setFactorId(event.target.value);
+                    setCode("");
+                    setError("");
+                  }}
+                  aria-label="Dispositivo autenticador"
+                >
+                  {factors.map((factor, index) => (
+                    <option value={factor.id} key={factor.id}>{mfaFactorName(factor, index)}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label>
               Código de segurança
               <div className="mfa-code-field"><KeyRound /><input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" placeholder="000000" /></div>
