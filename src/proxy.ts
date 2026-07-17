@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { platformConfig } from "@/config/platform";
+import { getPrimaryStorefrontRedirectPath } from "@/lib/canonical-storefront-path";
 
 const reservedSubdomains = new Set(["www", "app", "admin"]);
 
@@ -22,6 +24,17 @@ async function customDomainTenant(hostname: string) {
 
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const primaryStorefrontPath = getPrimaryStorefrontRedirectPath(
+    pathname,
+    platformConfig.clientId,
+  );
+
+  if (primaryStorefrontPath) {
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = primaryStorefrontPath;
+    return NextResponse.redirect(canonicalUrl, 308);
+  }
+
   if (pathname.startsWith("/admin") || pathname.startsWith("/api") || pathname.startsWith("/saas") || pathname.startsWith("/loja") || pathname.startsWith("/_next") || /\.[a-z0-9]+$/i.test(pathname)) {
     return NextResponse.next();
   }
