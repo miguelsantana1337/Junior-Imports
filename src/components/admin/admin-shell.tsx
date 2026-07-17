@@ -39,6 +39,7 @@ import type { AdminPermission, AdminRole } from "@/types/store";
 import { useAdminData } from "@/components/admin/admin-data-provider";
 import { platformConfig } from "@/config/platform";
 import { clearAdminSensitiveBrowserStorage } from "@/lib/browser-storage";
+import { AdminPwaInstall } from "@/components/admin/admin-pwa-install";
 
 const navigationGroups = [
   {
@@ -262,6 +263,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           </div>
 
           <div className="admin-topbar-actions">
+            <AdminPwaInstall />
             <div className="admin-popover-wrap">
               <button className="admin-create-button" onClick={() => setCreateOpen((current) => !current)} aria-expanded={createOpen}>
                 <IconPlus /> Criar <span /><IconChevronDown />

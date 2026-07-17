@@ -1,0 +1,74 @@
+{
+  "id": "/admin",
+  "name": "Junior Imports — Painel de Controle",
+  "short_name": "Junior Admin",
+  "description": "Gerencie pedidos, clientes, catálogo, estoque e financeiro da Junior Imports.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/admin?source=pwa",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07101f",
+  "theme_color": "#1677ff",
+  "categories": ["business", "productivity", "shopping"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/pwa/admin-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/admin-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa/admin-icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Pedidos",
+      "short_name": "Pedidos",
+      "url": "/admin/orders?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/pwa/admin-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Produtos",
+      "short_name": "Produtos",
+      "url": "/admin/products?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/pwa/admin-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "CRM",
+      "short_name": "CRM",
+      "url": "/admin/crm?source=pwa-shortcut",
+      "icons": [
+        {
+          "src": "/pwa/admin-icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

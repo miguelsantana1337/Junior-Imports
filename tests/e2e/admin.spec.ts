@@ -21,6 +21,40 @@ async function openSection(page: Page, name: string) {
   await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name, exact: true }).click();
 }
 
+test("instala o painel como PWA sem armazenar páginas administrativas", async ({ page, request }) => {
+  await login(page);
+
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute(
+    "href",
+    "/admin-manifest.webmanifest",
+  );
+  await expect(page.getByRole("button", { name: "Instalar painel como aplicativo" })).toBeVisible();
+
+  await expect.poll(() => page.evaluate(async () => {
+    const registration = await navigator.serviceWorker.getRegistration("/admin");
+    return registration?.scope.endsWith("/admin") ?? false;
+  })).toBe(true);
+  await expect.poll(() => page.evaluate(
+    () => navigator.serviceWorker.controller?.scriptURL.endsWith("/admin-sw.js") ?? false,
+  )).toBe(true);
+
+  const cachedAdminPages = await page.evaluate(async () => {
+    const keys = await caches.keys();
+    const urls = (await Promise.all(
+      keys.map(async (key) => (await caches.open(key)).keys()),
+    )).flat().map((entry) => new URL(entry.url).pathname);
+    return urls.filter((pathname) => pathname === "/admin" || pathname.startsWith("/admin/"));
+  });
+  expect(cachedAdminPages).toEqual([]);
+
+  const manifestResponse = await request.get("/admin-manifest.webmanifest");
+  expect(manifestResponse.ok()).toBe(true);
+  expect(manifestResponse.headers()["content-type"]).toContain("application/manifest+json");
+  const manifest = await manifestResponse.json();
+  expect(manifest.scope).toBe("/admin");
+  expect(manifest.start_url).toMatch(/^\/admin/);
+});
+
 test("alterna e mantém o modo escuro do painel", async ({ page }) => {
   await login(page);
 

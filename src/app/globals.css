@@ -1868,6 +1868,62 @@ html[data-admin-theme="dark"] .password-reset-field button { border-color: #3140
 }
 .admin-theme-toggle svg { width: 17px; }
 
+.admin-pwa-install-button {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: none;
+  border: 1px solid #b8d5fa;
+  border-radius: 8px;
+  background: #eef6ff;
+  color: #1268d8;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: border-color .18s ease, background .18s ease, color .18s ease, transform .18s ease;
+}
+.admin-pwa-install-button:hover {
+  border-color: #73aaf1;
+  background: #e2f0ff;
+  color: #075abf;
+  transform: translateY(-1px);
+}
+.admin-pwa-install-button:focus-visible {
+  outline: 3px solid rgb(22 119 255 / 22%);
+  outline-offset: 2px;
+}
+.admin-pwa-install-button svg { width: 16px; }
+.admin-pwa-instructions {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.admin-pwa-instruction-icon {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #eaf3ff;
+  color: #1677ff;
+}
+.admin-pwa-instruction-icon svg { width: 27px; }
+.admin-pwa-instructions > strong { margin-top: 17px; color: #1b2c43; font-size: 15px; }
+.admin-pwa-instructions > p { max-width: 390px; margin: 8px 0 0; color: #607289; font-size: 11px; line-height: 1.6; }
+.admin-pwa-instructions > small { max-width: 390px; margin-top: 15px; color: #8190a2; font-size: 9px; line-height: 1.5; }
+.admin-pwa-instructions > .admin-button { margin-top: 20px; }
+
+@media (max-width: 1400px) {
+  .admin-pwa-install-button { width: 36px; padding: 0; }
+  .admin-pwa-install-button span { display: none; }
+}
+
 html[data-admin-theme="dark"] .admin-shell-next {
   --surface: #111c2e;
   --surface-2: #162338;
@@ -1896,6 +1952,7 @@ html[data-admin-theme="dark"] .admin-topbar-next {
 html[data-admin-theme="dark"] .admin-global-search,
 html[data-admin-theme="dark"] .admin-menu-toggle,
 html[data-admin-theme="dark"] .admin-theme-toggle,
+html[data-admin-theme="dark"] .admin-pwa-install-button,
 html[data-admin-theme="dark"] .admin-view-store,
 html[data-admin-theme="dark"] .admin-notification-button,
 html[data-admin-theme="dark"] .admin-popover,
@@ -1915,6 +1972,19 @@ html[data-admin-theme="dark"] .admin-theme-toggle {
   background: #17263c;
   color: #ffd36a;
 }
+
+html[data-admin-theme="dark"] .admin-pwa-install-button {
+  border-color: #315d8f;
+  background: #102b49;
+  color: #75b4ff;
+}
+html[data-admin-theme="dark"] .admin-pwa-instruction-icon {
+  background: #102b49;
+  color: #75b4ff;
+}
+html[data-admin-theme="dark"] .admin-pwa-instructions > strong { color: #edf4ff; }
+html[data-admin-theme="dark"] .admin-pwa-instructions > p { color: #a7b7ca; }
+html[data-admin-theme="dark"] .admin-pwa-instructions > small { color: #8194ab; }
 
 html[data-admin-theme="dark"] .admin-theme-toggle:hover,
 html[data-admin-theme="dark"] .admin-shell-next .admin-button:hover,
