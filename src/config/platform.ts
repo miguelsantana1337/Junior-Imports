@@ -65,8 +65,6 @@ export const platformConfig = {
     email:
       process.env.NEXT_PUBLIC_DEMO_ADMIN_EMAIL?.trim() ||
       "admin@juniorimports.demo",
-    password:
-      process.env.NEXT_PUBLIC_DEMO_ADMIN_PASSWORD?.trim() || "junior123",
     fullName:
       process.env.NEXT_PUBLIC_DEMO_ADMIN_NAME?.trim() || "Administrador Demo",
   },

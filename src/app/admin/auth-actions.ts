@@ -5,12 +5,17 @@ import { redirect } from "next/navigation";
 import { adminLoginSchema, adminPasswordChangeSchema } from "@/lib/validation";
 import { platformRuntimeKeys } from "@/config/platform";
 import {
+  clearAdminLoginRateLimit,
+  enforceAdminLoginRateLimit,
+} from "@/lib/admin-login-security";
+import {
   hasValidPasswordRecoveryProof,
   passwordRecoveryCookie,
   passwordRecoveryCookieOptions,
 } from "@/lib/password-recovery-session";
-import { demoAdminCredentials, isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 import { createClient } from "@/lib/supabase/server";
 
 export async function loginAction(_previous: { error: string }, formData: FormData) {
@@ -31,8 +36,11 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
 
   const supabase = await createClient();
   if (!supabase) return { error: "Supabase não configurado." };
+  const loginLimit = await enforceAdminLoginRateLimit(parsed.data.email);
+  if (!loginLimit.allowed) return { error: loginLimit.error };
   const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error || !data.user) return { error: "E-mail ou senha inválidos." };
+  await clearAdminLoginRateLimit(loginLimit.context);
   const { data: profile } = await supabase.from("profiles").select("role, active, permissions, must_change_password").eq("id", data.user.id).maybeSingle();
   if (!profile?.active || !["owner", "manager", "editor", "support", "viewer", "admin"].includes(profile.role)) {
     await supabase.auth.signOut();

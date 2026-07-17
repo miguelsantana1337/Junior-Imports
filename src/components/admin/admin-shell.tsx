@@ -38,6 +38,7 @@ import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
 import { useAdminData } from "@/components/admin/admin-data-provider";
 import { platformConfig } from "@/config/platform";
+import { clearAdminSensitiveBrowserStorage } from "@/lib/browser-storage";
 
 const navigationGroups = [
   {
@@ -244,7 +245,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           <div className="admin-sidebar-actions">
             <button className="admin-sidebar-toggle" type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"} title={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"}><IconChevronLeft /><span>{collapsed ? "Expandir menu" : "Recolher menu"}</span></button>
             <Link href={data.tenant.storefrontPath || "/"} target="_blank" title="Ver loja"><IconExternalLink /><span>Ver loja</span></Link>
-            <form action={logoutAction}><button title="Sair"><IconLogout /><span>Sair</span></button></form>
+            <form action={logoutAction} onSubmit={clearAdminSensitiveBrowserStorage}><button title="Sair"><IconLogout /><span>Sair</span></button></form>
           </div>
         </div>
       </aside>

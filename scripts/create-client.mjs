@@ -241,10 +241,10 @@ NEXT_PUBLIC_SECONDARY_COLOR=${envValue(secondary)}
 NEXT_PUBLIC_DEFAULT_LOGO_URL=${envValue("/client-brand.svg")}
 NEXT_PUBLIC_DEFAULT_FAVICON_URL=${envValue("/client-brand.svg")}
 
-# Login exibido somente no modo local demonstrativo
-NEXT_PUBLIC_DEMO_ADMIN_NAME=${envValue("Administrador Demo")}
-NEXT_PUBLIC_DEMO_ADMIN_EMAIL=${envValue(adminEmail)}
-NEXT_PUBLIC_DEMO_ADMIN_PASSWORD=${envValue(adminPassword)}
+# Login privado usado somente no modo local demonstrativo
+DEMO_ADMIN_NAME=${envValue("Administrador Demo")}
+DEMO_ADMIN_EMAIL=${envValue(adminEmail)}
+DEMO_ADMIN_PASSWORD=${envValue(adminPassword)}
 
 # Preencha para conectar a instância própria do Supabase
 NEXT_PUBLIC_SUPABASE_URL=

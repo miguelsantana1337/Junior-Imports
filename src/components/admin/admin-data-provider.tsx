@@ -22,6 +22,11 @@ import {
 } from "@/lib/product-slug";
 import { createClient } from "@/lib/supabase/client";
 import { applyStockImport, type StockImportRow } from "@/lib/catalog-import";
+import {
+  readSensitiveSessionValue,
+  removeSensitiveBrowserValue,
+  writeSensitiveSessionValue,
+} from "@/lib/browser-storage";
 import { calculateCart } from "@/lib/commerce";
 import { validateCouponForCustomer } from "@/lib/coupon-rules";
 import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
@@ -138,17 +143,20 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
   const demoDataKey = `${initialData.tenant.id}:store-data:v1`;
 
   useEffect(() => {
-    if (!demoMode) return;
+    if (!demoMode) {
+      removeSensitiveBrowserValue(demoDataKey);
+      return;
+    }
     try {
-      const stored = window.localStorage.getItem(demoDataKey);
+      const stored = readSensitiveSessionValue(demoDataKey);
       if (stored) setData(JSON.parse(stored) as StoreData);
     } catch {
-      window.localStorage.removeItem(demoDataKey);
+      removeSensitiveBrowserValue(demoDataKey);
     }
   }, [demoDataKey, demoMode]);
 
   useEffect(() => {
-    if (demoMode) window.localStorage.setItem(demoDataKey, JSON.stringify(data));
+    if (demoMode) writeSensitiveSessionValue(demoDataKey, JSON.stringify(data));
   }, [data, demoDataKey, demoMode]);
 
   useEffect(() => {

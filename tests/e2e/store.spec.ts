@@ -48,6 +48,16 @@ test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsAp
   const cart = page.getByRole("dialog", { name: "Carrinho" });
   await expect(cart).toBeVisible();
   await expect(cart.getByRole("heading", { name: "T.G. 15" })).toBeVisible();
+  const browserStorage = await page.evaluate(() => ({
+    localSensitiveKeys: Object.keys(window.localStorage).filter((key) =>
+      /:cart:v1$|:favorites:v1$|:store-data:v1$|product-draft:|auth-token/i.test(key),
+    ),
+    sessionCart: Object.keys(window.sessionStorage)
+      .filter((key) => key.endsWith(":cart:v1"))
+      .map((key) => window.sessionStorage.getItem(key)),
+  }));
+  expect(browserStorage.localSensitiveKeys).toEqual([]);
+  expect(browserStorage.sessionCart.some((value) => value?.includes("productId"))).toBe(true);
 });
 
 test("conclui carrinho, cupom e envia o pedido para o WhatsApp", async ({ page }) => {

@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { platformConfig, platformRuntimeKeys } from "@/config/platform";
 import { createClient } from "@/lib/supabase/server";
+import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 import { allAdminPermissions, firstAllowedAdminPath, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
 
@@ -31,7 +32,7 @@ export async function requireAdmin(requiredPermission?: AdminPermission): Promis
   if (!isSupabaseConfigured()) {
     const cookieStore = await cookies();
     if (cookieStore.get(platformRuntimeKeys.adminCookie)?.value !== "1") redirect("/admin/login");
-    return { id: "00000000-0000-4000-8000-000000000001", email: platformConfig.demoAdmin.email, fullName: platformConfig.demoAdmin.fullName, role: "owner", permissions: allAdminPermissions, tenantId: "00000000-0000-4000-8000-000000000100", tenantSlug: platformConfig.clientId, isPlatformAdmin: true };
+    return { id: "00000000-0000-4000-8000-000000000001", email: demoAdminCredentials.email, fullName: demoAdminCredentials.fullName, role: "owner", permissions: allAdminPermissions, tenantId: "00000000-0000-4000-8000-000000000100", tenantSlug: platformConfig.clientId, isPlatformAdmin: true };
   }
 
   const supabase = await createClient();

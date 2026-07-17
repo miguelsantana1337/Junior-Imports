@@ -23,6 +23,11 @@ import { useConfirm } from "@/components/providers/confirm-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { formatMoney } from "@/lib/format";
+import {
+  readSensitiveSessionValue,
+  removeSensitiveBrowserValue,
+  writeSensitiveSessionValue,
+} from "@/lib/browser-storage";
 import { normalizeProductImages, removeProductImage, reorderProductImages, setProductCover } from "@/lib/product-images";
 import { createUniqueProductSlug, toProductSaveError } from "@/lib/product-slug";
 import { productSchema } from "@/lib/validation";
@@ -104,7 +109,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
   useEffect(() => {
     if (productId || restoredDraft.current) return;
     restoredDraft.current = true;
-    const saved = window.localStorage.getItem(draftKey);
+    const saved = readSensitiveSessionValue(draftKey);
     if (!saved) return;
     try {
       const restored = withGallery(JSON.parse(saved) as Product);
@@ -112,7 +117,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
       initialForm.current = JSON.stringify(restored);
       toast({ message: "Rascunho recuperado neste navegador.", kind: "success" });
     } catch {
-      window.localStorage.removeItem(draftKey);
+      removeSensitiveBrowserValue(draftKey);
     }
   }, [draftKey, productId, toast]);
 
@@ -183,7 +188,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
   }
 
   function saveDraft() {
-    window.localStorage.setItem(draftKey, JSON.stringify({ ...form, imageUrls: images, imageUrl: cover }));
+    writeSensitiveSessionValue(draftKey, JSON.stringify({ ...form, imageUrls: images, imageUrl: cover }));
     initialForm.current = JSON.stringify({ ...form, imageUrls: images, imageUrl: cover });
     toast({ message: "Rascunho salvo neste navegador.", kind: "success" });
   }
@@ -218,7 +223,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
         imageUrls: images,
       };
       await saveProduct(savedProduct);
-      window.localStorage.removeItem(draftKey);
+      removeSensitiveBrowserValue(draftKey);
       initialForm.current = JSON.stringify(form);
       router.push("/admin/products");
     } catch (caught) {

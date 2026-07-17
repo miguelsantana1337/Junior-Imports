@@ -26,24 +26,35 @@ export function guardStorefrontRequest(request: Request, maxBytes = 24_000) {
 }
 
 export function clientIp(request: Request) {
+  return clientIpFromHeaders(request.headers);
+}
+
+export function clientIpFromHeaders(headers: Pick<Headers, "get">) {
   return (
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || request.headers.get("x-real-ip")?.trim()
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || headers.get("x-real-ip")?.trim()
     || "unknown"
   );
 }
 
-export function requestFingerprint(request: Request, tenantId: string) {
+export function requestFingerprintFromHeaders(
+  headers: Pick<Headers, "get">,
+  scope: string,
+) {
   const secret =
     process.env.STOREFRONT_SECURITY_SECRET
     || process.env.SUPABASE_SERVICE_ROLE_KEY
     || "junior-imports-local-security";
   const material = [
-    tenantId,
-    clientIp(request),
-    request.headers.get("user-agent") || "unknown",
+    scope,
+    clientIpFromHeaders(headers),
+    headers.get("user-agent") || "unknown",
   ].join("|");
   return createHmac("sha256", secret).update(material).digest("hex");
+}
+
+export function requestFingerprint(request: Request, tenantId: string) {
+  return requestFingerprintFromHeaders(request.headers, tenantId);
 }
 
 export function requestHash(value: unknown) {
@@ -55,7 +66,7 @@ export async function consumeStorefrontRateLimit(
   input: {
     tenantId: string;
     fingerprint: string;
-    action: "order" | "coupon" | "password_reset" | "password_verify";
+    action: "order" | "coupon" | "password_reset" | "password_verify" | "login";
     limit: number;
     windowSeconds: number;
   },
@@ -77,6 +88,22 @@ export async function consumeStorefrontRateLimit(
     );
   }
   return { remaining: Number(result.remaining) || 0 };
+}
+
+export async function clearStorefrontRateLimit(
+  supabase: AdminClient,
+  input: {
+    tenantId: string;
+    fingerprint: string;
+    action: "order" | "coupon" | "password_reset" | "password_verify" | "login";
+  },
+) {
+  const { error } = await supabase.rpc("clear_storefront_rate_limit", {
+    p_tenant_id: input.tenantId,
+    p_fingerprint_hash: input.fingerprint,
+    p_action: input.action,
+  });
+  if (error) throw new StorefrontRequestError("Não foi possível limpar o controle de acesso.", 503);
 }
 
 export async function verifyTurnstile(request: Request, token: string) {

@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import type { StorefrontData } from "@/types/store";
+import { purgeLegacyAuthLocalStorage } from "@/lib/browser-storage";
 import { StoreProvider } from "./store-provider";
 import { CartProvider } from "./cart-provider";
 import { ToastProvider } from "./toast-provider";
@@ -14,6 +15,10 @@ export function AppProviders({
   initialData: StorefrontData;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    purgeLegacyAuthLocalStorage();
+  }, []);
+
   return (
     <StoreProvider initialData={initialData}>
       <ToastProvider>

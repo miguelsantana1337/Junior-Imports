@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
-import { demoAdminCredentials, isSupabaseConfigured } from "@/lib/supabase/config";
+import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 
 export const metadata: Metadata = { title: "Acesso administrativo" };
 
@@ -15,5 +16,6 @@ export default async function AdminLoginPage({
     : passwordStatus === "recovered"
       ? "Senha redefinida com sucesso. Entre com a nova senha; seu MFA continua protegendo a conta."
       : "";
-  return <AdminLoginForm demoEmail={demoAdminCredentials.email} demoPassword={demoAdminCredentials.password} demoMode={!isSupabaseConfigured()} notice={notice} />;
+  const demoMode = !isSupabaseConfigured();
+  return <AdminLoginForm demoEmail={demoMode ? demoAdminCredentials.email : ""} demoPassword={demoMode ? demoAdminCredentials.password : ""} demoMode={demoMode} notice={notice} />;
 }

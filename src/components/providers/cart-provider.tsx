@@ -10,6 +10,11 @@ import {
   type ReactNode,
 } from "react";
 import { calculateCart } from "@/lib/commerce";
+import {
+  readSensitiveSessionValue,
+  removeSensitiveBrowserValue,
+  writeSensitiveSessionValue,
+} from "@/lib/browser-storage";
 import { canAddProductToCart } from "@/lib/product-compliance";
 import type { CartLine, Coupon, PaymentMethod } from "@/types/store";
 import { useStore } from "./store-provider";
@@ -45,24 +50,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const storedLines = JSON.parse(window.localStorage.getItem(cartKey) ?? "[]") as CartLine[];
-      const storedFavorites = JSON.parse(window.localStorage.getItem(favoritesKey) ?? "[]") as string[];
+      const storedLines = JSON.parse(readSensitiveSessionValue(cartKey) ?? "[]") as CartLine[];
+      const storedFavorites = JSON.parse(readSensitiveSessionValue(favoritesKey) ?? "[]") as string[];
       setLines(storedLines);
       setFavorites(storedFavorites);
     } catch {
-      window.localStorage.removeItem(cartKey);
-      window.localStorage.removeItem(favoritesKey);
+      removeSensitiveBrowserValue(cartKey);
+      removeSensitiveBrowserValue(favoritesKey);
     }
     setHydrated(true);
   }, [cartKey, favoritesKey]);
 
   useEffect(() => {
-    if (hydrated) window.localStorage.setItem(cartKey, JSON.stringify(lines));
+    if (hydrated) writeSensitiveSessionValue(cartKey, JSON.stringify(lines));
   }, [lines, hydrated, cartKey]);
 
   useEffect(() => {
     if (hydrated)
-      window.localStorage.setItem(favoritesKey, JSON.stringify(favorites));
+      writeSensitiveSessionValue(favoritesKey, JSON.stringify(favorites));
   }, [favorites, hydrated, favoritesKey]);
 
   useEffect(() => {

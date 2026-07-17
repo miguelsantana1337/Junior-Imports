@@ -11,6 +11,11 @@ import {
   type ReactNode,
 } from "react";
 import type { Order, StorefrontData } from "@/types/store";
+import {
+  readSensitiveSessionValue,
+  removeSensitiveBrowserValue,
+  writeSensitiveSessionValue,
+} from "@/lib/browser-storage";
 import { sanitizeProductForStorefront } from "@/lib/storefront-product";
 
 interface StoreContextValue {
@@ -57,10 +62,10 @@ export function StoreProvider({
   useEffect(() => {
     if (demoMode) {
       try {
-        const stored = window.localStorage.getItem(demoDataKey);
+        const stored = readSensitiveSessionValue(demoDataKey);
         if (stored) setData(normalizeData(JSON.parse(stored) as StorefrontData, initialRef.current));
       } catch {
-        window.localStorage.removeItem(demoDataKey);
+        removeSensitiveBrowserValue(demoDataKey);
       }
     }
     setHydrated(true);
@@ -68,7 +73,7 @@ export function StoreProvider({
 
   useEffect(() => {
     if (demoMode && hydrated) {
-      window.localStorage.setItem(demoDataKey, JSON.stringify(data));
+      writeSensitiveSessionValue(demoDataKey, JSON.stringify(data));
     }
   }, [data, demoMode, hydrated, demoDataKey]);
 
