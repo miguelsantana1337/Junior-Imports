@@ -1,5 +1,6 @@
 import { formatMoney } from "@/lib/format";
 import type { Order, StoreSettings } from "@/types/store";
+import { checkoutTermsConfirmation } from "@/lib/checkout-terms";
 
 export const defaultWhatsappOrderMessage = `🛒 *Novo pedido – {{loja}}*
 
@@ -43,8 +44,10 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
     "{{cupom}}": order.couponCode || "Nenhum",
   };
 
-  return Object.entries(values).reduce(
+  const rendered = Object.entries(values).reduce(
     (message, [placeholder, value]) => message.replaceAll(placeholder, value),
     resolveMessageTemplate(settings.whatsappMessage),
   );
+
+  return `${rendered}\n\n✅ *${checkoutTermsConfirmation}*`;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, CheckCircle2, LockKeyhole } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useMemo, useState } from "react";
@@ -12,6 +12,7 @@ import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { formatMoney, whatsappUrl } from "@/lib/format";
 import { checkoutSchema, type CheckoutFormInput, type CheckoutInput } from "@/lib/validation";
 import { renderWhatsappOrderMessage } from "@/lib/whatsapp-order";
+import { CHECKOUT_TERMS_VERSION, checkoutTerms } from "@/lib/checkout-terms";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { Order } from "@/types/store";
 
@@ -47,7 +48,7 @@ export function CheckoutScreen() {
     formState: { errors, isSubmitting },
   } = useForm<CheckoutFormInput, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { payment: "Pix", complement: "", consent: false, botField: "", startedAt },
+    defaultValues: { payment: "Pix", complement: "", consent: false, termsAccepted: false, botField: "", startedAt },
   });
   const payment = useWatch({ control, name: "payment" });
   const calculation = calculate(payment);
@@ -59,6 +60,7 @@ export function CheckoutScreen() {
 
   async function submit(values: CheckoutInput) {
     setSubmitError("");
+    const termsAcceptedAt = new Date().toISOString();
     const customer = {
       name: values.name,
       phone: values.phone,
@@ -69,6 +71,8 @@ export function CheckoutScreen() {
       address: values.address,
       number: values.number,
       complement: values.complement,
+      termsAcceptedAt,
+      termsVersion: CHECKOUT_TERMS_VERSION,
     };
     const items = cartProducts.map(({ line, product }) => ({
       productId: product!.id,
@@ -91,6 +95,7 @@ export function CheckoutScreen() {
           customer,
           items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
           payment: values.payment,
+          termsAccepted: values.termsAccepted,
           couponCode: coupon?.code ?? "",
           idempotencyKey: requestId,
           botField: values.botField,
@@ -143,20 +148,21 @@ export function CheckoutScreen() {
   return (
     <section className="checkout-page container">
       <Link className="back-link" href={storeHref("/")}><ArrowLeft /> Continuar comprando</Link>
-      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR PEDIDO</span><h1>Envie seu carrinho para a loja.</h1><p>{data.settings.checkoutMode === "whatsapp" ? "Ao finalizar, abriremos o WhatsApp com todos os dados do pedido." : "Nenhuma cobrança será realizada neste fluxo demonstrativo."}</p></div>
+      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR PEDIDO</span><h1>Revise e conclua seu pedido.</h1><p>{data.settings.checkoutMode === "whatsapp" ? "Ao finalizar, abriremos o WhatsApp com todos os dados para a equipe confirmar pagamento e envio." : "Confira seus dados e as condições antes de concluir."}</p></div>
       <div className="checkout-grid">
         <form className="checkout-form" onSubmit={handleSubmit(submit)} noValidate>
           <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field></div></fieldset>
-          <fieldset><legend>2. Entrega simulada</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" placeholder="00000-000" {...register("zip")} /></Field><Field label="Cidade" error={errors.city?.message}><input {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Endereço" error={errors.address?.message} full><input {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input {...register("complement")} /></Field></div></fieldset>
-          <fieldset><legend>3. Pagamento simulado</legend><div className="payment-options">{(["Pix", "Cartao", "Boleto"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto demonstrativo` : method === "Cartao" ? "Até 6x sem juros" : "Vencimento em 1 dia útil"}</small></span></label>)}</div></fieldset>
+          <fieldset><legend>2. Entrega</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" placeholder="00000-000" {...register("zip")} /></Field><Field label="Cidade" error={errors.city?.message}><input {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Endereço" error={errors.address?.message} full><input {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input {...register("complement")} /></Field></div></fieldset>
+          <fieldset><legend>3. Pagamento</legend><div className="payment-options">{(["Pix", "Cartao", "Boleto"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto` : method === "Cartao" ? "Condição confirmada no atendimento" : "Instruções enviadas no atendimento"}</small></span></label>)}</div></fieldset>
+          <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />
-          <label className="consent-line"><input type="checkbox" {...register("consent")} /><span>{data.settings.checkoutMode === "whatsapp" ? "Concordo em enviar estes dados para o atendimento da loja pelo WhatsApp." : "Concordo que esta é uma simulação e nenhum pagamento será realizado."}</span></label>{errors.consent && <small className="field-error">{errors.consent.message}</small>}
+          <label className="consent-line"><input type="checkbox" {...register("consent")} /><span>Autorizo o envio dos dados deste pedido para o atendimento da loja pelo WhatsApp.</span></label>{errors.consent && <small className="field-error">{errors.consent.message}</small>}
           <TurnstileWidget onToken={handleTurnstileToken} />
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {data.settings.checkoutMode === "whatsapp" ? "Enviar pedido pelo WhatsApp" : "Criar pedido demonstrativo"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div></div><p className="summary-demo"><CheckCircle2 /> {data.settings.checkoutMode === "whatsapp" ? "O valor final pode ser confirmado no atendimento." : "Valores apenas demonstrativos."}</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div></div><p className="summary-demo"><CheckCircle2 /> Pagamento e envio serão confirmados pela equipe.</p></aside>
       </div>
     </section>
   );

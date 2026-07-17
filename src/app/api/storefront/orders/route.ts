@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { checkoutCustomerSchema } from "@/lib/validation";
+import { CHECKOUT_TERMS_VERSION } from "@/lib/checkout-terms";
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
   consumeStorefrontRateLimit,
@@ -20,6 +21,7 @@ const requestSchema = z.object({
     quantity: z.coerce.number().int().min(1).max(100),
   })).min(1).max(50),
   payment: z.enum(["Pix", "Cartao", "Boleto"]),
+  termsAccepted: z.literal(true),
   couponCode: z.string().trim().max(30),
   idempotencyKey: z.string().uuid(),
   botField: z.string().max(0),
@@ -63,10 +65,16 @@ export async function POST(request: Request) {
       items: parsed.data.items,
       payment: parsed.data.payment,
       couponCode: parsed.data.couponCode.toUpperCase(),
+      termsVersion: CHECKOUT_TERMS_VERSION,
     });
+    const orderCustomer = {
+      ...parsed.data.customer,
+      termsAcceptedAt: new Date().toISOString(),
+      termsVersion: CHECKOUT_TERMS_VERSION,
+    };
     const { data, error } = await supabase.rpc("create_tenant_order_secure", {
       p_tenant_id: parsed.data.tenantId,
-      p_customer: parsed.data.customer,
+      p_customer: orderCustomer,
       p_items: parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
       p_payment: parsed.data.payment,
       p_coupon_code: parsed.data.couponCode,

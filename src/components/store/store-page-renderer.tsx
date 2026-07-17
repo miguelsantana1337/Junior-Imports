@@ -52,7 +52,7 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
 
   if (block.kind === "featured") {
     const products = data.products.filter((product) => product.active && product.featured).sort((a, b) => a.order - b.order).slice(0, Math.max(4, block.columns * 2));
-    return <BlockShell block={block}><SectionHeading eyebrow={section.eyebrow} title={section.title} action={<Link className="text-link" href={storeHref("/#catalogo")}>Ver catálogo completo →</Link>} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
+    return <BlockShell block={block} id="destaques"><SectionHeading eyebrow={section.eyebrow} title={section.title} action={<Link className="text-link" href={storeHref("/#catalogo")}>Ver catálogo completo →</Link>} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
   }
 
   if (block.kind === "promo") {
@@ -63,11 +63,11 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
   }
 
   if (block.kind === "benefits") {
-    return <BlockShell block={block}><SectionHeading eyebrow={section.eyebrow} title={section.title} /><div className="benefits-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{[...data.benefits].sort((a, b) => a.order - b.order).map((item, index) => <article className="benefit-card" key={item.id}><span>0{index + 1}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></BlockShell>;
+    return <BlockShell block={block} id="beneficios"><SectionHeading eyebrow={section.eyebrow} title={section.title} /><div className="benefits-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{[...data.benefits].sort((a, b) => a.order - b.order).map((item, index) => <article className="benefit-card" key={item.id}><span>0{index + 1}</span><h3>{item.title}</h3><p>{item.text}</p></article>)}</div></BlockShell>;
   }
 
   if (block.kind === "faq") {
-    return <BlockShell block={block}><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow}</span><h2>{section.title}</h2></div><div className="faq-list">{[...data.faqs].sort((a, b) => a.order - b.order).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
+    return <BlockShell block={block} id="duvidas"><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow}</span><h2>{section.title}</h2></div><div className="faq-list">{[...data.faqs].sort((a, b) => a.order - b.order).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
   }
 
   if (block.kind === "spacer") return <div className={`page-spacer padding-${block.padding}`} aria-hidden="true" />;
@@ -81,9 +81,9 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
     return <BlockShell block={block}><div className="page-cta-block"><div><span className="section-kicker">{block.eyebrow}</span><h2>{block.title}</h2><p>{block.body}</p></div>{block.buttonText && <Link className="button button-light button-large" href={storeHref(block.buttonLink || "/")}>{block.buttonText}</Link>}</div></BlockShell>;
   }
 
-  return <BlockShell block={block}><div className="page-text-block"><span className="section-kicker">{block.eyebrow}</span><h1>{block.title}</h1><p>{block.body}</p>{block.buttonText && <Link className="button button-primary button-large" href={storeHref(block.buttonLink || "/")}>{block.buttonText}</Link>}</div></BlockShell>;
+  return <BlockShell block={block}><div className="page-text-block"><span className="section-kicker">{block.eyebrow}</span>{block.pageId === "home" ? <h2>{block.title}</h2> : <h1>{block.title}</h1>}<p>{block.body}</p>{block.buttonText && <Link className="button button-primary button-large" href={storeHref(block.buttonLink || "/")}>{block.buttonText}</Link>}</div></BlockShell>;
 }
 
-function BlockShell({ block, children }: { block: PageBlock; children: React.ReactNode }) {
-  return <section className={`page-block-shell padding-${block.padding}`} style={{ backgroundColor: block.backgroundColor || undefined, color: block.textColor || undefined }}><div className={`page-block-container width-${block.containerWidth}`}>{children}</div></section>;
+function BlockShell({ block, children, id }: { block: PageBlock; children: React.ReactNode; id?: string }) {
+  return <section id={id} className={`page-block-shell padding-${block.padding}`} style={{ backgroundColor: block.backgroundColor || undefined, color: block.textColor || undefined }}><div className={`page-block-container width-${block.containerWidth}`}>{children}</div></section>;
 }

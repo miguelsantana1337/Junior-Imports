@@ -20,7 +20,7 @@ describe("pedido direcionado ao WhatsApp", () => {
     const order = { ...seedData.orders[1], payment: "Cartao" as const, couponCode: "" };
     const settings = { ...seedData.settings, whatsappMessage: "Pedido {{pedido}}\\nPagamento: {{pagamento}}\\nCupom: {{cupom}}" };
     const message = renderWhatsappOrderMessage(order, settings);
-    expect(message).toBe(`Pedido ${order.code}\nPagamento: Cartão\nCupom: Nenhum`);
+    expect(message).toBe(`Pedido ${order.code}\nPagamento: Cartão\nCupom: Nenhum\n\n✅ *Termos e condições aceitos no checkout (versão 2026-07-17).*`);
   });
 
   it("atualiza automaticamente o modelo antigo salvo no banco", () => {

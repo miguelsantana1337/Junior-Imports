@@ -47,7 +47,7 @@ export const platformConfig = {
     "PROJETO DEMONSTRATIVO · NENHUMA COMPRA OU PAGAMENTO É PROCESSADO DE FORMA REAL",
   metadataDescription:
     process.env.NEXT_PUBLIC_METADATA_DESCRIPTION?.trim() ||
-    "Catálogo privado demonstrativo da Junior Imports. Consulte os produtos e envie seu pedido pelo WhatsApp; nenhum pagamento é processado no site.",
+    "Loja da Junior Imports com produtos organizados por categoria, checkout rápido e atendimento pelo WhatsApp.",
   contact: {
     whatsapp:
       process.env.NEXT_PUBLIC_STORE_WHATSAPP?.trim() || "5531999999999",

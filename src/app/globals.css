@@ -466,6 +466,17 @@ img { display: block; max-width: 100%; }
 .payment-options label:has(input:checked) { border-color: #2869c5; background: #0c1a2f; }
 .payment-options strong, .payment-options small { display: block; }
 .payment-options small { color: var(--muted); font-size: 9px; }
+.checkout-form .checkout-terms { margin-bottom: 22px; padding: 20px; border: 1px solid rgb(245 158 11 / 40%); border-radius: 14px; background: linear-gradient(145deg, rgb(245 158 11 / 10%), rgb(15 18 24 / 92%)); }
+.checkout-terms legend { display: flex; align-items: center; gap: 8px; width: auto; padding: 0 8px; color: #fbbf24; font-size: 14px; }
+.checkout-terms legend svg { width: 18px; height: 18px; }
+.checkout-terms-content { display: grid; gap: 10px; color: #e8edf5; font-size: 12px; line-height: 1.55; }
+.checkout-terms-content p { margin: 0; }
+.checkout-terms-content .terms-negative { color: #fecaca; }
+.terms-exclusions { padding: 13px 15px; border-left: 3px solid #ef4444; border-radius: 0 10px 10px 0; background: rgb(127 29 29 / 18%); }
+.terms-exclusions strong { color: #fecaca; }
+.terms-exclusions ul { margin: 8px 0 0; padding-left: 19px; }
+.terms-acceptance { display: flex; align-items: flex-start; gap: 11px; margin-top: 16px; padding: 14px; border: 1px solid rgb(255 255 255 / 12%); border-radius: 10px; background: rgb(255 255 255 / 4%); color: #fff; font-size: 12px; line-height: 1.45; cursor: pointer; }
+.terms-acceptance input, .consent-line input { flex: 0 0 auto; width: 17px; height: 17px; margin-top: 1px; accent-color: var(--primary); }
 .consent-line { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 17px; color: var(--muted); font-size: 10px; }
 .checkout-honeypot { position: absolute !important; left: -10000px !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
 .turnstile-field { display: grid; gap: 8px; margin: 4px 0 18px; }
@@ -773,6 +784,8 @@ img { display: block; max-width: 100%; }
   .form-grid { grid-template-columns: 1fr; }
   .form-full { grid-column: auto; }
   .checkout-form { padding: 22px 16px; }
+  .checkout-form .checkout-terms { padding: 16px 13px; }
+  .checkout-terms legend { font-size: 12px; }
   .checkout-page-heading h1 { font-size: 43px; }
   .success-actions .button { width: 100%; }
 }

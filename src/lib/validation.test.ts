@@ -14,6 +14,7 @@ describe("validacao do checkout", () => {
     complement: "",
     payment: "Pix",
     consent: true,
+    termsAccepted: true,
     botField: "",
     startedAt: Date.now(),
   };
@@ -28,12 +29,14 @@ describe("validacao do checkout", () => {
       phone: "123",
       email: "invalido",
       consent: false,
+      termsAccepted: false,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.flatten().fieldErrors.phone).toBeDefined();
       expect(result.error.flatten().fieldErrors.email).toBeDefined();
       expect(result.error.flatten().fieldErrors.consent).toBeDefined();
+      expect(result.error.flatten().fieldErrors.termsAccepted).toBeDefined();
     }
   });
 });

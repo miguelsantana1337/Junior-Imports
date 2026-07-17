@@ -340,6 +340,8 @@ export interface OrderCustomer {
   address: string;
   number: string;
   complement: string;
+  termsAcceptedAt?: string;
+  termsVersion?: string;
 }
 
 export interface Order {

@@ -8,8 +8,8 @@ import { whatsappUrl } from "@/lib/format";
 import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function StoreFooter() {
-  const { data, demoMode } = useStore();
-  const message = `Olá! Vim pelo e-commerce demonstrativo da ${data.settings.storeName}.`;
+  const { data } = useStore();
+  const message = `Olá! Vim pela loja da ${data.settings.storeName} e gostaria de tirar uma dúvida.`;
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
 
@@ -35,15 +35,15 @@ export function StoreFooter() {
             <span>{data.settings.email}</span>
           </div>
           <div>
-            <strong>Operação</strong>
-            <span>{data.settings.checkoutMode === "whatsapp" ? "Pedidos pelo WhatsApp" : "Ambiente demonstrativo"}</span>
-            <span>{demoMode ? "Modo local ativo" : "Conectado ao Supabase"}</span>
-            <Link className="footer-admin" href="/admin/login">Abrir painel administrativo</Link>
+            <strong>Como comprar</strong>
+            <Link href={storeHref("/#catalogo")}>Escolher produtos</Link>
+            <Link href={storeHref("/#duvidas")}>Pagamento e envio</Link>
+            <span>Pedido confirmado pelo WhatsApp</span>
           </div>
         </div>
         <div className="container footer-bottom">
           <span>© 2026 {data.settings.storeName}</span>
-          <span>{data.settings.checkoutMode === "whatsapp" ? "Atendimento e fechamento realizados pela loja." : "Projeto demonstrativo sem vendas reais."}</span>
+          <span>Atendimento, pagamento e envio confirmados pela nossa equipe.</span>
         </div>
       </footer>
       <a
