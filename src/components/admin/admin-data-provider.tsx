@@ -31,6 +31,7 @@ import { calculateCart } from "@/lib/commerce";
 import { validateCouponForCustomer } from "@/lib/coupon-rules";
 import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
+import { normalizeAdminStoreData } from "@/lib/admin-store-data";
 import type {
   AdminPermission,
   AdminRole,
@@ -149,7 +150,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     }
     try {
       const stored = readSensitiveSessionValue(demoDataKey);
-      if (stored) setData(JSON.parse(stored) as StoreData);
+      if (stored) setData(normalizeAdminStoreData(JSON.parse(stored), initialDataRef.current));
     } catch {
       removeSensitiveBrowserValue(demoDataKey);
     }
@@ -915,8 +916,9 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
   }, []);
 
   const importData = useCallback((next: StoreData) => {
-    dataRef.current = next;
-    setData(next);
+    const normalized = normalizeAdminStoreData(next, initialDataRef.current);
+    dataRef.current = normalized;
+    setData(normalized);
   }, []);
 
   const value = useMemo<AdminDataContextValue>(() => ({

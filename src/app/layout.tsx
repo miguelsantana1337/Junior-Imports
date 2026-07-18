@@ -35,7 +35,15 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const data = await getStoreData();
   return (
-    <html lang="pt-BR" data-scroll-behavior="smooth">
+    <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        <script
+          id="admin-theme-bootstrap"
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("junior-imports:admin-theme");if(t!=="dark"&&t!=="light"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.adminTheme=t}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body>
         <AppProviders initialData={data}>{children}</AppProviders>
       </body>

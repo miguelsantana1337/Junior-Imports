@@ -1,0 +1,77 @@
+import type { Product, StoreData, StorefrontData, StorefrontProduct } from "@/types/store";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function arrayOrFallback<T>(value: unknown, fallback: T[]) {
+  return Array.isArray(value) ? value as T[] : fallback;
+}
+
+export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData): StoreData {
+  if (!isRecord(candidate)) return fallback;
+
+  return {
+    tenant: isRecord(candidate.tenant) ? { ...fallback.tenant, ...candidate.tenant } : fallback.tenant,
+    settings: isRecord(candidate.settings) ? { ...fallback.settings, ...candidate.settings } : fallback.settings,
+    products: arrayOrFallback(candidate.products, fallback.products),
+    categories: arrayOrFallback(candidate.categories, fallback.categories),
+    banners: arrayOrFallback(candidate.banners, fallback.banners),
+    sections: arrayOrFallback(candidate.sections, fallback.sections),
+    pages: arrayOrFallback(candidate.pages, fallback.pages),
+    pageBlocks: arrayOrFallback(candidate.pageBlocks, fallback.pageBlocks),
+    coupons: arrayOrFallback(candidate.coupons, fallback.coupons),
+    customers: arrayOrFallback(candidate.customers, fallback.customers),
+    customerTasks: arrayOrFallback(candidate.customerTasks, fallback.customerTasks),
+    customerContacts: arrayOrFallback(candidate.customerContacts, fallback.customerContacts),
+    couponRedemptions: arrayOrFallback(candidate.couponRedemptions, fallback.couponRedemptions),
+    catalogImports: arrayOrFallback(candidate.catalogImports, fallback.catalogImports),
+    trustItems: arrayOrFallback(candidate.trustItems, fallback.trustItems),
+    benefits: arrayOrFallback(candidate.benefits, fallback.benefits),
+    faqs: arrayOrFallback(candidate.faqs, fallback.faqs),
+    orders: arrayOrFallback(candidate.orders, fallback.orders),
+    financialTransactions: arrayOrFallback(candidate.financialTransactions, fallback.financialTransactions),
+    inventoryMovements: arrayOrFallback(candidate.inventoryMovements, fallback.inventoryMovements),
+    productLots: arrayOrFallback(candidate.productLots, fallback.productLots),
+    suppliers: arrayOrFallback(candidate.suppliers, fallback.suppliers),
+    purchaseOrders: arrayOrFallback(candidate.purchaseOrders, fallback.purchaseOrders),
+    messageAutomations: arrayOrFallback(candidate.messageAutomations, fallback.messageAutomations),
+    messageLogs: arrayOrFallback(candidate.messageLogs, fallback.messageLogs),
+    teamMembers: arrayOrFallback(candidate.teamMembers, fallback.teamMembers),
+    auditLogs: arrayOrFallback(candidate.auditLogs, fallback.auditLogs),
+  };
+}
+
+function mergeProducts(
+  storedProducts: unknown,
+  storefrontProducts: StorefrontProduct[],
+): Array<Product | StorefrontProduct> {
+  if (!Array.isArray(storedProducts)) return storefrontProducts;
+  const storedById = new Map(
+    storedProducts
+      .filter(isRecord)
+      .map((product) => [String(product.id ?? ""), product]),
+  );
+
+  return storefrontProducts.map((product) => ({
+    ...(storedById.get(product.id) ?? {}),
+    ...product,
+  })) as Array<Product | StorefrontProduct>;
+}
+
+export function mergeStorefrontIntoStoredData(
+  stored: unknown,
+  storefront: StorefrontData,
+): StorefrontData & Partial<StoreData> {
+  const base = isRecord(stored) ? stored : {};
+  const baseTenant = isRecord(base.tenant) ? base.tenant : {};
+  const baseSettings = isRecord(base.settings) ? base.settings : {};
+
+  return {
+    ...base,
+    ...storefront,
+    tenant: { ...baseTenant, ...storefront.tenant },
+    settings: { ...baseSettings, ...storefront.settings },
+    products: mergeProducts(base.products, storefront.products) as Product[],
+  } as StorefrontData & Partial<StoreData>;
+}

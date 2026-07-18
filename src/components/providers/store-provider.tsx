@@ -17,6 +17,7 @@ import {
   writeSensitiveSessionValue,
 } from "@/lib/browser-storage";
 import { sanitizeProductForStorefront } from "@/lib/storefront-product";
+import { mergeStorefrontIntoStoredData } from "@/lib/admin-store-data";
 
 interface StoreContextValue {
   data: StorefrontData;
@@ -73,7 +74,17 @@ export function StoreProvider({
 
   useEffect(() => {
     if (demoMode && hydrated) {
-      writeSensitiveSessionValue(demoDataKey, JSON.stringify(data));
+      let stored: unknown = null;
+      try {
+        const serialized = readSensitiveSessionValue(demoDataKey);
+        stored = serialized ? JSON.parse(serialized) : null;
+      } catch {
+        stored = null;
+      }
+      writeSensitiveSessionValue(
+        demoDataKey,
+        JSON.stringify(mergeStorefrontIntoStoredData(stored, data)),
+      );
     }
   }, [data, demoMode, hydrated, demoDataKey]);
 

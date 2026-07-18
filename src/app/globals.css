@@ -1663,6 +1663,9 @@ html[data-admin-theme="dark"] .password-reset-field button { border-color: #3140
   .admin-mobile-cards small { color: #74849a; font-size: 10px; }
   .admin-mobile-cards dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .admin-mobile-cards dl > div { padding: 8px; border-radius: 7px; background: #f5f8fb; }
+  .crm-mobile-cards header > div { min-width: 0; display: grid; gap: 3px; }
+  .crm-mobile-cards header > div strong,
+  .crm-mobile-cards header > div small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .admin-mobile-cards dt { color: #718198; font-size: 9px; }
   .admin-mobile-cards dd { margin: 3px 0 0; color: #1d2d42; font-size: 11px; font-weight: 760; }
   .admin-bulk-bar { align-items: stretch; flex-wrap: wrap; }
@@ -2740,9 +2743,282 @@ html[data-admin-theme="dark"] .crm-card-metrics b {
   color: var(--text);
 }
 
+html[data-admin-theme="dark"] :is(
+  .crm-summary-grid article,
+  .coupon-summary-grid article,
+  .automation-list > article,
+  .admin-shell-next .admin-mobile-cards > article,
+  .admin-shell-next .admin-mobile-cards dl > div,
+  .permission-picker > label,
+  .product-profit-preview
+) {
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: none;
+}
+
+html[data-admin-theme="dark"] :is(
+  .crm-summary-grid article strong,
+  .coupon-summary-grid article strong,
+  .permission-picker strong,
+  .order-automation-hint strong
+) {
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] :is(
+  .crm-summary-grid article span,
+  .crm-summary-grid article small,
+  .coupon-summary-grid article span,
+  .coupon-summary-grid article small,
+  .permission-picker small,
+  .admin-shell-next .admin-mobile-cards small,
+  .order-automation-hint span
+) {
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] :is(
+  .crm-summary-grid article > svg,
+  .coupon-summary-grid article > svg,
+  .user-avatar,
+  .current-user-tag,
+  .ops-timeline article > span
+) {
+  background: #102b49;
+  color: #75b4ff;
+}
+
+html[data-admin-theme="dark"] .ops-tabs button,
+html[data-admin-theme="dark"] .ops-tabs a {
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] .ops-tabs button.active {
+  background: #132d4f;
+  color: #78b5ff;
+}
+
+html[data-admin-theme="dark"] .ops-tabs button b {
+  background: #263750;
+  color: #c3d0df;
+}
+
+html[data-admin-theme="dark"] .priority {
+  background: #263348;
+  color: #bdc9d7;
+}
+
+html[data-admin-theme="dark"] .priority.medium,
+html[data-admin-theme="dark"] .finance-status,
+html[data-admin-theme="dark"] .purchase-order-list header > b {
+  background: #392914;
+  color: #f2bd6a !important;
+}
+
+html[data-admin-theme="dark"] .priority.high,
+html[data-admin-theme="dark"] .priority.urgent,
+html[data-admin-theme="dark"] .inventory-state.low,
+html[data-admin-theme="dark"] .ops-lot-list article > span.blocked,
+html[data-admin-theme="dark"] .ops-lot-list article > span.expired,
+html[data-admin-theme="dark"] .finance-list article > span.expense {
+  background: #3a1d28;
+  color: #ff8ea1;
+}
+
+html[data-admin-theme="dark"] :is(
+  .inventory-state,
+  .ops-lot-list article > span,
+  .finance-status.paid,
+  .purchase-order-list header > b.received,
+  .finance-list article > span.income,
+  .automation-channel.whatsapp
+) {
+  background: #123528;
+  color: #6bd5a0 !important;
+}
+
+html[data-admin-theme="dark"] .finance-status.cancelled {
+  background: #263348;
+  color: #bdc9d7 !important;
+}
+
+html[data-admin-theme="dark"] :is(
+  .ops-profitability article > span,
+  .supplier-list article > span,
+  .automation-channel.email,
+  .message-placeholders code
+) {
+  background: #102b49;
+  color: #75b4ff;
+}
+
+html[data-admin-theme="dark"] .admin-icon-button {
+  border-color: var(--line);
+  background: #17253a;
+  color: #a9b8ca;
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .admin-modal-panel > header > button {
+  border-color: #35475f;
+  background: #17253a;
+  color: #d8e3f0;
+}
+
+html[data-admin-theme="dark"] .admin-shell-next .admin-modal-panel > header > button:hover {
+  border-color: #4f8fe6;
+  background: #172b48;
+  color: #79b6ff;
+}
+
+html[data-admin-theme="dark"] .crm-segment {
+  background: #263348;
+  color: #bdc9d7;
+}
+
+html[data-admin-theme="dark"] .crm-segment.active {
+  background: #123528;
+  color: #6bd5a0;
+}
+
+html[data-admin-theme="dark"] .crm-segment.recurring {
+  background: #102b49;
+  color: #75b4ff;
+}
+
+html[data-admin-theme="dark"] .crm-segment.vip {
+  background: #3b2d14;
+  color: #f1c46e;
+}
+
+html[data-admin-theme="dark"] .crm-segment.at_risk {
+  background: #3a2418;
+  color: #f5a06d;
+}
+
+html[data-admin-theme="dark"] .crm-segment.inactive {
+  background: #263348;
+  color: #aebdcd;
+}
+
+html[data-admin-theme="dark"] .crm-segment.new {
+  background: #2c2146;
+  color: #c5a5ff;
+}
+
+html[data-admin-theme="dark"] .automation-list .sortable-main p,
+html[data-admin-theme="dark"] .automation-list .sortable-main small b {
+  color: var(--muted);
+}
+
+html[data-admin-theme="dark"] .message-log-empty strong {
+  color: var(--text) !important;
+}
+
+html[data-admin-theme="dark"] .message-placeholders strong,
+html[data-admin-theme="dark"] .product-editor-summary-tip strong {
+  color: #b9d8fa;
+}
+
+html[data-admin-theme="dark"] .product-editor-summary-tip p {
+  color: #9cc6f5;
+}
+
+html[data-admin-theme="dark"] .product-editor-summary-heading small {
+  background: #123528;
+  color: #6bd5a0;
+}
+
+html[data-admin-theme="dark"] .product-profit-preview {
+  border-color: #315c91;
+  background: #102745;
+}
+
+html[data-admin-theme="dark"] .product-profit-preview span,
+html[data-admin-theme="dark"] .product-profit-preview small {
+  color: #9cc0e8;
+}
+
+html[data-admin-theme="dark"] .product-profit-preview strong {
+  color: #75b4ff;
+}
+
+html[data-admin-theme="dark"] .permission-picker > label.selected {
+  border-color: #4e8edc;
+  background: #132a49;
+}
+
+html[data-admin-theme="dark"] .shipping-campaign-preview strong {
+  color: var(--text);
+}
+
+html[data-admin-theme="dark"] .shipping-campaign-preview small {
+  color: var(--muted);
+}
+
 html[data-admin-theme="dark"] .admin-shell-next ::selection {
   background: #2b73ce;
   color: #fff;
+}
+
+html[data-admin-theme="dark"] .mfa-page,
+html[data-admin-theme="dark"] .admin-state-page {
+  background: #09111f;
+  color: #edf4ff;
+  color-scheme: dark;
+}
+
+html[data-admin-theme="dark"] .mfa-card,
+html[data-admin-theme="dark"] .admin-state-card {
+  border-color: #2b3b52;
+  background: #111c2e;
+  color: #edf4ff;
+  box-shadow: 0 24px 70px rgb(0 0 0 / 32%);
+}
+
+html[data-admin-theme="dark"] :is(
+  .mfa-card p,
+  .mfa-card form label,
+  .password-change-card > label,
+  .password-change-card > label small,
+  .mfa-secret small,
+  .mfa-signout,
+  .admin-state-card p
+) {
+  color: #9aabc0;
+}
+
+html[data-admin-theme="dark"] .mfa-icon,
+html[data-admin-theme="dark"] .admin-state-card > span {
+  background: #102b49;
+  color: #75b4ff;
+}
+
+html[data-admin-theme="dark"] .mfa-code-field,
+html[data-admin-theme="dark"] .password-change-card > label input {
+  border-color: #35475f;
+  background: #0d1828;
+  color: #edf4ff;
+}
+
+html[data-admin-theme="dark"] .mfa-code-field input,
+html[data-admin-theme="dark"] .mfa-secret code {
+  color: #edf4ff;
+}
+
+html[data-admin-theme="dark"] .mfa-secret {
+  background: #17253a;
+}
+
+html[data-admin-theme="dark"] .mfa-qr {
+  border-color: #fff;
+  box-shadow: 0 0 0 1px #35475f;
+}
+
+html[data-admin-theme="dark"] .password-recovery-message {
+  border-color: #286b51;
+  background: #102d25;
+  color: #72d9aa !important;
 }
 
 /* Sidebar controls, resilient dashboard metrics and manual orders */
