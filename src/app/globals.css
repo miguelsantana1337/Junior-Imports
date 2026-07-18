@@ -4221,6 +4221,158 @@ html[data-admin-theme="dark"] .admin-health-skeleton i { background: linear-grad
   .admin-health-meta { padding-block: 10px; align-items: flex-start; flex-direction: column; gap: 5px; }
 }
 
+/* Cashback e Cliente 360 */
+.cashback-summary-grid { margin: 0 0 16px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.cashback-summary-grid article { min-height: 106px; padding: 17px; display: flex; align-items: center; gap: 13px; overflow: hidden; position: relative; border: 1px solid #dce5ef; border-radius: 15px; background: #fff; box-shadow: 0 10px 28px rgb(35 63 97 / 5%); }
+.cashback-summary-grid article.primary { border-color: #b9d7ff; background: radial-gradient(circle at 100% 0, rgb(34 126 255 / 18%), transparent 42%), linear-gradient(135deg, #f4f9ff, #fff); }
+.cashback-summary-grid article > svg { width: 42px; height: 42px; padding: 10px; flex: none; border-radius: 13px; background: #eaf3ff; color: #1677ff; }
+.cashback-summary-grid article.primary > svg { background: #1677ff; color: #fff; box-shadow: 0 10px 24px rgb(22 119 255 / 24%); }
+.cashback-summary-grid span, .cashback-summary-grid strong, .cashback-summary-grid small { display: block; }
+.cashback-summary-grid span { color: #63748b; font-size: 9px; font-weight: 760; text-transform: uppercase; letter-spacing: .04em; }
+.cashback-summary-grid strong { margin-top: 4px; color: #14243a; font-size: 22px; line-height: 1; }
+.cashback-summary-grid small { margin-top: 7px; color: #8190a3; font-size: 9px; }
+.cashback-campaign-toolbar { margin: -2px 0 14px; padding: 13px 14px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border: 1px solid #d8e6f7; border-radius: 12px; background: linear-gradient(135deg, #f4f8ff, #fbfdff); }
+.cashback-campaign-toolbar strong, .cashback-campaign-toolbar span { display: block; }
+.cashback-campaign-toolbar strong { color: #26496f; font-size: 11px; }
+.cashback-campaign-toolbar span { margin-top: 3px; color: #6f849b; font-size: 9px; }
+.cashback-campaign-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cashback-campaign-list > article { padding: 16px; display: grid; gap: 14px; border: 1px solid #dce5ef; border-radius: 15px; background: #fff; box-shadow: 0 8px 24px rgb(42 69 101 / 4%); }
+.cashback-campaign-list > article.active { border-color: #9ddbbf; box-shadow: inset 3px 0 #26ae78, 0 8px 24px rgb(42 69 101 / 4%); }
+.cashback-campaign-list > article.paused { box-shadow: inset 3px 0 #e2a13a; }
+.cashback-campaign-list article > header { display: flex; align-items: flex-start; gap: 11px; }
+.cashback-campaign-icon { width: 38px; height: 38px; display: grid; place-items: center; flex: none; border-radius: 12px; background: #edf5ff; color: #247bd5; }
+.cashback-campaign-icon svg { width: 19px; }
+.cashback-campaign-list h3 { margin: 6px 0 0; color: #1e3047; font-size: 13px; }
+.cashback-campaign-list p { margin: 4px 0 0; color: #72849a; font-size: 9px; line-height: 1.45; }
+.cashback-campaign-status { padding: 4px 7px; display: inline-flex; border-radius: 999px; background: #edf1f6; color: #6a798c; font-size: 7px; font-weight: 850; text-transform: uppercase; letter-spacing: .06em; }
+.cashback-campaign-status.active { background: #e5f8ef; color: #168359; }
+.cashback-campaign-status.paused { background: #fff2dc; color: #a86a09; }
+.cashback-campaign-status.ended { background: #f0f2f5; color: #7a8491; }
+.cashback-campaign-rules { display: flex; gap: 7px; flex-wrap: wrap; }
+.cashback-campaign-rules span { min-height: 27px; padding: 5px 8px; display: inline-flex; align-items: center; gap: 5px; border-radius: 8px; background: #f4f7fa; color: #5e7187; font-size: 8px; font-weight: 680; }
+.cashback-campaign-rules svg { width: 12px; }
+.cashback-campaign-list article > footer { padding-top: 12px; display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; border-top: 1px solid #e8edf3; }
+.cashback-campaign-list article > footer strong, .cashback-campaign-list article > footer span { display: block; }
+.cashback-campaign-list article > footer strong { color: #344860; font-size: 9px; }
+.cashback-campaign-list article > footer span { margin-top: 3px; color: #8492a4; font-size: 8px; }
+.cashback-campaign-list article > footer > div:last-child { display: flex; gap: 6px; }
+.cashback-campaign-list .admin-empty { grid-column: 1 / -1; }
+.cashback-campaign-editor { position: fixed; inset: 0; z-index: 190; display: grid; place-items: center; padding: 20px; }
+.cashback-campaign-editor > form { width: min(800px, calc(100vw - 28px)); max-height: calc(100vh - 36px); overflow: auto; position: relative; z-index: 1; border: 1px solid #dbe4ee; border-radius: 20px; background: #fff; box-shadow: 0 30px 90px rgb(16 34 58 / 28%); }
+.cashback-campaign-editor > form > header { padding: 19px 21px; display: flex; align-items: flex-start; justify-content: space-between; border-bottom: 1px solid #e4eaf1; background: radial-gradient(circle at 95% 0, rgb(31 125 255 / 12%), transparent 38%); }
+.cashback-campaign-editor header span { color: #1677ff; font-size: 8px; font-weight: 850; letter-spacing: .13em; }
+.cashback-campaign-editor header h2 { margin: 5px 0 0; color: #182a40; font-size: 20px; }
+.cashback-campaign-editor header p { margin: 5px 0 0; color: #74869b; font-size: 9px; }
+.cashback-campaign-editor header > button { width: 34px; height: 34px; border: 1px solid #d7e0ea; border-radius: 10px; background: #fff; color: #53667d; font-size: 19px; }
+.cashback-editor-grid { padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.cashback-editor-grid > label { display: grid; align-content: start; gap: 6px; color: #53667d; font-size: 9px; font-weight: 760; }
+.cashback-editor-grid .full { grid-column: 1 / -1; }
+.cashback-editor-grid input, .cashback-editor-grid select, .cashback-editor-grid textarea { width: 100%; min-height: 40px; padding: 9px 10px; border: 1px solid #d6e0eb; border-radius: 9px; background: #fff; color: #1f3148; font: inherit; font-size: 10px; resize: vertical; }
+.cashback-editor-grid label > small, .cashback-editor-grid fieldset > p { margin: 0; color: #8391a3; font-size: 8px; font-weight: 500; }
+.cashback-editor-grid fieldset { min-width: 0; padding: 12px; border: 1px solid #dce5ee; border-radius: 11px; }
+.cashback-editor-grid legend { padding-inline: 5px; color: #41566e; font-size: 9px; font-weight: 780; }
+.cashback-choice-grid { margin-top: 10px; display: flex; gap: 7px; flex-wrap: wrap; }
+.cashback-choice-grid label { cursor: pointer; }
+.cashback-choice-grid input { position: absolute; opacity: 0; pointer-events: none; }
+.cashback-choice-grid span { padding: 7px 9px; display: inline-flex; border: 1px solid #d6e0ea; border-radius: 999px; background: #fff; color: #5a6d83; font-size: 8px; font-weight: 740; }
+.cashback-choice-grid input:checked + span { border-color: #76adf2; background: #eaf4ff; color: #176cc6; }
+.cashback-product-picker { margin-top: 10px; max-height: 190px; overflow: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.cashback-product-picker label { padding: 9px; display: flex; align-items: center; gap: 8px; border: 1px solid #dfe6ee; border-radius: 9px; background: #fbfcfe; cursor: pointer; }
+.cashback-product-picker input { width: 15px; min-height: 15px; flex: none; accent-color: #1677ff; }
+.cashback-product-picker strong, .cashback-product-picker small { display: block; }
+.cashback-product-picker strong { color: #30455d; font-size: 9px; }
+.cashback-product-picker small { margin-top: 2px; color: #7c8da1; font-size: 8px; }
+.cashback-campaign-editor > form > .admin-form-error { margin: 0 20px 15px; }
+.cashback-campaign-editor > form > footer { padding: 14px 20px; display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid #e4eaf1; background: #f8fafc; }
+.crm-wallet-balance { display: block; color: #167a58 !important; }
+.crm-wallet-expiry { display: block; margin-top: 3px; color: #b87613; font-size: 8px; }
+.crm-repurchase { padding: 5px 7px; display: inline-flex; border-radius: 7px; background: #edf5ff; color: #3972af; font-size: 8px; font-weight: 740; white-space: nowrap; }
+.crm-repurchase.overdue { background: #fff0e8; color: #b5551f; }
+.crm-customer-panel { width: min(1180px, calc(100vw - 32px)); }
+.customer-cashback-wallet { border-bottom: 1px solid #e2e9f1; background: linear-gradient(180deg, #f8fbff, #fff); }
+.customer-cashback-wallet > header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border-bottom: 1px solid #e3eaf2; }
+.customer-wallet-title { display: flex; align-items: center; gap: 11px; }
+.customer-wallet-title > span { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: #1677ff; color: #fff; box-shadow: 0 9px 22px rgb(22 119 255 / 22%); }
+.customer-wallet-title svg { width: 20px; }
+.customer-wallet-title small, .customer-wallet-title h3, .customer-wallet-title p { display: block; margin: 0; }
+.customer-wallet-title small { color: #2478d1; font-size: 7px; font-weight: 850; letter-spacing: .11em; }
+.customer-wallet-title h3 { margin-top: 3px; color: #1c3048; font-size: 17px; }
+.customer-wallet-title p { margin-top: 3px; color: #7a8ba0; font-size: 8px; }
+.customer-wallet-alert { padding: 8px 10px; display: flex; align-items: center; gap: 7px; border: 1px solid #f0d09b; border-radius: 9px; background: #fff8ea; color: #9c6411; }
+.customer-wallet-alert svg { width: 16px; }
+.customer-wallet-alert span, .customer-wallet-alert strong { display: block; font-size: 8px; }
+.customer-wallet-metrics { padding: 12px 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.customer-wallet-metrics article { padding: 10px; border: 1px solid #e0e8f1; border-radius: 9px; background: #fff; }
+.customer-wallet-metrics span { display: block; color: #7a8ba0; font-size: 8px; }
+.customer-wallet-metrics strong { display: block; margin-top: 3px; color: #263a52; font-size: 12px; }
+.customer-wallet-layout { display: grid; grid-template-columns: minmax(260px, .38fr) minmax(0, .62fr); border-top: 1px solid #e5ebf2; }
+.customer-wallet-adjustment { padding: 17px 20px; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 10px; border-right: 1px solid #e3eaf1; background: #fbfcfe; }
+.customer-wallet-adjustment > div:first-child, .customer-wallet-adjustment .full, .customer-wallet-adjustment > button, .customer-wallet-adjustment > p { grid-column: 1 / -1; }
+.customer-wallet-adjustment > div:first-child strong, .customer-wallet-adjustment > div:first-child span { display: block; }
+.customer-wallet-adjustment > div:first-child strong { color: #2a3e56; font-size: 10px; }
+.customer-wallet-adjustment > div:first-child span { margin-top: 3px; color: #7f8fa2; font-size: 8px; }
+.customer-wallet-mode { grid-column: 1 / -1; padding: 3px; display: grid; grid-template-columns: 1fr 1fr; border-radius: 9px; background: #edf2f7; }
+.customer-wallet-mode button { min-height: 32px; display: flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 7px; background: transparent; color: #6a7a8e; font-size: 8px; font-weight: 780; }
+.customer-wallet-mode button.active { background: #fff; color: #168158; box-shadow: 0 3px 9px rgb(38 62 91 / 10%); }
+.customer-wallet-mode button.active.debit { color: #bd394f; }
+.customer-wallet-mode svg { width: 13px; }
+.customer-wallet-adjustment label { display: grid; gap: 5px; color: #5b6e84; font-size: 8px; font-weight: 740; }
+.customer-wallet-adjustment input, .customer-wallet-adjustment select, .customer-wallet-adjustment textarea { width: 100%; min-height: 38px; padding: 8px 9px; border: 1px solid #d6e0ea; border-radius: 8px; background: #fff; color: #24364c; font: inherit; font-size: 9px; resize: vertical; }
+.customer-wallet-notice { margin: 0; padding: 8px; display: flex; align-items: center; gap: 6px; border-radius: 8px; background: #edf5ff; color: #4673a5; font-size: 8px; }
+.customer-wallet-notice svg { width: 14px; }
+.customer-wallet-statement { min-width: 0; padding: 17px 20px; }
+.customer-wallet-statement > header > div { display: flex; align-items: center; gap: 8px; }
+.customer-wallet-statement > header svg { width: 18px; color: #3780cc; }
+.customer-wallet-statement > header strong, .customer-wallet-statement > header small { display: block; }
+.customer-wallet-statement > header strong { color: #293e56; font-size: 10px; }
+.customer-wallet-statement > header small { margin-top: 2px; color: #8391a2; font-size: 8px; }
+.customer-wallet-statement > div { margin-top: 10px; max-height: 300px; overflow: auto; display: grid; gap: 7px; }
+.customer-wallet-statement article { padding: 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 9px; border: 1px solid #e1e8f0; border-radius: 10px; background: #fff; }
+.customer-wallet-entry-icon { width: 29px; height: 29px; display: grid; place-items: center; border-radius: 9px; background: #e8f7ef; color: #168158; }
+.customer-wallet-statement article.debit .customer-wallet-entry-icon { background: #fff0f2; color: #c13b51; }
+.customer-wallet-entry-icon svg { width: 14px; }
+.customer-wallet-statement article strong, .customer-wallet-statement article p, .customer-wallet-statement article small { display: block; }
+.customer-wallet-statement article strong { color: #2c4058; font-size: 9px; }
+.customer-wallet-statement article p { margin: 3px 0 0; color: #718298; font-size: 8px; }
+.customer-wallet-statement article small { margin-top: 3px; color: #8b98a8; font-size: 7px; }
+.customer-wallet-statement article > b { color: #168158; font-size: 10px; white-space: nowrap; }
+.customer-wallet-statement article.debit > b { color: #c13b51; }
+.customer-wallet-statement article.expired { opacity: .68; }
+.customer-wallet-empty { min-height: 120px; display: grid; place-items: center; align-content: center; gap: 4px; color: #8191a4; text-align: center; }
+.customer-wallet-empty svg { width: 24px; color: #8fb5dd; }
+.customer-wallet-empty strong { color: #4b6078; font-size: 9px; }
+.customer-wallet-empty span { font-size: 8px; }
+html[data-admin-theme="dark"] .cashback-summary-grid article, html[data-admin-theme="dark"] .cashback-campaign-list > article, html[data-admin-theme="dark"] .cashback-campaign-editor > form, html[data-admin-theme="dark"] .customer-wallet-metrics article, html[data-admin-theme="dark"] .customer-wallet-statement article { border-color: #2b4058; background: #101d2f; }
+html[data-admin-theme="dark"] .cashback-summary-grid article.primary { border-color: #315d91; background: radial-gradient(circle at 100% 0, rgb(38 118 227 / 20%), transparent 42%), #101d2f; }
+html[data-admin-theme="dark"] .cashback-summary-grid strong, html[data-admin-theme="dark"] .cashback-campaign-list h3, html[data-admin-theme="dark"] .cashback-campaign-editor header h2, html[data-admin-theme="dark"] .cashback-product-picker strong, html[data-admin-theme="dark"] .customer-wallet-title h3, html[data-admin-theme="dark"] .customer-wallet-metrics strong, html[data-admin-theme="dark"] .customer-wallet-adjustment > div:first-child strong, html[data-admin-theme="dark"] .customer-wallet-statement > header strong, html[data-admin-theme="dark"] .customer-wallet-statement article strong { color: #e6eef8; }
+html[data-admin-theme="dark"] .cashback-campaign-toolbar, html[data-admin-theme="dark"] .customer-cashback-wallet, html[data-admin-theme="dark"] .customer-wallet-adjustment { border-color: #2b4058; background: #0d1929; }
+html[data-admin-theme="dark"] .cashback-campaign-toolbar strong, html[data-admin-theme="dark"] .cashback-campaign-list article > footer strong { color: #a9c9eb; }
+html[data-admin-theme="dark"] .cashback-campaign-rules span, html[data-admin-theme="dark"] .customer-wallet-mode { background: #17263a; color: #a8b8cb; }
+html[data-admin-theme="dark"] .cashback-campaign-list article > footer, html[data-admin-theme="dark"] .cashback-campaign-editor > form > header, html[data-admin-theme="dark"] .cashback-campaign-editor > form > footer, html[data-admin-theme="dark"] .customer-cashback-wallet > header, html[data-admin-theme="dark"] .customer-wallet-layout { border-color: #2b4058; }
+html[data-admin-theme="dark"] .cashback-campaign-editor > form > header, html[data-admin-theme="dark"] .cashback-campaign-editor > form > footer { background: #111f32; }
+html[data-admin-theme="dark"] .cashback-editor-grid input, html[data-admin-theme="dark"] .cashback-editor-grid select, html[data-admin-theme="dark"] .cashback-editor-grid textarea, html[data-admin-theme="dark"] .cashback-choice-grid span, html[data-admin-theme="dark"] .cashback-product-picker label, html[data-admin-theme="dark"] .customer-wallet-adjustment input, html[data-admin-theme="dark"] .customer-wallet-adjustment select, html[data-admin-theme="dark"] .customer-wallet-adjustment textarea { border-color: #334860; background: #0d1828; color: #e7eef7; }
+html[data-admin-theme="dark"] .cashback-editor-grid fieldset { border-color: #30445c; }
+html[data-admin-theme="dark"] .customer-wallet-mode button.active { background: #203049; }
+
+@media (max-width: 1180px) { .cashback-summary-grid { grid-template-columns: 1fr 1fr; } .cashback-campaign-list { grid-template-columns: 1fr; } }
+@media (max-width: 820px) { .cashback-editor-grid { grid-template-columns: 1fr 1fr; } .customer-wallet-layout { grid-template-columns: 1fr; } .customer-wallet-adjustment { border-right: 0; border-bottom: 1px solid #e3eaf1; } }
+@media (max-width: 560px) {
+  .cashback-summary-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cashback-summary-grid article { min-height: 92px; padding: 12px; gap: 8px; }
+  .cashback-summary-grid article > svg { width: 34px; height: 34px; padding: 8px; }
+  .cashback-summary-grid strong { font-size: 16px; }
+  .cashback-campaign-toolbar, .cashback-campaign-list article > footer, .customer-cashback-wallet > header { align-items: stretch; flex-direction: column; }
+  .cashback-campaign-toolbar .admin-button { width: 100%; }
+  .cashback-campaign-list article > footer > div:last-child { width: 100%; }
+  .cashback-campaign-list article > footer .admin-button { flex: 1; }
+  .cashback-editor-grid { padding: 14px; grid-template-columns: 1fr; }
+  .cashback-editor-grid .full { grid-column: auto; }
+  .cashback-product-picker { grid-template-columns: 1fr; }
+  .customer-wallet-metrics { padding: 10px 14px; grid-template-columns: 1fr 1fr; }
+  .customer-wallet-adjustment, .customer-wallet-statement { padding: 14px; }
+  .customer-wallet-alert { width: 100%; }
+}
+
 @keyframes admin-command-fade-in { from { opacity: 0; } }
 @keyframes admin-command-open { from { opacity: 0; transform: translateY(-14px) scale(.975); } }
 

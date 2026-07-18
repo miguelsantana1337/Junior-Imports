@@ -181,6 +181,8 @@ export const seedData: StoreData = {
   customers: [],
   customerTasks: [],
   customerContacts: [],
+  cashbackCampaigns: [],
+  cashbackEntries: [],
   couponRedemptions: [],
   catalogImports: [],
   orders: [],

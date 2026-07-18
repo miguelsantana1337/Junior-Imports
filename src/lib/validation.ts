@@ -204,6 +204,37 @@ export const customerContactSchema = z.object({
   createdAt: z.string(),
 });
 
+export const cashbackCampaignSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(3, "Informe o nome da campanha.").max(100),
+  description: z.string().trim().max(500),
+  status: z.enum(["draft", "active", "paused", "ended"]),
+  startsAt: z.string().min(1, "Informe o início da campanha."),
+  endsAt: z.string(),
+  multiplier: z.coerce.number().min(1, "O multiplicador mínimo é 1x.").max(10),
+  fixedBonus: z.coerce.number().min(0).max(10000),
+  creditValidDays: z.coerce.number().int().min(1).max(730),
+  priority: z.coerce.number().int().min(0).max(1000),
+  targetSegments: z.array(z.enum(["new", "active", "recurring", "vip", "at_risk", "inactive"])).max(6),
+  productIds: z.array(z.string().min(1)).max(500),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).superRefine((campaign, context) => {
+  if (campaign.endsAt && new Date(campaign.endsAt).getTime() <= new Date(campaign.startsAt).getTime()) {
+    context.addIssue({ code: "custom", path: ["endsAt"], message: "O término deve ser posterior ao início." });
+  }
+  if (campaign.multiplier === 1 && campaign.fixedBonus === 0) {
+    context.addIssue({ code: "custom", path: ["multiplier"], message: "Defina um multiplicador acima de 1x ou um bônus fixo." });
+  }
+});
+
+export const cashbackAdjustmentSchema = z.object({
+  customerId: z.string().min(1, "Cliente inválido."),
+  amount: z.coerce.number().min(-100000).max(100000).refine((value) => value !== 0, "Informe um valor diferente de zero."),
+  reason: z.string().trim().min(5, "Explique o motivo do ajuste.").max(240),
+  validDays: z.coerce.number().int().min(1).max(730),
+});
+
 export const financialTransactionSchema = z.object({
   id: z.string().min(1),
   type: z.enum(["income", "expense"]),
@@ -400,6 +431,8 @@ export type CouponInput = z.infer<typeof couponSchema>;
 export type CustomerInput = z.infer<typeof customerSchema>;
 export type CustomerTaskInput = z.infer<typeof customerTaskSchema>;
 export type CustomerContactInput = z.infer<typeof customerContactSchema>;
+export type CashbackCampaignInput = z.infer<typeof cashbackCampaignSchema>;
+export type CashbackAdjustmentInput = z.infer<typeof cashbackAdjustmentSchema>;
 export type FinancialTransactionInput = z.infer<typeof financialTransactionSchema>;
 export type InventoryMovementInput = z.infer<typeof inventoryMovementSchema>;
 export type SupplierInput = z.infer<typeof supplierSchema>;

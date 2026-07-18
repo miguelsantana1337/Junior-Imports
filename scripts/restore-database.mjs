@@ -30,7 +30,11 @@ const supabase = createClient(url, serviceRoleKey, { auth: { autoRefreshToken: f
 for (const table of restoreOrder) {
   const rows = payload.tables[table] ?? [];
   for (let index = 0; index < rows.length; index += 200) {
-    const { error } = await supabase.from(table).upsert(rows.slice(index, index + 200));
+    const immutableLedger = table === "cashback_entries" || table === "cashback_allocations";
+    const { error } = await supabase.from(table).upsert(
+      rows.slice(index, index + 200),
+      immutableLedger ? { onConflict: "id", ignoreDuplicates: true } : undefined,
+    );
     if (error) throw new Error(`${table}: ${error.message}`);
   }
 }

@@ -10,6 +10,8 @@ import type {
   Banner,
   Benefit,
   CatalogImportRun,
+  CashbackCampaign,
+  CashbackEntry,
   Category,
   Coupon,
   CouponRedemption,
@@ -197,6 +199,44 @@ function mapCustomer(row: Row): Customer {
     emailConsent: Boolean(row.email_consent),
     createdAt: str(row.created_at),
     updatedAt: str(row.updated_at),
+  };
+}
+
+function mapCashbackCampaign(row: Row): CashbackCampaign {
+  return {
+    id: str(row.id),
+    name: str(row.name),
+    description: str(row.description),
+    status: (str(row.status) || "draft") as CashbackCampaign["status"],
+    startsAt: str(row.starts_at),
+    endsAt: str(row.ends_at),
+    multiplier: num(row.multiplier) || 1,
+    fixedBonus: num(row.fixed_bonus),
+    creditValidDays: num(row.credit_valid_days) || 90,
+    priority: num(row.priority),
+    targetSegments: stringList(row.target_segments) as CashbackCampaign["targetSegments"],
+    productIds: stringList(row.product_ids),
+    createdAt: str(row.created_at),
+    updatedAt: str(row.updated_at),
+  };
+}
+
+function mapCashbackEntry(row: Row): CashbackEntry {
+  return {
+    id: str(row.id),
+    customerId: str(row.customer_id),
+    kind: str(row.kind) as CashbackEntry["kind"],
+    amount: num(row.amount),
+    description: str(row.description),
+    orderId: str(row.order_id),
+    campaignId: str(row.campaign_id),
+    referenceEntryId: str(row.reference_entry_id),
+    operationId: str(row.operation_id),
+    expiresAt: str(row.expires_at),
+    actorEmail: str(row.actor_email),
+    createdAt: str(row.created_at),
+    allocatedAmount: num(row.allocated_amount),
+    remainingAmount: num(row.remaining_amount),
   };
 }
 
@@ -664,6 +704,12 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     options.admin
       ? scopeTenant(supabase.from("purchase_orders").select("*, purchase_order_items(*)"), tenantId).order("created_at", { ascending: false })
       : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("cashback_campaigns").select("*"), tenantId).order("priority", { ascending: false })
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("cashback_wallet_entries_view").select("*"), tenantId).order("created_at", { ascending: false }).limit(1000)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (resolution.persisted) {
@@ -684,6 +730,9 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       .filter((name): name is string => Boolean(name));
     if (failures.length) {
       throw new Error(`Não foi possível carregar dados administrativos: ${failures.join(", ")}.`);
+    }
+    if (queries[26].error || queries[27].error) {
+      throw new Error("Não foi possível carregar a carteira de cashback.");
     }
   }
 
@@ -739,6 +788,8 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     customers: options.admin && !queries[16].error ? ((queries[16].data ?? []) as Row[]).map(mapCustomer) : [],
     customerTasks: options.admin && !queries[19].error ? ((queries[19].data ?? []) as Row[]).map(mapCustomerTask) : fallback.customerTasks,
     customerContacts: options.admin && !queries[20].error ? ((queries[20].data ?? []) as Row[]).map(mapCustomerContact) : fallback.customerContacts,
+    cashbackCampaigns: options.admin && !queries[26].error ? ((queries[26].data ?? []) as Row[]).map(mapCashbackCampaign) : fallback.cashbackCampaigns,
+    cashbackEntries: options.admin && !queries[27].error ? ((queries[27].data ?? []) as Row[]).map(mapCashbackEntry) : fallback.cashbackEntries,
     couponRedemptions,
     catalogImports: options.admin && !queries[18].error ? ((queries[18].data ?? []) as Row[]).map(mapCatalogImport) : [],
     trustItems: queries[6].error ? fallback.trustItems : ((queries[6].data ?? []) as Row[]).map((row) => mapSimpleOrdered<TrustItem>(row)),

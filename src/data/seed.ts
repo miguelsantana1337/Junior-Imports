@@ -390,6 +390,14 @@ export const seedData: StoreData = {
   customerContacts: [
     { id: "contact-demo-1", customerId: "customer-demo-1", channel: "whatsapp", result: "follow_up", summary: "Cliente pediu retorno após conferir o estoque em casa.", nextStepAt: "2026-07-15T14:00:00-03:00", actorEmail: platformConfig.demoAdmin.email, createdAt: "2026-07-13T16:20:00-03:00" },
   ],
+  cashbackCampaigns: [
+    { id: "cashback-campaign-demo", name: "Cashback em dobro — clientes VIP", description: "Dobra o cashback dos produtos selecionados para clientes VIP e recorrentes.", status: "active", startsAt: "2026-07-01T00:00:00-03:00", endsAt: "2026-08-31T23:59:59-03:00", multiplier: 2, fixedBonus: 0, creditValidDays: 90, priority: 100, targetSegments: ["vip", "recurring"], productIds: ["tg15"], createdAt: "2026-07-01T09:00:00-03:00", updatedAt: "2026-07-01T09:00:00-03:00" },
+  ],
+  cashbackEntries: [
+    { id: "cashback-credit-demo", customerId: "customer-demo-1", kind: "order_credit", amount: 50, description: `Cashback do pedido ${platformConfig.orderPrefix}-1001`, orderId: "order-1001", campaignId: "", referenceEntryId: "", operationId: "cashback-operation-demo", expiresAt: "2026-10-08T15:20:00-03:00", actorEmail: "", createdAt: "2026-07-10T15:20:00-03:00", allocatedAmount: 10, remainingAmount: 40 },
+    { id: "cashback-bonus-demo", customerId: "customer-demo-1", kind: "campaign_bonus", amount: 25, description: "Bônus da campanha Cashback em dobro", orderId: "order-1001", campaignId: "cashback-campaign-demo", referenceEntryId: "", operationId: "cashback-operation-bonus-demo", expiresAt: "2026-10-08T15:20:00-03:00", actorEmail: "", createdAt: "2026-07-10T15:20:01-03:00", allocatedAmount: 0, remainingAmount: 25 },
+    { id: "cashback-use-demo", customerId: "customer-demo-1", kind: "redemption", amount: 10, description: "Uso autorizado no atendimento", orderId: "", campaignId: "", referenceEntryId: "", operationId: "cashback-operation-use-demo", expiresAt: "", actorEmail: platformConfig.demoAdmin.email, createdAt: "2026-07-15T12:00:00-03:00", allocatedAmount: 10, remainingAmount: 0 },
+  ],
   couponRedemptions: [],
   catalogImports: [],
   orders: [

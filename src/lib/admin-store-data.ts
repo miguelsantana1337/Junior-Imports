@@ -24,6 +24,8 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     customers: arrayOrFallback(candidate.customers, fallback.customers),
     customerTasks: arrayOrFallback(candidate.customerTasks, fallback.customerTasks),
     customerContacts: arrayOrFallback(candidate.customerContacts, fallback.customerContacts),
+    cashbackCampaigns: arrayOrFallback(candidate.cashbackCampaigns, fallback.cashbackCampaigns),
+    cashbackEntries: arrayOrFallback(candidate.cashbackEntries, fallback.cashbackEntries),
     couponRedemptions: arrayOrFallback(candidate.couponRedemptions, fallback.couponRedemptions),
     catalogImports: arrayOrFallback(candidate.catalogImports, fallback.catalogImports),
     trustItems: arrayOrFallback(candidate.trustItems, fallback.trustItems),

@@ -274,6 +274,50 @@ export interface CustomerInsight extends Customer {
   favoriteProducts: string[];
 }
 
+export type CashbackCampaignStatus = "draft" | "active" | "paused" | "ended";
+
+export interface CashbackCampaign {
+  id: string;
+  name: string;
+  description: string;
+  status: CashbackCampaignStatus;
+  startsAt: string;
+  endsAt: string;
+  multiplier: number;
+  fixedBonus: number;
+  creditValidDays: number;
+  priority: number;
+  targetSegments: CustomerSegment[];
+  productIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CashbackEntryKind =
+  | "order_credit"
+  | "campaign_bonus"
+  | "adjustment_credit"
+  | "redemption"
+  | "adjustment_debit"
+  | "order_reversal";
+
+export interface CashbackEntry {
+  id: string;
+  customerId: string;
+  kind: CashbackEntryKind;
+  amount: number;
+  description: string;
+  orderId: string;
+  campaignId: string;
+  referenceEntryId: string;
+  operationId: string;
+  expiresAt: string;
+  actorEmail: string;
+  createdAt: string;
+  allocatedAmount: number;
+  remainingAmount: number;
+}
+
 export interface CouponRedemption {
   id: string;
   couponId: string;
@@ -534,6 +578,8 @@ export interface StoreData {
   customers: Customer[];
   customerTasks: CustomerTask[];
   customerContacts: CustomerContact[];
+  cashbackCampaigns: CashbackCampaign[];
+  cashbackEntries: CashbackEntry[];
   couponRedemptions: CouponRedemption[];
   catalogImports: CatalogImportRun[];
   trustItems: TrustItem[];

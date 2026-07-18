@@ -57,11 +57,11 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Cliente 360 | Parcial | Compras, frequência, ticket e produtos favoritos já existem; falta carteira/extrato. |
-| Cashback por produto e total por pedido | Concluído | Conectar à carteira de créditos. |
-| Carteira, extrato, validade e ajustes | Planejado | Nova estrutura de ledger imutável no Supabase. |
-| Campanhas e segmentos de cashback | Planejado | Regras por produto, período e segmento. |
-| Indicadores e alertas de recompra | Parcial | Segmentação de risco existe; falta automação e calendário. |
+| Cliente 360 | Concluído | Evoluir comunicações e histórico compartilhado no Lote 4. |
+| Cashback por produto e total por pedido | Concluído | Acompanhar conversão e custo das campanhas. |
+| Carteira, extrato, validade e ajustes | Concluído | Ledger imutável, consumo FIFO e ajustes auditáveis disponíveis. |
+| Campanhas e segmentos de cashback | Concluído | Integrar ao calendário unificado do Lote 4. |
+| Indicadores e alertas de recompra | Concluído | Conectar alertas ao calendário e às automações do Lote 4. |
 
 ## 5. Marketing, publicação e automação
 
@@ -128,7 +128,7 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 1. **Lote 1 — concluído:** central de comandos, favoritos, preferências, filtros salvos e auditoria visual.
 2. **Lote 2 — concluído nesta entrega:** health center, proteção contra demo em produção, backup/restore e monitoramento interno.
-3. **Lote 3:** carteira/extrato de cashback e Cliente 360.
+3. **Lote 3 — concluído nesta entrega:** carteira/extrato de cashback, campanhas segmentadas e Cliente 360.
 4. **Lote 4:** calendário de campanhas, workflow de publicação e construtor de automações.
 5. **Lote 5:** análises de estoque, relatórios e exportações.
 6. **Lote 6:** colaboração de equipe e Copiloto Junior em modo somente leitura.

@@ -2,6 +2,7 @@
 
 import { CalendarClock, ChevronRight, MessageCircle, Search, ShoppingBag, UserRound, UsersRound, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
 import { buildCustomerInsights, customerMatchesOrder, customerRecurrenceRate } from "@/lib/crm";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
@@ -10,6 +11,9 @@ import type { Customer, CustomerInsight, CustomerSegment } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel } from "./admin-ui";
 import { useAdminDialog } from "./use-admin-dialog";
+import { CashbackCenter } from "./cashback-center";
+import { CustomerCashbackPanel } from "./customer-cashback-panel";
+import { cashbackWalletSummary } from "@/lib/cashback";
 
 const segmentLabels: Record<CustomerSegment, string> = {
   new: "Novo",
@@ -33,6 +37,7 @@ export function CustomersAdmin() {
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [segment, setSegment] = useState<CustomerSegment | "all">("all");
   const [selected, setSelected] = useState<CustomerInsight | null>(null);
+  const [now] = useState(() => Date.now());
   useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) setQuery(externalQuery); }, [searchParams]);
   const insights = useMemo(() => buildCustomerInsights(data.customers, data.orders), [data.customers, data.orders]);
   const filtered = useMemo(() => insights.filter((customer) => {
@@ -52,6 +57,8 @@ export function CustomersAdmin() {
       <article><UserRound /><div><span>Valor por cliente</span><strong>{formatMoney(insights.length ? totalRevenue / insights.length : 0)}</strong><small>média acumulada</small></div></article>
     </section>
 
+    <CashbackCenter />
+
     <AdminPanel title="Clientes e relacionamento" description="Acompanhe compras, frequência, valor e oportunidades de recompra.">
       <div className="admin-list-toolbar crm-toolbar">
         <label className="admin-search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por nome, e-mail, telefone ou etiqueta" aria-label="Buscar clientes" /></label>
@@ -60,8 +67,8 @@ export function CustomersAdmin() {
       </div>
 
       {filtered.length ? <>
-        <div className="admin-table-wrap crm-desktop-table"><table className="admin-table"><thead><tr><th>Cliente</th><th>Segmento</th><th>Pedidos</th><th>Total gasto</th><th>Ticket médio</th><th>Última compra</th><th>Ação</th></tr></thead><tbody>{filtered.map((customer) => <tr key={customer.id}><td><div className="admin-customer-cell"><strong>{customer.name}</strong><small>{customer.phone || customer.email}</small></div></td><td><span className={`crm-segment ${customer.segment}`}>{segmentLabels[customer.segment]}</span></td><td>{customer.orderCount}</td><td><strong>{formatMoney(customer.totalSpent)}</strong></td><td>{formatMoney(customer.averageTicket)}</td><td>{customer.lastOrderAt ? formatDateTime(customer.lastOrderAt) : "Sem compras"}</td><td><button className="admin-button" onClick={() => setSelected(customer)}>Abrir <ChevronRight /></button></td></tr>)}</tbody></table></div>
-        <div className="admin-mobile-cards crm-mobile-cards">{filtered.map((customer) => <article key={customer.id}><header><div><strong>{customer.name}</strong><small>{customer.phone || customer.email}</small></div><span className={`crm-segment ${customer.segment}`}>{segmentLabels[customer.segment]}</span></header><div className="crm-card-metrics"><span><b>{customer.orderCount}</b> pedidos</span><span><b>{formatMoney(customer.totalSpent)}</b> total</span></div><footer><small>{customer.lastOrderAt ? `Última compra ${formatDateTime(customer.lastOrderAt)}` : "Sem compras"}</small><button className="admin-button" onClick={() => setSelected(customer)}>Ver cliente <ChevronRight /></button></footer></article>)}</div>
+        <div className="admin-table-wrap crm-desktop-table"><table className="admin-table"><thead><tr><th>Cliente</th><th>Segmento</th><th>Pedidos</th><th>Total gasto</th><th>Cashback</th><th>Próxima recompra</th><th>Última compra</th><th>Ação</th></tr></thead><tbody>{filtered.map((customer) => { const wallet = cashbackWalletSummary(data.cashbackEntries, customer.id); const predicted = customer.predictedNextOrderAt ? new Date(customer.predictedNextOrderAt) : null; const overdue = predicted && predicted.getTime() < now; return <tr key={customer.id}><td><div className="admin-customer-cell"><strong>{customer.name}</strong><small>{customer.phone || customer.email}</small></div></td><td><span className={`crm-segment ${customer.segment}`}>{segmentLabels[customer.segment]}</span></td><td>{customer.orderCount}</td><td><strong>{formatMoney(customer.totalSpent)}</strong></td><td><strong className="crm-wallet-balance">{formatMoney(wallet.available)}</strong>{wallet.expiringSoon > 0 && <small className="crm-wallet-expiry">{formatMoney(wallet.expiringSoon)} vencendo</small>}</td><td>{predicted ? <span className={`crm-repurchase ${overdue ? "overdue" : ""}`}>{overdue ? "Contato atrasado" : formatDateTime(customer.predictedNextOrderAt)}</span> : "Sem previsão"}</td><td>{customer.lastOrderAt ? formatDateTime(customer.lastOrderAt) : "Sem compras"}</td><td><button className="admin-button" onClick={() => setSelected(customer)}>Abrir <ChevronRight /></button></td></tr>; })}</tbody></table></div>
+        <div className="admin-mobile-cards crm-mobile-cards">{filtered.map((customer) => { const wallet = cashbackWalletSummary(data.cashbackEntries, customer.id); return <article key={customer.id}><header><div><strong>{customer.name}</strong><small>{customer.phone || customer.email}</small></div><span className={`crm-segment ${customer.segment}`}>{segmentLabels[customer.segment]}</span></header><div className="crm-card-metrics"><span><b>{customer.orderCount}</b> pedidos</span><span><b>{formatMoney(customer.totalSpent)}</b> total</span><span><b className="crm-wallet-balance">{formatMoney(wallet.available)}</b> cashback</span></div><footer><small>{customer.lastOrderAt ? `Última compra ${formatDateTime(customer.lastOrderAt)}` : "Sem compras"}</small><button className="admin-button" onClick={() => setSelected(customer)}>Ver cliente <ChevronRight /></button></footer></article>; })}</div>
       </> : <AdminEmpty><UsersRound /><strong>Nenhum cliente encontrado.</strong><span>Ajuste os filtros ou aguarde novos pedidos.</span></AdminEmpty>}
     </AdminPanel>
     {selected && <CustomerDetail customer={insights.find((item) => item.id === selected.id) ?? selected} onClose={() => setSelected(null)} />}
@@ -93,9 +100,10 @@ function CustomerDetail({ customer, onClose }: { customer: CustomerInsight; onCl
   const orders = data.orders.filter((order) => customerMatchesOrder(customer, order)).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   const field = <K extends keyof Customer>(key: K, value: Customer[K]) => setForm((current) => ({ ...current, [key]: value }));
 
-  return <div className="admin-modal" role="dialog" aria-modal="true" aria-label={`Cliente ${customer.name}`}><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel crm-customer-panel" ref={panelRef}>
+  return createPortal(<div className="admin-modal" role="dialog" aria-modal="true" aria-label={`Cliente ${customer.name}`}><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel crm-customer-panel" ref={panelRef}>
     <header><div><span>CLIENTE</span><h2>{customer.name}</h2><small><span className={`crm-segment ${customer.segment}`}>{segmentLabels[customer.segment]}</span> · {customer.orderCount} pedido{customer.orderCount === 1 ? "" : "s"}</small></div><button onClick={onClose} aria-label="Fechar"><X /></button></header>
     <div className="crm-detail-metrics"><article><span>Total gasto</span><strong>{formatMoney(customer.totalSpent)}</strong></article><article><span>Ticket médio</span><strong>{formatMoney(customer.averageTicket)}</strong></article><article><span>Frequência</span><strong>{customer.averageDaysBetweenOrders ? `${customer.averageDaysBetweenOrders} dias` : "Primeira compra"}</strong></article><article><span>Última compra</span><strong>{customer.daysSinceLastOrder} dias atrás</strong></article></div>
+    <CustomerCashbackPanel customer={customer} />
     <div className="crm-detail-grid">
       <form className="admin-form crm-customer-form" onSubmit={async (event) => { event.preventDefault(); const nextCustomer = { ...form, tags: tags.split(",").map((tag) => tag.trim()).filter(Boolean), updatedAt: new Date().toISOString() }; const parsed = customerSchema.safeParse(nextCustomer); if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revise os dados do cliente."); return; } setError(""); setSaving(true); try { await saveCustomer(nextCustomer); onClose(); } finally { setSaving(false); } }}>
         <label>Nome<input value={form.name} onChange={(event) => field("name", event.target.value)} required /></label>
@@ -116,5 +124,5 @@ function CustomerDetail({ customer, onClose }: { customer: CustomerInsight; onCl
       </form>
       <section className="crm-order-history"><h3>Histórico de pedidos</h3>{orders.map((order) => <article key={order.id}><div><strong>{order.code}</strong><small>{formatDateTime(order.createdAt)} · {order.status}</small></div><b>{formatMoney(order.total)}</b></article>)}{!orders.length && <p>Nenhum pedido vinculado.</p>}{customer.favoriteProducts.length > 0 && <div className="crm-favorites"><strong>Produtos mais comprados</strong><span>{customer.favoriteProducts.join(" · ")}</span></div>}</section>
     </div>
-  </div></div>;
+  </div></div>, document.body);
 }

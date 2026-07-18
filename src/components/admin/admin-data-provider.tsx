@@ -29,7 +29,7 @@ import {
 } from "@/lib/browser-storage";
 import { calculateCart } from "@/lib/commerce";
 import { validateCouponForCustomer } from "@/lib/coupon-rules";
-import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
+import { buildCustomerInsights, normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
 import { normalizeAdminStoreData } from "@/lib/admin-store-data";
 import type {
@@ -38,6 +38,8 @@ import type {
   AdminUser,
   Banner,
   CatalogImportRun,
+  CashbackCampaign,
+  CashbackEntry,
   Category,
   Coupon,
   Customer,
@@ -60,6 +62,8 @@ import type {
   Supplier,
 } from "@/types/store";
 import type { AdminUserCreateInput, AdminUserUpdateInput, ManualOrderInput } from "@/lib/validation";
+import type { CashbackAdjustmentInput } from "@/lib/validation";
+import { activeCashbackCampaigns, cashbackWalletSummary } from "@/lib/cashback";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
 type OrderedKey = "products" | "banners" | "categories" | "sections";
@@ -102,6 +106,8 @@ interface AdminDataContextValue {
   saveCustomerTask: (task: CustomerTask) => Promise<void>;
   deleteCustomerTask: (id: string) => Promise<void>;
   saveCustomerContact: (contact: CustomerContact) => Promise<void>;
+  saveCashbackCampaign: (campaign: CashbackCampaign) => Promise<void>;
+  adjustCustomerCashback: (adjustment: CashbackAdjustmentInput) => Promise<void>;
   createOrder: (input: ManualOrderInput) => Promise<Order>;
   saveFinancialTransaction: (transaction: FinancialTransaction) => Promise<void>;
   deleteFinancialTransaction: (id: string) => Promise<void>;
@@ -132,6 +138,75 @@ const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 function productRecord(product: Product) {
   return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cashback: product.cashback, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
+}
+
+function cashbackEntryRecord(row: Record<string, unknown>): CashbackEntry {
+  return {
+    id: String(row.id ?? ""),
+    customerId: String(row.customer_id ?? ""),
+    kind: String(row.kind ?? "adjustment_credit") as CashbackEntry["kind"],
+    amount: Number(row.amount) || 0,
+    description: String(row.description ?? ""),
+    orderId: String(row.order_id ?? ""),
+    campaignId: String(row.campaign_id ?? ""),
+    referenceEntryId: String(row.reference_entry_id ?? ""),
+    operationId: String(row.operation_id ?? ""),
+    expiresAt: String(row.expires_at ?? ""),
+    actorEmail: String(row.actor_email ?? ""),
+    createdAt: String(row.created_at ?? ""),
+    allocatedAmount: Number(row.allocated_amount) || 0,
+    remainingAmount: Number(row.remaining_amount) || 0,
+  };
+}
+
+function orderCashbackEntries(data: StoreData, order: Order, status: OrderStatus, actorEmail: string) {
+  const entries = [...data.cashbackEntries];
+  if (!order.customerId) return entries;
+  const committed = ["Pago", "Preparando", "Enviado", "Entregue"] as OrderStatus[];
+  const now = new Date();
+
+  if (committed.includes(status)) {
+    if (order.cashbackTotal > 0 && !entries.some((entry) => entry.orderId === order.id && entry.kind === "order_credit")) {
+      entries.unshift({
+        id: crypto.randomUUID(), customerId: order.customerId, kind: "order_credit", amount: order.cashbackTotal,
+        description: `Cashback do pedido ${order.code}`, orderId: order.id, campaignId: "", referenceEntryId: "",
+        operationId: crypto.randomUUID(), expiresAt: new Date(now.getTime() + 90 * 86_400_000).toISOString(),
+        actorEmail: "", createdAt: now.toISOString(), allocatedAmount: 0, remainingAmount: order.cashbackTotal,
+      });
+    }
+    if (!entries.some((entry) => entry.orderId === order.id && entry.kind === "campaign_bonus")) {
+      const segment = buildCustomerInsights(data.customers, data.orders.filter((candidate) => candidate.id !== order.id), now)
+        .find((customer) => customer.id === order.customerId)?.segment ?? "new";
+      const campaign = activeCashbackCampaigns(data.cashbackCampaigns, now)
+        .filter((item) => !item.targetSegments.length || item.targetSegments.includes(segment))
+        .filter((item) => !item.productIds.length || order.items.some((entry) => item.productIds.includes(entry.productId)))
+        .sort((a, b) => b.priority - a.priority)[0];
+      if (campaign) {
+        const matchingBase = order.items
+          .filter((item) => !campaign.productIds.length || campaign.productIds.includes(item.productId))
+          .reduce((sum, item) => sum + item.quantity * item.unitCashback, 0);
+        const bonus = Number((matchingBase * (campaign.multiplier - 1) + campaign.fixedBonus).toFixed(2));
+        if (bonus > 0) entries.unshift({
+          id: crypto.randomUUID(), customerId: order.customerId, kind: "campaign_bonus", amount: bonus,
+          description: `Bônus da campanha ${campaign.name}`, orderId: order.id, campaignId: campaign.id, referenceEntryId: "",
+          operationId: crypto.randomUUID(), expiresAt: new Date(now.getTime() + campaign.creditValidDays * 86_400_000).toISOString(),
+          actorEmail: "", createdAt: now.toISOString(), allocatedAmount: 0, remainingAmount: bonus,
+        });
+      }
+    }
+  }
+
+  if (status === "Cancelado") {
+    entries.filter((entry) => entry.orderId === order.id && ["order_credit", "campaign_bonus"].includes(entry.kind)).forEach((credit) => {
+      if (entries.some((entry) => entry.kind === "order_reversal" && entry.referenceEntryId === credit.id)) return;
+      entries.unshift({
+        id: crypto.randomUUID(), customerId: order.customerId, kind: "order_reversal", amount: credit.amount,
+        description: `Estorno por cancelamento do pedido ${order.code}`, orderId: order.id, campaignId: "", referenceEntryId: credit.id,
+        operationId: crypto.randomUUID(), expiresAt: "", actorEmail, createdAt: now.toISOString(), allocatedAmount: 0, remainingAmount: 0,
+      });
+    });
+  }
+  return entries;
 }
 
 export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
@@ -210,6 +285,20 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     },
     [supabase],
   );
+
+  const refreshCashbackEntries = useCallback(async () => {
+    if (!supabase) return;
+    const { data: rows, error } = await supabase
+      .from("cashback_wallet_entries_view")
+      .select("*")
+      .eq("tenant_id", dataRef.current.tenant.id)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (error) throw new Error(error.message);
+    const next = { ...dataRef.current, cashbackEntries: (rows ?? []).map((row) => cashbackEntryRecord(row as Record<string, unknown>)) };
+    dataRef.current = next;
+    setData(next);
+  }, [supabase]);
 
   const update = useCallback(
     async (table: string, id: string, row: Record<string, unknown>) => {
@@ -452,6 +541,77 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       "Contato registrado na timeline.",
     );
   }, [commitMutation, persist]);
+
+  const saveCashbackCampaign = useCallback(async (campaign: CashbackCampaign) => {
+    const saved = { ...campaign, updatedAt: new Date().toISOString() };
+    await commitMutation(
+      (current) => ({
+        ...current,
+        cashbackCampaigns: current.cashbackCampaigns.some((item) => item.id === saved.id)
+          ? current.cashbackCampaigns.map((item) => item.id === saved.id ? saved : item)
+          : [saved, ...current.cashbackCampaigns],
+      }),
+      () => persist("cashback_campaigns", {
+        id: saved.id,
+        name: saved.name,
+        description: saved.description,
+        status: saved.status,
+        starts_at: saved.startsAt,
+        ends_at: saved.endsAt || null,
+        multiplier: saved.multiplier,
+        fixed_bonus: saved.fixedBonus,
+        credit_valid_days: saved.creditValidDays,
+        priority: saved.priority,
+        target_segments: saved.targetSegments,
+        product_ids: saved.productIds,
+        created_at: saved.createdAt,
+        updated_at: saved.updatedAt,
+      }),
+      "Campanha de cashback salva.",
+    );
+  }, [commitMutation, persist]);
+
+  const adjustCustomerCashback = useCallback(async (adjustment: CashbackAdjustmentInput) => {
+    if (!supabase) {
+      const current = dataRef.current;
+      if (adjustment.amount < 0 && Math.abs(adjustment.amount) > cashbackWalletSummary(current.cashbackEntries, adjustment.customerId).available) {
+        throw new Error("Saldo de cashback insuficiente.");
+      }
+      const createdAt = new Date().toISOString();
+      const entry: CashbackEntry = {
+        id: crypto.randomUUID(),
+        customerId: adjustment.customerId,
+        kind: adjustment.amount > 0 ? "adjustment_credit" : "adjustment_debit",
+        amount: Math.abs(adjustment.amount),
+        description: adjustment.reason,
+        orderId: "",
+        campaignId: "",
+        referenceEntryId: "",
+        operationId: crypto.randomUUID(),
+        expiresAt: adjustment.amount > 0 ? new Date(Date.now() + adjustment.validDays * 86_400_000).toISOString() : "",
+        actorEmail: currentUser.email,
+        createdAt,
+        allocatedAmount: 0,
+        remainingAmount: adjustment.amount > 0 ? adjustment.amount : 0,
+      };
+      const next = { ...current, cashbackEntries: [entry, ...current.cashbackEntries] };
+      dataRef.current = next;
+      setData(next);
+      toast({ message: "Ajuste registrado no extrato.", kind: "success" });
+      return;
+    }
+
+    const { error } = await supabase.rpc("adjust_customer_cashback", {
+      p_tenant_id: dataRef.current.tenant.id,
+      p_customer_id: adjustment.customerId,
+      p_amount: adjustment.amount,
+      p_reason: adjustment.reason,
+      p_valid_days: adjustment.validDays,
+    });
+    if (error) throw new Error(error.message);
+    await refreshCashbackEntries();
+    toast({ message: "Ajuste registrado no extrato.", kind: "success" });
+  }, [currentUser.email, refreshCashbackEntries, supabase, toast]);
 
   const saveFinancialTransaction = useCallback(async (transaction: FinancialTransaction) => {
     await commitMutation(
@@ -829,18 +989,23 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
         financialTransactions = [income, ...(cost > 0 ? [cogs] : []), ...financialTransactions.filter((transaction) => transaction.id !== income.id && transaction.id !== cogs.id)];
       }
 
-      return { ...current, products, inventoryMovements, financialTransactions, orders: nextOrders, couponRedemptions, messageLogs: [...generatedLogs, ...current.messageLogs] };
+      const cashbackEntries = previousOrder ? orderCashbackEntries(current, previousOrder, status, currentUser.email) : current.cashbackEntries;
+      return { ...current, products, inventoryMovements, financialTransactions, cashbackEntries, orders: nextOrders, couponRedemptions, messageLogs: [...generatedLogs, ...current.messageLogs] };
     }, async (next, previous) => {
       const generatedCount = Math.max(0, next.messageLogs.length - previous.messageLogs.length);
       const generatedLogs = next.messageLogs.slice(0, generatedCount);
       if (!supabase) return;
       const { error } = await supabase.rpc("update_tenant_order_status", { p_tenant_id: dataRef.current.tenant.id, p_order_id: id, p_status: status });
-      if (!error) return;
+      if (!error) {
+        await refreshCashbackEntries();
+        return;
+      }
       if (error.code !== "PGRST202" && error.code !== "42883") throw new Error(error.message);
       await update("orders", id, { status });
       await Promise.all(generatedLogs.map((log) => persist("message_logs", { id: log.id, order_id: log.orderId, order_code: log.orderCode, automation_id: log.automationId, automation_name: log.automationName, channel: log.channel, recipient: log.recipient, subject: log.subject, message: log.message, status: log.status, created_at: log.createdAt })));
+      await refreshCashbackEntries();
     }, "Status atualizado.");
-  }, [commitMutation, currentUser.email, persist, supabase, update]);
+  }, [commitMutation, currentUser.email, persist, refreshCashbackEntries, supabase, update]);
 
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
@@ -963,6 +1128,8 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     saveCustomerTask,
     deleteCustomerTask,
     saveCustomerContact,
+    saveCashbackCampaign,
+    adjustCustomerCashback,
     createOrder,
     saveFinancialTransaction,
     deleteFinancialTransaction,
@@ -987,7 +1154,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }
