@@ -1,15 +1,28 @@
 "use client";
 
 import { IconCheck, IconLock, IconSparkles } from "@tabler/icons-react";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 
 type LoadingPhase = "entering" | "ready" | "exiting" | "hidden";
+const launchSeenKey = "junior-imports:admin-launch-seen:v1";
 
 export function AdminLoadingScreen({ autoDismiss = false }: { autoDismiss?: boolean }) {
   const [phase, setPhase] = useState<LoadingPhase>("entering");
+  const [initialized, setInitialized] = useState(!autoDismiss);
+  const [shouldAnimate, setShouldAnimate] = useState(!autoDismiss);
+
+  useLayoutEffect(() => {
+    if (!autoDismiss) return;
+    if (window.sessionStorage.getItem(launchSeenKey)) setPhase("hidden");
+    else {
+      window.sessionStorage.setItem(launchSeenKey, "1");
+      setShouldAnimate(true);
+    }
+    setInitialized(true);
+  }, [autoDismiss]);
 
   useEffect(() => {
-    if (!autoDismiss) return;
+    if (!autoDismiss || !initialized || !shouldAnimate) return;
 
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const readyTimer = window.setTimeout(() => setPhase("ready"), reducedMotion ? 20 : 420);
@@ -21,9 +34,9 @@ export function AdminLoadingScreen({ autoDismiss = false }: { autoDismiss?: bool
       window.clearTimeout(exitTimer);
       window.clearTimeout(hideTimer);
     };
-  }, [autoDismiss]);
+  }, [autoDismiss, initialized, shouldAnimate]);
 
-  if (phase === "hidden") return null;
+  if (!initialized || phase === "hidden") return null;
 
   return (
     <div className={`admin-launch-screen is-${phase}`} role="status" aria-live="polite" aria-label="Carregando o painel administrativo">

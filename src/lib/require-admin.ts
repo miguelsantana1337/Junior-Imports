@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 import { allAdminPermissions, firstAllowedAdminPath, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
+import { isDemoAdminAllowed } from "@/lib/demo-admin-runtime";
 
 export interface AdminSessionUser {
   id: string;
@@ -30,6 +31,7 @@ function isEmailPlatformAdmin(email: string) {
 
 export async function requireAdmin(requiredPermission?: AdminPermission): Promise<AdminSessionUser> {
   if (!isSupabaseConfigured()) {
+    if (!isDemoAdminAllowed()) redirect("/admin/login?configuration=missing");
     const cookieStore = await cookies();
     if (cookieStore.get(platformRuntimeKeys.adminCookie)?.value !== "1") redirect("/admin/login");
     return { id: "00000000-0000-4000-8000-000000000001", email: demoAdminCredentials.email, fullName: demoAdminCredentials.fullName, role: "owner", permissions: allAdminPermissions, tenantId: "00000000-0000-4000-8000-000000000100", tenantSlug: platformConfig.clientId, isPlatformAdmin: true };

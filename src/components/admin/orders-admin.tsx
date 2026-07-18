@@ -2,7 +2,8 @@
 
 import { ChevronLeft, ChevronRight, PackagePlus, Plus, Save, Search, Trash2, UserRound, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel, StatusTag } from "./admin-ui";
 import { calculateCart } from "@/lib/commerce";
@@ -35,11 +36,13 @@ function emptyManualOrder(): ManualOrderInput {
 
 export function OrdersAdmin() {
   const { data } = useAdminData();
+  const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Order | null>(null);
   const [creating, setCreating] = useState(false);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
+  useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) { setQuery(externalQuery); setPage(1); } }, [searchParams]);
   const filtered = useMemo(() => data.orders.filter((order) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matches = !normalized || `${order.code} ${order.customer.name} ${order.customer.email} ${order.customer.phone}`.toLocaleLowerCase("pt-BR").includes(normalized);

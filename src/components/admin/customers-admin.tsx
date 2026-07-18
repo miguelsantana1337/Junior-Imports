@@ -1,7 +1,8 @@
 "use client";
 
 import { CalendarClock, ChevronRight, MessageCircle, Search, ShoppingBag, UserRound, UsersRound, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { buildCustomerInsights, customerMatchesOrder, customerRecurrenceRate } from "@/lib/crm";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
 import { customerSchema } from "@/lib/validation";
@@ -28,9 +29,11 @@ const sourceLabels: Record<Customer["source"], string> = {
 
 export function CustomersAdmin() {
   const { data } = useAdminData();
-  const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [segment, setSegment] = useState<CustomerSegment | "all">("all");
   const [selected, setSelected] = useState<CustomerInsight | null>(null);
+  useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) setQuery(externalQuery); }, [searchParams]);
   const insights = useMemo(() => buildCustomerInsights(data.customers, data.orders), [data.customers, data.orders]);
   const filtered = useMemo(() => insights.filter((customer) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");

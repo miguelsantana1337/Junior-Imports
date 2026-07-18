@@ -17,6 +17,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 import { createClient } from "@/lib/supabase/server";
+import { isDemoAdminAllowed } from "@/lib/demo-admin-runtime";
 
 export async function loginAction(_previous: { error: string }, formData: FormData) {
   const parsed = adminLoginSchema.safeParse({
@@ -26,6 +27,7 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
 
   if (!isSupabaseConfigured()) {
+    if (!isDemoAdminAllowed()) return { error: "Acesso administrativo indisponível: configure o Supabase neste ambiente." };
     if (parsed.data.email !== demoAdminCredentials.email || parsed.data.password !== demoAdminCredentials.password) {
       return { error: "Credenciais demonstrativas incorretas." };
     }

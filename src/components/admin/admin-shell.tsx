@@ -2,7 +2,6 @@
 
 import {
   IconBell,
-  IconArrowRight,
   IconBox,
   IconChevronDown,
   IconChevronLeft,
@@ -33,7 +32,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/auth-actions";
 import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
@@ -42,6 +41,8 @@ import { platformConfig } from "@/config/platform";
 import { clearAdminSensitiveBrowserStorage } from "@/lib/browser-storage";
 import { AdminPwaInstall } from "@/components/admin/admin-pwa-install";
 import { AdminLoadingScreen } from "@/components/admin/admin-loading-screen";
+import { AdminCommandPalette, type AdminCommandSource } from "@/components/admin/admin-command-palette";
+import { useAdminPreferences } from "@/components/admin/use-admin-preferences";
 
 const navigationGroups = [
   {
@@ -142,12 +143,12 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [collapsed, setCollapsed] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const [commandOpen, setCommandOpen] = useState(false);
   const [theme, setTheme] = useState<AdminTheme>("light");
   const [navigationPending, setNavigationPending] = useState(false);
   const createPopoverRef = useRef<HTMLDivElement>(null);
   const notificationsPopoverRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { preferences, updatePreferences } = useAdminPreferences(user.id);
   const [eyebrow, title] = titles[pathname] ?? titles["/admin"];
   const productEditorPath = pathname === "/admin/products/new" || pathname.startsWith("/admin/products/");
   const isNavigationActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
@@ -158,17 +159,16 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const lowStockCount = data.products.filter((product) => product.active && product.stock <= product.minStock).length;
   const pendingOrderCount = data.orders.filter((order) => ["Novo", "Aguardando pagamento", "Pago", "Preparando"].includes(order.status)).length;
   const notificationCount = Number(lowStockCount > 0) + Number(pendingOrderCount > 0);
-  const searchDestination = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase("pt-BR");
-    if (!normalized) return pathname;
-    const match = visibleNavigation.find((item) => item.label.toLocaleLowerCase("pt-BR").includes(normalized));
-    return match?.href ?? pathname;
-  }, [pathname, query, visibleNavigation]);
+  const commandSources: AdminCommandSource[] = [
+    ...visibleNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
+    ...visibleCreateLinks.map((item) => ({ ...item, group: "Criar" as const })),
+  ];
 
   useEffect(() => {
     setOpen(false);
     setCreateOpen(false);
     setNotificationsOpen(false);
+    setCommandOpen(false);
     setNavigationPending(false);
   }, [pathname]);
 
@@ -176,13 +176,14 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     const closeMenus = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
         event.preventDefault();
-        searchInputRef.current?.focus();
+        setCommandOpen(true);
         return;
       }
       if (event.key === "Escape") {
         setOpen(false);
         setCreateOpen(false);
         setNotificationsOpen(false);
+        setCommandOpen(false);
       }
     };
     window.addEventListener("keydown", closeMenus);
@@ -246,6 +247,19 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       }}
     >
       <AdminLoadingScreen autoDismiss />
+      <AdminCommandPalette
+        open={commandOpen}
+        onClose={() => setCommandOpen(false)}
+        data={data}
+        sources={commandSources}
+        favoriteHrefs={preferences.favoriteHrefs}
+        onToggleFavorite={(href) => updatePreferences((current) => ({
+          ...current,
+          favoriteHrefs: current.favoriteHrefs.includes(href)
+            ? current.favoriteHrefs.filter((item) => item !== href)
+            : [...current.favoriteHrefs, href],
+        }))}
+      />
       <div className={`admin-navigation-progress ${navigationPending ? "is-active" : ""}`} aria-hidden="true"><span /></div>
       <aside className={`admin-sidebar-next ${open ? "open" : ""}`}>
         <div className="admin-sidebar-panel">
@@ -296,12 +310,11 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       <section className="admin-main-next">
         <header className="admin-topbar-next">
           <button className="admin-menu-toggle" onClick={() => setOpen(true)} aria-label="Abrir menu"><IconMenu2 /></button>
-          <div className="admin-global-search" role="search">
+          <button className="admin-global-search" type="button" onClick={() => setCommandOpen(true)} aria-label="Abrir central de comandos">
             <IconSearch />
-            <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && query.trim()) window.location.assign(searchDestination); }} aria-label="Ir para uma área do painel" placeholder="Ir para produtos, pedidos ou configurações" />
+            <span>Buscar áreas, produtos, pedidos ou clientes</span>
             <kbd aria-hidden="true">⌘ K</kbd>
-            <Link className="admin-search-submit" href={searchDestination} onClick={() => setQuery("")} aria-label="Buscar"><IconArrowRight /></Link>
-          </div>
+          </button>
 
           <div className="admin-topbar-actions">
             <AdminPwaInstall />
