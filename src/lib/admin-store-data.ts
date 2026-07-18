@@ -41,8 +41,11 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     productLots: arrayOrFallback(candidate.productLots, fallback.productLots),
     suppliers: arrayOrFallback(candidate.suppliers, fallback.suppliers),
     purchaseOrders: arrayOrFallback(candidate.purchaseOrders, fallback.purchaseOrders),
+    marketingPublications: arrayOrFallback(candidate.marketingPublications, fallback.marketingPublications),
+    marketingPublicationVersions: arrayOrFallback(candidate.marketingPublicationVersions, fallback.marketingPublicationVersions),
     messageAutomations: arrayOrFallback(candidate.messageAutomations, fallback.messageAutomations),
     messageLogs: arrayOrFallback(candidate.messageLogs, fallback.messageLogs),
+    automationRuns: arrayOrFallback(candidate.automationRuns, fallback.automationRuns),
     teamMembers: arrayOrFallback(candidate.teamMembers, fallback.teamMembers),
     auditLogs: arrayOrFallback(candidate.auditLogs, fallback.auditLogs),
   };

@@ -191,11 +191,14 @@ export const seedData: StoreData = {
   productLots: [],
   suppliers: [],
   purchaseOrders: [],
+  marketingPublications: [],
+  marketingPublicationVersions: [],
   messageAutomations: [
-    { id: "automation-new", name: "Pedido recebido", triggerStatus: "Novo", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Recebemos o pedido demonstrativo {{pedido}} no valor de {{total}}.", active: true, order: 1 },
-    { id: "automation-paid", name: "Pagamento confirmado", triggerStatus: "Pago", channel: "email", subject: "Pagamento confirmado — {{pedido}}", message: "Olá, {{cliente}}! O pagamento demonstrativo do pedido {{pedido}} foi marcado como confirmado.", active: true, order: 2 },
+    { id: "automation-new", name: "Pedido recebido", triggerType: "order_status", triggerValue: "Novo", triggerStatus: "Novo", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Recebemos o pedido demonstrativo {{pedido}} no valor de {{total}}.", conditions: { minOrderTotal: 0, orderSource: "any", customerSegment: "all" }, actions: { sendMessage: true, createTask: false, taskTitle: "", addTag: "" }, status: "active", maxRetries: 3, retryDelayMinutes: 15, lastTestedAt: "", runCount: 0, failureCount: 0, active: true, order: 1 },
+    { id: "automation-paid", name: "Pagamento confirmado", triggerType: "order_status", triggerValue: "Pago", triggerStatus: "Pago", channel: "email", subject: "Pagamento confirmado — {{pedido}}", message: "Olá, {{cliente}}! O pagamento demonstrativo do pedido {{pedido}} foi marcado como confirmado.", conditions: { minOrderTotal: 0, orderSource: "any", customerSegment: "all" }, actions: { sendMessage: true, createTask: false, taskTitle: "", addTag: "" }, status: "active", maxRetries: 3, retryDelayMinutes: 15, lastTestedAt: "", runCount: 0, failureCount: 0, active: true, order: 2 },
   ],
   messageLogs: [],
+  automationRuns: [],
   auditLogs: [],
   teamMembers: [
     { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: new Date().toISOString(), lastSignInAt: "", isCurrent: true },

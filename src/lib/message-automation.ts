@@ -17,7 +17,14 @@ export function renderMessageTemplate(template: string, order: Order) {
 
 export function createMessageLogs(order: Order, automations: MessageAutomation[]): MessageLog[] {
   return automations
-    .filter((automation) => automation.active && automation.triggerStatus === order.status)
+    .filter((automation) => automation.active
+      && automation.status === "active"
+      && automation.triggerType === "order_status"
+      && automation.triggerValue === order.status
+      && automation.conditions.minOrderTotal <= order.total
+      && (automation.conditions.orderSource === "any" || automation.conditions.orderSource === (order.orderSource ?? "legacy"))
+      && automation.conditions.customerSegment === "all"
+      && automation.actions.sendMessage)
     .map((automation) => ({
       id: crypto.randomUUID(),
       orderId: order.id,
@@ -29,6 +36,9 @@ export function createMessageLogs(order: Order, automations: MessageAutomation[]
       subject: renderMessageTemplate(automation.subject, order),
       message: renderMessageTemplate(automation.message, order),
       status: "simulated" as const,
+      runId: "",
+      attempt: 1,
+      errorMessage: "",
       createdAt: new Date().toISOString(),
     }));
 }

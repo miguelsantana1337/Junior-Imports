@@ -1,45 +1,37 @@
 "use client";
 
-import { Bot, Eye, EyeOff, Mail, MessageCircle, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Activity, CalendarDays, GitPullRequestArrow, Megaphone, Plus, Workflow } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { formatDateTime } from "@/lib/format";
-import { messageAutomationSchema } from "@/lib/validation";
-import type { MessageAutomation, OrderStatus } from "@/types/store";
+import type { MarketingPublication } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
-import { AdminPanel, StatusTag } from "./admin-ui";
-import { useConfirm } from "@/components/providers/confirm-provider";
+import { AutomationStudio } from "./automation-studio";
+import { MarketingCalendar } from "./marketing-calendar";
+import { newMarketingPublication, PublicationEditor, PublicationWorkflow } from "./publication-workflow";
 
-const statuses: OrderStatus[] = ["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"];
+type StudioTab = "calendar" | "workflow" | "automations";
 
 export function MessagesAdmin() {
-  const { data, saveMessageAutomation, deleteMessageAutomation } = useAdminData();
-  const confirm = useConfirm();
+  const { data, currentUser, processDueMarketingPublications } = useAdminData();
   const searchParams = useSearchParams();
-  const [editing, setEditing] = useState<MessageAutomation | "new" | null>(null);
-  const automations = useMemo(() => [...data.messageAutomations].sort((a, b) => a.order - b.order), [data.messageAutomations]);
-
-  useEffect(() => {
-    if (searchParams.get("novo") === "1") setEditing("new");
-  }, [searchParams]);
+  const [tab, setTab] = useState<StudioTab>(() => searchParams.get("novo") === "1" ? "automations" : "calendar");
+  const [editing, setEditing] = useState<MarketingPublication | null>(null);
+  const processed = useRef(false);
+  useEffect(() => { if (processed.current) return; processed.current = true; void processDueMarketingPublications(); }, [processDueMarketingPublications]);
+  const stats = useMemo(() => ({
+    scheduled: data.marketingPublications.filter((item) => item.status === "scheduled").length,
+    review: data.marketingPublications.filter((item) => item.status === "in_review").length,
+    live: data.marketingPublications.filter((item) => item.status === "published").length,
+    healthyRuns: data.automationRuns.filter((item) => ["simulated", "succeeded"].includes(item.status)).length,
+  }), [data.automationRuns, data.marketingPublications]);
 
   return <>
-    <div className="message-automation-note"><Bot /><div><strong>Mensagens automáticas demonstrativas</strong><span>Ao mudar o status de um pedido, o painel registra o disparo com os dados do cliente. Para envio real, conecte posteriormente um provedor de WhatsApp ou e-mail.</span></div></div>
-    <div className="message-stats"><article><span>Automações ativas</span><strong>{automations.filter((item) => item.active).length}</strong><small>de {automations.length} configuradas</small></article><article><span>Mensagens registradas</span><strong>{data.messageLogs.length}</strong><small>histórico demonstrativo</small></article><article><span>Canais</span><strong>{new Set(automations.map((item) => item.channel)).size}</strong><small>WhatsApp e e-mail</small></article></div>
-    <AdminPanel title="Regras automáticas" description="Escolha o status, o canal e a mensagem enviada ao cliente." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Nova automação</button>}>
-      <div className="automation-list">{automations.map((automation) => <article key={automation.id}><span className={`automation-channel ${automation.channel}`}>{automation.channel === "whatsapp" ? <MessageCircle /> : <Mail />}</span><div className="sortable-main"><strong>{automation.name}</strong><small>Quando o pedido mudar para <b>{automation.triggerStatus}</b> · {automation.channel === "whatsapp" ? "WhatsApp" : "E-mail"} · <StatusTag active={automation.active}>{automation.active ? "Ativa" : "Pausada"}</StatusTag></small><p>{automation.message}</p></div><div className="admin-actions"><button title={automation.active ? "Pausar" : "Ativar"} onClick={() => saveMessageAutomation({ ...automation, active: !automation.active })}>{automation.active ? <EyeOff /> : <Eye />}</button><button title="Editar" onClick={() => setEditing(automation)}><Pencil /></button><button className="danger" title="Excluir" onClick={async () => { const accepted = await confirm({ title: "Excluir automação?", description: `A regra “${automation.name}” será removida.`, confirmLabel: "Excluir automação", danger: true }); if (accepted) await deleteMessageAutomation(automation.id); }}><Trash2 /></button></div></article>)}</div>
-    </AdminPanel>
-    <AdminPanel title="Histórico de mensagens" description="Registro das mensagens geradas pelos pedidos demonstrativos.">
-      <div className="admin-table-wrap"><table className="admin-table message-log-table"><thead><tr><th>Data</th><th>Pedido</th><th>Automação</th><th>Canal</th><th>Destinatário</th><th>Status</th></tr></thead><tbody>{data.messageLogs.map((log) => <tr key={log.id}><td>{formatDateTime(log.createdAt)}</td><td><strong>{log.orderCode}</strong></td><td>{log.automationName}</td><td>{log.channel === "whatsapp" ? "WhatsApp" : "E-mail"}</td><td>{log.recipient}</td><td><StatusTag active={log.status !== "failed"}>{log.status === "simulated" ? "Simulada" : log.status}</StatusTag></td></tr>)}{!data.messageLogs.length && <tr><td colSpan={6}><div className="message-log-empty"><Bot /><strong>Nenhuma mensagem registrada.</strong><span>Atualize o status de um pedido para testar uma automação.</span></div></td></tr>}</tbody></table></div>
-    </AdminPanel>
-    {editing && <AutomationEditor automation={editing === "new" ? null : editing} count={automations.length} onClose={() => setEditing(null)} />}
+    <section className="marketing-studio-hero"><div><span><Megaphone /> MARKETING STUDIO</span><h2>Planeje, aprove e automatize em um só lugar.</h2><p>Uma central operacional para coordenar campanhas sem perder contexto, versão ou controle.</p></div><button className="admin-button primary" onClick={() => { setTab("workflow"); setEditing(newMarketingPublication(currentUser.email)); }}><Plus /> Nova publicação</button></section>
+    <section className="marketing-studio-metrics" aria-label="Resumo do Marketing Studio"><article><CalendarDays /><div><span>Agendadas</span><strong>{stats.scheduled}</strong><small>próximas publicações</small></div></article><article><GitPullRequestArrow /><div><span>Em revisão</span><strong>{stats.review}</strong><small>aguardando aprovação</small></div></article><article><Megaphone /><div><span>No ar</span><strong>{stats.live}</strong><small>campanhas publicadas</small></div></article><article><Activity /><div><span>Execuções seguras</span><strong>{stats.healthyRuns}</strong><small>testes e fluxos concluídos</small></div></article></section>
+    <nav className="marketing-studio-tabs" aria-label="Áreas do Marketing Studio"><button className={tab === "calendar" ? "active" : ""} onClick={() => setTab("calendar")}><CalendarDays /> Calendário</button><button className={tab === "workflow" ? "active" : ""} onClick={() => setTab("workflow")}><GitPullRequestArrow /> Publicação</button><button className={tab === "automations" ? "active" : ""} onClick={() => setTab("automations")}><Workflow /> Automações</button></nav>
+    {tab === "calendar" && <MarketingCalendar onOpen={(publication) => setEditing(publication)} />}
+    {tab === "workflow" && <PublicationWorkflow onOpen={(publication) => setEditing(publication)} onNew={() => setEditing(newMarketingPublication(currentUser.email))} />}
+    {tab === "automations" && <AutomationStudio />}
+    {editing && <PublicationEditor publication={editing} onClose={() => setEditing(null)} />}
   </>;
-}
-
-function AutomationEditor({ automation, count, onClose }: { automation: MessageAutomation | null; count: number; onClose: () => void }) {
-  const { saveMessageAutomation } = useAdminData();
-  const [form, setForm] = useState<MessageAutomation>(automation ?? { id: crypto.randomUUID(), name: "Nova automação", triggerStatus: "Novo", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! O pedido demonstrativo {{pedido}} agora está com o status {{status}}.", active: true, order: count + 1 });
-  const [error, setError] = useState("");
-  function field<K extends keyof MessageAutomation>(key: K, value: MessageAutomation[K]) { setForm((current) => ({ ...current, [key]: value })); }
-  return <div className="admin-modal" role="dialog" aria-modal="true" aria-labelledby="automation-title"><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel small"><header><div><span>MENSAGENS</span><h2 id="automation-title">{automation ? "Editar automação" : "Nova automação"}</h2></div><button onClick={onClose} aria-label="Fechar"><X /></button></header><form className="admin-form" onSubmit={async (event) => { event.preventDefault(); const parsed = messageAutomationSchema.safeParse(form); if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? "Revise os campos."); return; } await saveMessageAutomation(form); onClose(); }}><label className="full">Nome da automação<input value={form.name} onChange={(event) => field("name", event.target.value)} /></label><label>Status que dispara<select value={form.triggerStatus} onChange={(event) => field("triggerStatus", event.target.value as OrderStatus)}>{statuses.map((status) => <option key={status}>{status}</option>)}</select></label><label>Canal<select value={form.channel} onChange={(event) => field("channel", event.target.value as MessageAutomation["channel"])}><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option></select></label>{form.channel === "email" && <label className="full">Assunto<input value={form.subject} onChange={(event) => field("subject", event.target.value)} /></label>}<label className="full">Mensagem<textarea value={form.message} onChange={(event) => field("message", event.target.value)} /></label><div className="message-placeholders full"><strong>Campos disponíveis</strong><code>{"{{cliente}}"}</code><code>{"{{pedido}}"}</code><code>{"{{status}}"}</code><code>{"{{total}}"}</code></div><label className="check-field full"><input type="checkbox" checked={form.active} onChange={(event) => field("active", event.target.checked)} /> Automação ativa</label>{error && <p className="admin-form-error full">{error}</p>}<div className="admin-form-actions full"><button type="button" className="admin-button" onClick={onClose}>Cancelar</button><button className="admin-button primary">Salvar automação</button></div></form></div></div>;
 }

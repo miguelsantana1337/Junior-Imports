@@ -12,6 +12,7 @@ import type {
   CatalogImportRun,
   CashbackCampaign,
   CashbackEntry,
+  AutomationRun,
   Category,
   Coupon,
   CouponRedemption,
@@ -24,6 +25,8 @@ import type {
   InventoryMovement,
   MessageAutomation,
   MessageLog,
+  MarketingPublication,
+  MarketingPublicationVersion,
   Order,
   PageBlock,
   Product,
@@ -46,6 +49,7 @@ type Row = Record<string, unknown>;
 const num = (value: unknown) => Number(value) || 0;
 const str = (value: unknown) => String(value ?? "");
 const stringList = (value: unknown) => Array.isArray(value) ? value.map(str).filter(Boolean) : [];
+const objectValue = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
 function mapCategory(row: Row): Category {
   return {
@@ -458,14 +462,36 @@ function mapTenant(row: Row, storefrontPath: string): StoreTenant {
 }
 
 function mapMessageAutomation(row: Row): MessageAutomation {
+  const conditions = objectValue(row.conditions);
+  const actions = objectValue(row.actions);
+  const workflowStatus = (str(row.workflow_status) || (Boolean(row.active) ? "active" : "paused")) as MessageAutomation["status"];
   return {
     id: str(row.id),
     name: str(row.name),
+    triggerType: (str(row.trigger_type) || "order_status") as MessageAutomation["triggerType"],
+    triggerValue: str(row.trigger_value) || str(row.trigger_status),
     triggerStatus: str(row.trigger_status) as MessageAutomation["triggerStatus"],
     channel: str(row.channel) as MessageAutomation["channel"],
     subject: str(row.subject),
     message: str(row.message),
-    active: Boolean(row.active),
+    conditions: {
+      minOrderTotal: num(conditions.minOrderTotal),
+      orderSource: (str(conditions.orderSource) || "any") as MessageAutomation["conditions"]["orderSource"],
+      customerSegment: (str(conditions.customerSegment) || "all") as MessageAutomation["conditions"]["customerSegment"],
+    },
+    actions: {
+      sendMessage: actions.sendMessage === undefined ? true : Boolean(actions.sendMessage),
+      createTask: Boolean(actions.createTask),
+      taskTitle: str(actions.taskTitle),
+      addTag: str(actions.addTag),
+    },
+    status: workflowStatus,
+    maxRetries: num(row.max_retries),
+    retryDelayMinutes: num(row.retry_delay_minutes) || 15,
+    lastTestedAt: str(row.last_tested_at),
+    runCount: num(row.run_count),
+    failureCount: num(row.failure_count),
+    active: Boolean(row.active) && workflowStatus === "active",
     order: num(row.order_index),
   };
 }
@@ -482,7 +508,38 @@ function mapMessageLog(row: Row): MessageLog {
     subject: str(row.subject),
     message: str(row.message),
     status: str(row.status) as MessageLog["status"],
+    runId: str(row.run_id),
+    attempt: num(row.attempt) || 1,
+    errorMessage: str(row.error_message),
     createdAt: str(row.created_at),
+  };
+}
+
+function mapMarketingPublication(row: Row): MarketingPublication {
+  return {
+    id: str(row.id), name: str(row.name), description: str(row.description),
+    kind: str(row.kind) as MarketingPublication["kind"], entityId: str(row.entity_id),
+    status: str(row.status) as MarketingPublication["status"], startsAt: str(row.starts_at), endsAt: str(row.ends_at),
+    ownerEmail: str(row.owner_email), reviewerEmail: str(row.reviewer_email), revision: num(row.revision) || 1,
+    notes: str(row.notes), lastPublishedAt: str(row.last_published_at), createdAt: str(row.created_at), updatedAt: str(row.updated_at),
+  };
+}
+
+function mapMarketingPublicationVersion(row: Row): MarketingPublicationVersion {
+  return {
+    id: str(row.id), publicationId: str(row.publication_id), revision: num(row.revision),
+    status: str(row.status) as MarketingPublicationVersion["status"], snapshot: objectValue(row.snapshot),
+    note: str(row.note), actorEmail: str(row.actor_email), createdAt: str(row.created_at),
+  };
+}
+
+function mapAutomationRun(row: Row): AutomationRun {
+  return {
+    id: str(row.id), automationId: str(row.automation_id), automationName: str(row.automation_name),
+    triggerType: str(row.trigger_type) as AutomationRun["triggerType"], triggerEvent: objectValue(row.trigger_event),
+    status: str(row.status) as AutomationRun["status"], attempt: num(row.attempt), maxAttempts: num(row.max_attempts),
+    output: objectValue(row.output), errorMessage: str(row.error_message), nextRetryAt: str(row.next_retry_at),
+    startedAt: str(row.started_at), finishedAt: str(row.finished_at), actorEmail: str(row.actor_email), createdAt: str(row.created_at),
   };
 }
 
@@ -642,6 +699,10 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
   const resolution = await resolveTenant(supabase, fallback, options.tenantSlug, options.storefrontPath);
   const tenantId = resolution.persisted ? resolution.tenant.id : null;
 
+  if (!options.admin && tenantId) {
+    await supabase.rpc("process_public_marketing_schedule", { p_tenant_id: tenantId });
+  }
+
   const queries = await Promise.all([
     // @ts-expect-error Supabase's chained generic exceeds TypeScript's instantiation depth after tenant scoping.
     scopeTenant(supabase.from("store_settings").select("*"), tenantId).eq("id", "default").maybeSingle(),
@@ -710,6 +771,15 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     options.admin
       ? scopeTenant(supabase.from("cashback_wallet_entries_view").select("*"), tenantId).order("created_at", { ascending: false }).limit(1000)
       : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("marketing_publications").select("*"), tenantId).order("starts_at", { ascending: true })
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("marketing_publication_versions").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("automation_runs").select("*"), tenantId).order("created_at", { ascending: false }).limit(300)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (resolution.persisted) {
@@ -733,6 +803,9 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     }
     if (queries[26].error || queries[27].error) {
       throw new Error("Não foi possível carregar a carteira de cashback.");
+    }
+    if (queries[28].error || queries[29].error || queries[30].error) {
+      throw new Error("Não foi possível carregar o Marketing Studio.");
     }
   }
 
@@ -801,12 +874,15 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     productLots: options.admin && !queries[23].error ? ((queries[23].data ?? []) as Row[]).map(mapProductLot) : fallback.productLots,
     suppliers: options.admin && !queries[24].error ? ((queries[24].data ?? []) as Row[]).map(mapSupplier) : fallback.suppliers,
     purchaseOrders: options.admin && !queries[25].error ? ((queries[25].data ?? []) as Row[]).map(mapPurchaseOrder) : fallback.purchaseOrders,
+    marketingPublications: options.admin && !queries[28].error ? ((queries[28].data ?? []) as Row[]).map(mapMarketingPublication) : fallback.marketingPublications,
+    marketingPublicationVersions: options.admin && !queries[29].error ? ((queries[29].data ?? []) as Row[]).map(mapMarketingPublicationVersion) : fallback.marketingPublicationVersions,
     pages: queries[10].error || (!resolution.persisted && !queries[10].data?.length) ? fallback.pages : ((queries[10].data ?? []) as Row[]).map(mapPage),
     pageBlocks: queries[11].error || (!resolution.persisted && !queries[11].data?.length) ? fallback.pageBlocks : ((queries[11].data ?? []) as Row[]).map(mapPageBlock),
     messageAutomations: options.admin
       ? (queries[12].error ? fallback.messageAutomations : ((queries[12].data ?? []) as Row[]).map(mapMessageAutomation))
       : [],
     messageLogs: options.admin && !queries[13].error ? ((queries[13].data ?? []) as Row[]).map(mapMessageLog) : [],
+    automationRuns: options.admin && !queries[30].error ? ((queries[30].data ?? []) as Row[]).map(mapAutomationRun) : fallback.automationRuns,
     teamMembers: options.admin && !queries[14].error ? ((queries[14].data ?? []) as Row[]).map(mapAdminUser) : [],
     auditLogs: options.includeAudit && !queries[15].error ? ((queries[15].data ?? []) as Row[]).map(mapAuditLog) : [],
   };

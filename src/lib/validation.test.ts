@@ -76,7 +76,7 @@ describe("validacao do construtor da loja", () => {
   });
 
   it("valida uma automacao por status", () => {
-    expect(messageAutomationSchema.safeParse({ name: "Pedido enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi enviado.", active: true }).success).toBe(true);
+    expect(messageAutomationSchema.safeParse({ id: "automation-test", name: "Pedido enviado", triggerType: "order_status", triggerValue: "Enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi enviado.", conditions: { minOrderTotal: 0, orderSource: "any", customerSegment: "all" }, actions: { sendMessage: true, createTask: false, taskTitle: "", addTag: "" }, status: "active", maxRetries: 3, retryDelayMinutes: 15, lastTestedAt: "", runCount: 0, failureCount: 0, active: true, order: 1 }).success).toBe(true);
   });
 });
 

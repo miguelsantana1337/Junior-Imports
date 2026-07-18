@@ -36,6 +36,7 @@ import type {
   AdminPermission,
   AdminRole,
   AdminUser,
+  AutomationRun,
   Banner,
   CatalogImportRun,
   CashbackCampaign,
@@ -49,6 +50,10 @@ import type {
   HomeSection,
   InventoryMovement,
   MessageAutomation,
+  MarketingPublication,
+  MarketingPublicationStatus,
+  MarketingPublicationVersion,
+  MessageLog,
   Order,
   OrderStatus,
   PageBlock,
@@ -64,6 +69,7 @@ import type {
 import type { AdminUserCreateInput, AdminUserUpdateInput, ManualOrderInput } from "@/lib/validation";
 import type { CashbackAdjustmentInput } from "@/lib/validation";
 import { activeCashbackCampaigns, cashbackWalletSummary } from "@/lib/cashback";
+import { canTransitionPublication, simulateMessageAutomation } from "@/lib/marketing";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
 type OrderedKey = "products" | "banners" | "categories" | "sections";
@@ -81,6 +87,49 @@ type PersistedOrder = {
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
 };
+
+type DatabaseRow = Record<string, unknown>;
+const rowString = (value: unknown) => String(value ?? "");
+const rowNumber = (value: unknown) => Number(value) || 0;
+const rowObject = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+function marketingPublicationFromRow(row: DatabaseRow): MarketingPublication {
+  return {
+    id: rowString(row.id), name: rowString(row.name), description: rowString(row.description), kind: rowString(row.kind) as MarketingPublication["kind"],
+    entityId: rowString(row.entity_id), status: rowString(row.status) as MarketingPublication["status"], startsAt: rowString(row.starts_at), endsAt: rowString(row.ends_at),
+    ownerEmail: rowString(row.owner_email), reviewerEmail: rowString(row.reviewer_email), revision: rowNumber(row.revision) || 1, notes: rowString(row.notes),
+    lastPublishedAt: rowString(row.last_published_at), createdAt: rowString(row.created_at), updatedAt: rowString(row.updated_at),
+  };
+}
+
+function marketingVersionFromRow(row: DatabaseRow): MarketingPublicationVersion {
+  return { id: rowString(row.id), publicationId: rowString(row.publication_id), revision: rowNumber(row.revision), status: rowString(row.status) as MarketingPublicationVersion["status"], snapshot: rowObject(row.snapshot), note: rowString(row.note), actorEmail: rowString(row.actor_email), createdAt: rowString(row.created_at) };
+}
+
+function automationRunFromRow(row: DatabaseRow): AutomationRun {
+  return { id: rowString(row.id), automationId: rowString(row.automation_id), automationName: rowString(row.automation_name), triggerType: rowString(row.trigger_type) as AutomationRun["triggerType"], triggerEvent: rowObject(row.trigger_event), status: rowString(row.status) as AutomationRun["status"], attempt: rowNumber(row.attempt), maxAttempts: rowNumber(row.max_attempts), output: rowObject(row.output), errorMessage: rowString(row.error_message), nextRetryAt: rowString(row.next_retry_at), startedAt: rowString(row.started_at), finishedAt: rowString(row.finished_at), actorEmail: rowString(row.actor_email), createdAt: rowString(row.created_at) };
+}
+
+function messageLogFromRow(row: DatabaseRow): MessageLog {
+  return { id: rowString(row.id), orderId: rowString(row.order_id), orderCode: rowString(row.order_code), automationId: rowString(row.automation_id), automationName: rowString(row.automation_name), channel: rowString(row.channel) as MessageLog["channel"], recipient: rowString(row.recipient), subject: rowString(row.subject), message: rowString(row.message), status: rowString(row.status) as MessageLog["status"], runId: rowString(row.run_id), attempt: rowNumber(row.attempt) || 1, errorMessage: rowString(row.error_message), createdAt: rowString(row.created_at) };
+}
+
+function automationFromRow(row: DatabaseRow): MessageAutomation {
+  const conditions = rowObject(row.conditions);
+  const actions = rowObject(row.actions);
+  const status = (rowString(row.workflow_status) || (Boolean(row.active) ? "active" : "paused")) as MessageAutomation["status"];
+  return { id: rowString(row.id), name: rowString(row.name), triggerType: (rowString(row.trigger_type) || "order_status") as MessageAutomation["triggerType"], triggerValue: rowString(row.trigger_value) || rowString(row.trigger_status), triggerStatus: rowString(row.trigger_status) as MessageAutomation["triggerStatus"], channel: rowString(row.channel) as MessageAutomation["channel"], subject: rowString(row.subject), message: rowString(row.message), conditions: { minOrderTotal: rowNumber(conditions.minOrderTotal), orderSource: (rowString(conditions.orderSource) || "any") as MessageAutomation["conditions"]["orderSource"], customerSegment: (rowString(conditions.customerSegment) || "all") as MessageAutomation["conditions"]["customerSegment"] }, actions: { sendMessage: actions.sendMessage === undefined ? true : Boolean(actions.sendMessage), createTask: Boolean(actions.createTask), taskTitle: rowString(actions.taskTitle), addTag: rowString(actions.addTag) }, status, maxRetries: rowNumber(row.max_retries), retryDelayMinutes: rowNumber(row.retry_delay_minutes) || 15, lastTestedAt: rowString(row.last_tested_at), runCount: rowNumber(row.run_count), failureCount: rowNumber(row.failure_count), active: Boolean(row.active) && status === "active", order: rowNumber(row.order_index) };
+}
+
+function syncLocalPublicationEntity(current: StoreData, publication: MarketingPublication, status: MarketingPublicationStatus): StoreData {
+  if (!publication.entityId) return current;
+  const published = status === "published";
+  if (publication.kind === "banner") return { ...current, banners: current.banners.map((item) => item.id === publication.entityId ? { ...item, active: published } : item) };
+  if (publication.kind === "coupon") return { ...current, coupons: current.coupons.map((item) => item.id === publication.entityId ? { ...item, active: published } : item) };
+  if (publication.kind === "cashback") return { ...current, cashbackCampaigns: current.cashbackCampaigns.map((item) => item.id === publication.entityId ? { ...item, status: published ? "active" : status === "archived" ? "ended" : "paused" } : item) };
+  if (publication.kind === "message") return { ...current, messageAutomations: current.messageAutomations.map((item) => item.id === publication.entityId ? { ...item, status: published ? "active" : "paused", active: published } : item) };
+  return current;
+}
 
 interface AdminDataContextValue {
   data: StoreData;
@@ -108,6 +157,12 @@ interface AdminDataContextValue {
   saveCustomerContact: (contact: CustomerContact) => Promise<void>;
   saveCashbackCampaign: (campaign: CashbackCampaign) => Promise<void>;
   adjustCustomerCashback: (adjustment: CashbackAdjustmentInput) => Promise<void>;
+  saveMarketingPublication: (publication: MarketingPublication) => Promise<void>;
+  transitionMarketingPublication: (id: string, status: MarketingPublicationStatus, note?: string) => Promise<void>;
+  rollbackMarketingPublication: (publicationId: string, versionId: string) => Promise<void>;
+  processDueMarketingPublications: () => Promise<void>;
+  testMessageAutomation: (automationId: string, orderId: string) => Promise<void>;
+  retryAutomationRun: (runId: string) => Promise<void>;
   createOrder: (input: ManualOrderInput) => Promise<Order>;
   saveFinancialTransaction: (transaction: FinancialTransaction) => Promise<void>;
   deleteFinancialTransaction: (id: string) => Promise<void>;
@@ -296,6 +351,30 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       .limit(1000);
     if (error) throw new Error(error.message);
     const next = { ...dataRef.current, cashbackEntries: (rows ?? []).map((row) => cashbackEntryRecord(row as Record<string, unknown>)) };
+    dataRef.current = next;
+    setData(next);
+  }, [supabase]);
+
+  const refreshMarketingStudio = useCallback(async () => {
+    if (!supabase) return;
+    const tenantId = dataRef.current.tenant.id;
+    const [publications, versions, automations, runs, logs] = await Promise.all([
+      supabase.from("marketing_publications").select("*").eq("tenant_id", tenantId).order("starts_at"),
+      supabase.from("marketing_publication_versions").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(500),
+      supabase.from("message_automations").select("*").eq("tenant_id", tenantId).order("order_index"),
+      supabase.from("automation_runs").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(300),
+      supabase.from("message_logs").select("*").eq("tenant_id", tenantId).order("created_at", { ascending: false }).limit(100),
+    ]);
+    const failure = [publications, versions, automations, runs, logs].find((result) => result.error)?.error;
+    if (failure) throw new Error(failure.message);
+    const next: StoreData = {
+      ...dataRef.current,
+      marketingPublications: (publications.data ?? []).map((row) => marketingPublicationFromRow(row as DatabaseRow)),
+      marketingPublicationVersions: (versions.data ?? []).map((row) => marketingVersionFromRow(row as DatabaseRow)),
+      messageAutomations: (automations.data ?? []).map((row) => automationFromRow(row as DatabaseRow)),
+      automationRuns: (runs.data ?? []).map((row) => automationRunFromRow(row as DatabaseRow)),
+      messageLogs: (logs.data ?? []).map((row) => messageLogFromRow(row as DatabaseRow)),
+    };
     dataRef.current = next;
     setData(next);
   }, [supabase]);
@@ -490,7 +569,26 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       messageAutomations: current.messageAutomations.some((item) => item.id === automation.id)
         ? current.messageAutomations.map((item) => item.id === automation.id ? automation : item)
         : [...current.messageAutomations, automation],
-    }), () => persist("message_automations", { id: automation.id, name: automation.name, trigger_status: automation.triggerStatus, channel: automation.channel, subject: automation.subject, message: automation.message, active: automation.active, order_index: automation.order }), "Automação salva.");
+    }), () => persist("message_automations", {
+      id: automation.id,
+      name: automation.name,
+      trigger_type: automation.triggerType,
+      trigger_value: automation.triggerValue,
+      trigger_status: automation.triggerType === "order_status" ? automation.triggerValue : automation.triggerStatus,
+      channel: automation.channel,
+      subject: automation.subject,
+      message: automation.message,
+      conditions: automation.conditions,
+      actions: automation.actions,
+      workflow_status: automation.status,
+      max_retries: automation.maxRetries,
+      retry_delay_minutes: automation.retryDelayMinutes,
+      last_tested_at: automation.lastTestedAt || null,
+      run_count: automation.runCount,
+      failure_count: automation.failureCount,
+      active: automation.status === "active" && automation.active,
+      order_index: automation.order,
+    }), "Automação salva.");
   }, [commitMutation, persist]);
 
   const deleteMessageAutomation = useCallback(async (id: string) => {
@@ -612,6 +710,171 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     await refreshCashbackEntries();
     toast({ message: "Ajuste registrado no extrato.", kind: "success" });
   }, [currentUser.email, refreshCashbackEntries, supabase, toast]);
+
+  const saveMarketingPublication = useCallback(async (publication: MarketingPublication) => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const existing = current.marketingPublications.find((item) => item.id === publication.id);
+      const now = new Date().toISOString();
+      const saved: MarketingPublication = {
+        ...publication,
+        status: existing && ["in_review", "approved", "scheduled", "published"].includes(existing.status) ? "draft" : publication.status,
+        revision: existing ? existing.revision + 1 : 1,
+        createdAt: existing?.createdAt || publication.createdAt || now,
+        updatedAt: now,
+      };
+      const version: MarketingPublicationVersion = { id: crypto.randomUUID(), publicationId: saved.id, revision: saved.revision, status: saved.status, snapshot: { ...saved }, note: existing ? "Conteúdo atualizado" : "Rascunho criado", actorEmail: currentUser.email, createdAt: now };
+      let next: StoreData = { ...current, marketingPublications: current.marketingPublications.some((item) => item.id === saved.id) ? current.marketingPublications.map((item) => item.id === saved.id ? saved : item) : [saved, ...current.marketingPublications], marketingPublicationVersions: [version, ...current.marketingPublicationVersions] };
+      if (existing && ["scheduled", "published"].includes(existing.status)) next = syncLocalPublicationEntity(next, existing, "draft");
+      dataRef.current = next;
+      setData(next);
+      toast({ message: "Rascunho editorial salvo.", kind: "success" });
+      return;
+    }
+    const { error } = await supabase.rpc("save_marketing_publication", {
+      p_tenant_id: dataRef.current.tenant.id,
+      p_id: publication.id,
+      p_name: publication.name,
+      p_description: publication.description,
+      p_kind: publication.kind,
+      p_entity_id: publication.entityId,
+      p_starts_at: publication.startsAt,
+      p_ends_at: publication.endsAt || null,
+      p_owner_email: publication.ownerEmail,
+      p_reviewer_email: publication.reviewerEmail,
+      p_notes: publication.notes,
+    });
+    if (error) throw new Error(error.message);
+    await refreshMarketingStudio();
+    toast({ message: "Rascunho editorial salvo.", kind: "success" });
+  }, [currentUser.email, refreshMarketingStudio, supabase, toast]);
+
+  const transitionMarketingPublication = useCallback(async (id: string, status: MarketingPublicationStatus, note = "") => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const publication = current.marketingPublications.find((item) => item.id === id);
+      if (!publication) throw new Error("Publicação não encontrada.");
+      if (!canTransitionPublication(publication.status, status)) throw new Error("Transição de publicação inválida.");
+      if (status === "approved" && !publication.reviewerEmail) throw new Error("Defina um revisor antes da aprovação.");
+      const now = new Date().toISOString();
+      const updated = { ...publication, status, revision: publication.revision + 1, lastPublishedAt: status === "published" ? now : publication.lastPublishedAt, updatedAt: now };
+      const version: MarketingPublicationVersion = { id: crypto.randomUUID(), publicationId: id, revision: updated.revision, status, snapshot: { ...updated }, note, actorEmail: currentUser.email, createdAt: now };
+      let next: StoreData = { ...current, marketingPublications: current.marketingPublications.map((item) => item.id === id ? updated : item), marketingPublicationVersions: [version, ...current.marketingPublicationVersions] };
+      next = syncLocalPublicationEntity(next, updated, status);
+      dataRef.current = next;
+      setData(next);
+      toast({ message: "Etapa editorial atualizada.", kind: "success" });
+      return;
+    }
+    const { error } = await supabase.rpc("transition_marketing_publication", { p_tenant_id: dataRef.current.tenant.id, p_publication_id: id, p_status: status, p_note: note });
+    if (error) throw new Error(error.message);
+    await refreshMarketingStudio();
+    toast({ message: "Etapa editorial atualizada.", kind: "success" });
+  }, [currentUser.email, refreshMarketingStudio, supabase, toast]);
+
+  const rollbackMarketingPublication = useCallback(async (publicationId: string, versionId: string) => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const publication = current.marketingPublications.find((item) => item.id === publicationId);
+      const version = current.marketingPublicationVersions.find((item) => item.id === versionId && item.publicationId === publicationId);
+      if (!publication || !version) throw new Error("Versão não encontrada.");
+      const snapshot = version.snapshot;
+      const value = (camel: string, snake: string) => snapshot[camel] ?? snapshot[snake];
+      const now = new Date().toISOString();
+      const restored: MarketingPublication = {
+        ...publication,
+        name: rowString(value("name", "name")) || publication.name,
+        description: rowString(value("description", "description")),
+        kind: (rowString(value("kind", "kind")) || publication.kind) as MarketingPublication["kind"],
+        entityId: rowString(value("entityId", "entity_id")),
+        startsAt: rowString(value("startsAt", "starts_at")) || publication.startsAt,
+        endsAt: rowString(value("endsAt", "ends_at")),
+        ownerEmail: rowString(value("ownerEmail", "owner_email")) || publication.ownerEmail,
+        reviewerEmail: rowString(value("reviewerEmail", "reviewer_email")),
+        notes: rowString(value("notes", "notes")),
+        status: "draft",
+        revision: publication.revision + 1,
+        updatedAt: now,
+      };
+      const rollbackVersion: MarketingPublicationVersion = { id: crypto.randomUUID(), publicationId, revision: restored.revision, status: "draft", snapshot: { ...restored }, note: `Rollback para a revisão ${version.revision}`, actorEmail: currentUser.email, createdAt: now };
+      let next: StoreData = { ...current, marketingPublications: current.marketingPublications.map((item) => item.id === publicationId ? restored : item), marketingPublicationVersions: [rollbackVersion, ...current.marketingPublicationVersions] };
+      next = syncLocalPublicationEntity(next, publication, "draft");
+      dataRef.current = next;
+      setData(next);
+      toast({ message: `Revisão ${version.revision} restaurada como rascunho.`, kind: "success" });
+      return;
+    }
+    const { error } = await supabase.rpc("rollback_marketing_publication", { p_tenant_id: dataRef.current.tenant.id, p_publication_id: publicationId, p_version_id: versionId });
+    if (error) throw new Error(error.message);
+    await refreshMarketingStudio();
+    toast({ message: "Versão restaurada como rascunho.", kind: "success" });
+  }, [currentUser.email, refreshMarketingStudio, supabase, toast]);
+
+  const processDueMarketingPublications = useCallback(async () => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const now = Date.now();
+      let next = current;
+      let changed = false;
+      for (const publication of current.marketingPublications) {
+        const expired = Boolean(publication.endsAt && new Date(publication.endsAt).getTime() < now && ["published", "scheduled"].includes(publication.status));
+        const due = publication.status === "scheduled" && new Date(publication.startsAt).getTime() <= now;
+        if (!expired && !due) continue;
+        const status: MarketingPublicationStatus = expired ? "archived" : "published";
+        const updated = { ...publication, status, revision: publication.revision + 1, lastPublishedAt: due ? new Date().toISOString() : publication.lastPublishedAt, updatedAt: new Date().toISOString() };
+        next = { ...next, marketingPublications: next.marketingPublications.map((item) => item.id === publication.id ? updated : item) };
+        next = syncLocalPublicationEntity(next, updated, status);
+        changed = true;
+      }
+      if (changed) { dataRef.current = next; setData(next); }
+      return;
+    }
+    const { data: processed, error } = await supabase.rpc("process_due_marketing_publications", { p_tenant_id: dataRef.current.tenant.id });
+    if (error) throw new Error(error.message);
+    if (Number(processed) > 0) await refreshMarketingStudio();
+  }, [refreshMarketingStudio, supabase]);
+
+  const testMessageAutomation = useCallback(async (automationId: string, orderId: string) => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const automation = current.messageAutomations.find((item) => item.id === automationId);
+      const order = current.orders.find((item) => item.id === orderId);
+      if (!automation || !order) throw new Error("Selecione uma automação e um pedido válidos.");
+      const rendered = simulateMessageAutomation(automation, order);
+      const now = new Date().toISOString();
+      const runId = crypto.randomUUID();
+      const run: AutomationRun = { id: runId, automationId, automationName: automation.name, triggerType: automation.triggerType, triggerEvent: { test: true, orderId, orderCode: order.code }, status: "simulated", attempt: 1, maxAttempts: automation.maxRetries + 1, output: rendered, errorMessage: "", nextRetryAt: "", startedAt: now, finishedAt: now, actorEmail: currentUser.email, createdAt: now };
+      const log: MessageLog = { id: crypto.randomUUID(), orderId, orderCode: order.code, automationId, automationName: automation.name, channel: automation.channel, recipient: rendered.recipient, subject: rendered.subject, message: rendered.message, status: "simulated", runId, attempt: 1, errorMessage: "", createdAt: now };
+      const next = { ...current, automationRuns: [run, ...current.automationRuns], messageLogs: automation.actions.sendMessage ? [log, ...current.messageLogs] : current.messageLogs, messageAutomations: current.messageAutomations.map((item) => item.id === automationId ? { ...item, lastTestedAt: now, runCount: item.runCount + 1 } : item) };
+      dataRef.current = next;
+      setData(next);
+      toast({ message: "Simulação concluída sem enviar mensagem real.", kind: "success" });
+      return;
+    }
+    const { error } = await supabase.rpc("test_message_automation", { p_tenant_id: dataRef.current.tenant.id, p_automation_id: automationId, p_order_id: orderId });
+    if (error) throw new Error(error.message);
+    await refreshMarketingStudio();
+    toast({ message: "Simulação concluída sem enviar mensagem real.", kind: "success" });
+  }, [currentUser.email, refreshMarketingStudio, supabase, toast]);
+
+  const retryAutomationRun = useCallback(async (runId: string) => {
+    if (!supabase) {
+      const current = dataRef.current;
+      const run = current.automationRuns.find((item) => item.id === runId);
+      if (!run || !["failed", "retrying"].includes(run.status)) throw new Error("Somente falhas podem ser reenviadas.");
+      if (run.attempt >= run.maxAttempts) throw new Error("Limite de tentativas atingido.");
+      const updated: AutomationRun = { ...run, status: "simulated", attempt: run.attempt + 1, errorMessage: "", nextRetryAt: "", output: { ...run.output, retried: true }, startedAt: new Date().toISOString(), finishedAt: new Date().toISOString() };
+      const next = { ...current, automationRuns: current.automationRuns.map((item) => item.id === runId ? updated : item) };
+      dataRef.current = next;
+      setData(next);
+      toast({ message: "Execução reenviada para simulação.", kind: "success" });
+      return;
+    }
+    const { error } = await supabase.rpc("retry_automation_run", { p_tenant_id: dataRef.current.tenant.id, p_run_id: runId });
+    if (error) throw new Error(error.message);
+    await refreshMarketingStudio();
+    toast({ message: "Execução reenviada.", kind: "success" });
+  }, [refreshMarketingStudio, supabase, toast]);
 
   const saveFinancialTransaction = useCallback(async (transaction: FinancialTransaction) => {
     await commitMutation(
@@ -1130,6 +1393,12 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     saveCustomerContact,
     saveCashbackCampaign,
     adjustCustomerCashback,
+    saveMarketingPublication,
+    transitionMarketingPublication,
+    rollbackMarketingPublication,
+    processDueMarketingPublications,
+    testMessageAutomation,
+    retryAutomationRun,
     createOrder,
     saveFinancialTransaction,
     deleteFinancialTransaction,
@@ -1154,7 +1423,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

@@ -497,13 +497,71 @@ export interface PurchaseOrder {
 
 export type MessageChannel = "whatsapp" | "email";
 
+export type MarketingPublicationKind = "campaign" | "banner" | "coupon" | "cashback" | "message";
+export type MarketingPublicationStatus = "draft" | "in_review" | "approved" | "scheduled" | "published" | "paused" | "archived";
+
+export interface MarketingPublication {
+  id: string;
+  name: string;
+  description: string;
+  kind: MarketingPublicationKind;
+  entityId: string;
+  status: MarketingPublicationStatus;
+  startsAt: string;
+  endsAt: string;
+  ownerEmail: string;
+  reviewerEmail: string;
+  revision: number;
+  notes: string;
+  lastPublishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MarketingPublicationVersion {
+  id: string;
+  publicationId: string;
+  revision: number;
+  status: MarketingPublicationStatus;
+  snapshot: Record<string, unknown>;
+  note: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
+export type AutomationTriggerType = "order_status" | "customer_segment" | "cashback_expiring" | "schedule";
+export type AutomationStatus = "draft" | "active" | "paused";
+
+export interface AutomationConditions {
+  minOrderTotal: number;
+  orderSource: "any" | "storefront" | "admin" | "legacy";
+  customerSegment: "all" | CustomerSegment;
+}
+
+export interface AutomationActions {
+  sendMessage: boolean;
+  createTask: boolean;
+  taskTitle: string;
+  addTag: string;
+}
+
 export interface MessageAutomation {
   id: string;
   name: string;
+  triggerType: AutomationTriggerType;
+  triggerValue: string;
   triggerStatus: OrderStatus;
   channel: MessageChannel;
   subject: string;
   message: string;
+  conditions: AutomationConditions;
+  actions: AutomationActions;
+  status: AutomationStatus;
+  maxRetries: number;
+  retryDelayMinutes: number;
+  lastTestedAt: string;
+  runCount: number;
+  failureCount: number;
   active: boolean;
   order: number;
 }
@@ -519,6 +577,29 @@ export interface MessageLog {
   subject: string;
   message: string;
   status: "simulated" | "queued" | "sent" | "failed";
+  runId: string;
+  attempt: number;
+  errorMessage: string;
+  createdAt: string;
+}
+
+export type AutomationRunStatus = "testing" | "simulated" | "queued" | "running" | "succeeded" | "failed" | "retrying" | "cancelled";
+
+export interface AutomationRun {
+  id: string;
+  automationId: string;
+  automationName: string;
+  triggerType: AutomationTriggerType;
+  triggerEvent: Record<string, unknown>;
+  status: AutomationRunStatus;
+  attempt: number;
+  maxAttempts: number;
+  output: Record<string, unknown>;
+  errorMessage: string;
+  nextRetryAt: string;
+  startedAt: string;
+  finishedAt: string;
+  actorEmail: string;
   createdAt: string;
 }
 
@@ -591,8 +672,11 @@ export interface StoreData {
   productLots: ProductLot[];
   suppliers: Supplier[];
   purchaseOrders: PurchaseOrder[];
+  marketingPublications: MarketingPublication[];
+  marketingPublicationVersions: MarketingPublicationVersion[];
   messageAutomations: MessageAutomation[];
   messageLogs: MessageLog[];
+  automationRuns: AutomationRun[];
   teamMembers: AdminUser[];
   auditLogs: AuditLog[];
 }

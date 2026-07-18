@@ -67,11 +67,11 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Banners, cupons e mensagens | Concluído | Adicionar agendamento, aprovação e calendário. |
-| Calendário de campanhas | Planejado | Visão única para banners, cupons, cashback e mensagens. |
-| Templates e simulação | Parcial | Mensagens têm simulação; falta biblioteca versionada. |
-| Rascunho, revisão, preview e publicação | Parcial | Editor da loja tem preview; falta workflow compartilhado e rollback. |
-| Construtor de regras | Planejado | Gatilhos, condições, ações, teste, pausa, retry e logs. |
+| Banners, cupons e mensagens | Concluído | Medir conversão e custo por campanha nos próximos lotes. |
+| Calendário de campanhas | Concluído | Visão única para banners, cupons, cashback, mensagens e campanhas coordenadas. |
+| Templates e simulação | Concluído | Placeholders, preview por pedido e simulação segura com histórico. |
+| Rascunho, revisão, preview e publicação | Concluído | Workflow compartilhado com aprovação, agendamento, versões e rollback. |
+| Construtor de regras | Concluído | Gatilhos, condições, ações combinadas, teste, pausa, retry e logs. |
 
 ## 6. Catálogo, estoque e compras
 
@@ -129,6 +129,6 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 1. **Lote 1 — concluído:** central de comandos, favoritos, preferências, filtros salvos e auditoria visual.
 2. **Lote 2 — concluído nesta entrega:** health center, proteção contra demo em produção, backup/restore e monitoramento interno.
 3. **Lote 3 — concluído nesta entrega:** carteira/extrato de cashback, campanhas segmentadas e Cliente 360.
-4. **Lote 4:** calendário de campanhas, workflow de publicação e construtor de automações.
+4. **Lote 4 — concluído nesta entrega:** calendário de campanhas, workflow de publicação e construtor de automações.
 5. **Lote 5:** análises de estoque, relatórios e exportações.
 6. **Lote 6:** colaboração de equipe e Copiloto Junior em modo somente leitura.

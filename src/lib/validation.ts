@@ -342,11 +342,56 @@ export const pageBlockSchema = z.object({
 export const messageAutomationSchema = z.object({
   id: z.string().optional(),
   name: z.string().trim().min(2, "Informe o nome da automação."),
+  triggerType: z.enum(["order_status", "customer_segment", "cashback_expiring", "schedule"]),
+  triggerValue: z.string().trim().min(1, "Configure o evento que inicia a automação."),
   triggerStatus: z.enum(["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"]),
   channel: z.enum(["whatsapp", "email"]),
   subject: z.string().trim().max(140),
   message: z.string().trim().min(10, "Escreva uma mensagem com pelo menos 10 caracteres.").max(1200),
+  conditions: z.object({
+    minOrderTotal: z.coerce.number().min(0).max(1_000_000),
+    orderSource: z.enum(["any", "storefront", "admin", "legacy"]),
+    customerSegment: z.enum(["all", "new", "active", "recurring", "vip", "at_risk", "inactive"]),
+  }),
+  actions: z.object({
+    sendMessage: z.boolean(),
+    createTask: z.boolean(),
+    taskTitle: z.string().trim().max(160),
+    addTag: z.string().trim().max(60),
+  }),
+  status: z.enum(["draft", "active", "paused"]),
+  maxRetries: z.coerce.number().int().min(0).max(10),
+  retryDelayMinutes: z.coerce.number().int().min(1).max(10_080),
+  lastTestedAt: z.string(),
+  runCount: z.coerce.number().int().min(0),
+  failureCount: z.coerce.number().int().min(0),
   active: z.boolean(),
+  order: z.coerce.number().int().min(0),
+}).superRefine((automation, context) => {
+  if (automation.channel === "email" && !automation.subject) context.addIssue({ code: "custom", path: ["subject"], message: "Informe o assunto do e-mail." });
+  if (!automation.actions.sendMessage && !automation.actions.createTask && !automation.actions.addTag) context.addIssue({ code: "custom", path: ["actions"], message: "Selecione pelo menos uma ação." });
+  if (automation.actions.createTask && automation.actions.taskTitle.length < 3) context.addIssue({ code: "custom", path: ["actions", "taskTitle"], message: "Informe o título da tarefa." });
+});
+
+export const marketingPublicationSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(3, "Informe o nome da publicação.").max(120),
+  description: z.string().trim().max(600),
+  kind: z.enum(["campaign", "banner", "coupon", "cashback", "message"]),
+  entityId: z.string(),
+  status: z.enum(["draft", "in_review", "approved", "scheduled", "published", "paused", "archived"]),
+  startsAt: z.string().min(1, "Informe o início da campanha."),
+  endsAt: z.string(),
+  ownerEmail: z.string().trim().email("Informe o responsável."),
+  reviewerEmail: z.union([z.literal(""), z.string().trim().email("Informe um revisor válido.")]),
+  revision: z.coerce.number().int().min(1),
+  notes: z.string().trim().max(1200),
+  lastPublishedAt: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).superRefine((publication, context) => {
+  if (publication.endsAt && new Date(publication.endsAt) <= new Date(publication.startsAt)) context.addIssue({ code: "custom", path: ["endsAt"], message: "O término deve ser posterior ao início." });
+  if (publication.kind !== "campaign" && !publication.entityId) context.addIssue({ code: "custom", path: ["entityId"], message: "Vincule o conteúdo que será publicado." });
 });
 
 const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
@@ -440,6 +485,7 @@ export type SettingsInput = z.infer<typeof settingsSchema>;
 export type StorePageInput = z.infer<typeof storePageSchema>;
 export type PageBlockInput = z.infer<typeof pageBlockSchema>;
 export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;
+export type MarketingPublicationInput = z.infer<typeof marketingPublicationSchema>;
 export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
 export type AdminUserPasswordResetInput = z.infer<typeof adminUserPasswordResetSchema>;

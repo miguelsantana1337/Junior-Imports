@@ -82,7 +82,7 @@ const navigationGroups = [
     label: "Marketing",
     items: [
       { href: "/admin/coupons", label: "Cupons", icon: IconTicket, permission: "marketing" },
-      { href: "/admin/messages", label: "Mensagens", icon: IconMessageCircle, permission: "marketing" },
+      { href: "/admin/messages", label: "Marketing Studio", icon: IconMessageCircle, permission: "marketing" },
     ],
   },
   {
@@ -107,7 +107,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/sections": ["LOJA VIRTUAL", "Página inicial"],
   "/admin/layout": ["LOJA VIRTUAL", "Editor de layout"],
   "/admin/coupons": ["MARKETING", "Cupons"],
-  "/admin/messages": ["MARKETING", "Mensagens automáticas"],
+  "/admin/messages": ["MARKETING", "Calendário, publicação e automações"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos demonstrativos"],
   "/admin/crm": ["CRM", "Relacionamento e tarefas"],
   "/admin/customers": ["CRM", "Clientes e relacionamento"],
