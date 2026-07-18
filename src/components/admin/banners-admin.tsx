@@ -3,6 +3,7 @@
 import {
   Eye,
   EyeOff,
+  GripVertical,
   ImagePlus,
   Monitor,
   Pencil,
@@ -12,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type DragEvent } from "react";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { bannerSchema } from "@/lib/validation";
 import type { Banner } from "@/types/store";
@@ -20,9 +21,11 @@ import { useAdminData } from "./admin-data-provider";
 import { AdminPanel, StatusTag } from "./admin-ui";
 
 export function BannersAdmin() {
-  const { data, deleteBanner, moveItem, toggleItem } = useAdminData();
+  const { data, deleteBanner, moveItem, reorderItem, toggleItem } = useAdminData();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<Banner | "new" | null>(null);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -30,6 +33,21 @@ export function BannersAdmin() {
   }, [searchParams]);
 
   const banners = [...data.banners].sort((a, b) => a.order - b.order);
+
+  function startDrag(event: DragEvent<HTMLButtonElement>, id: string) {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", id);
+    setDraggedId(id);
+  }
+
+  async function dropBanner(targetId: string, transferredId?: string) {
+    const sourceId = transferredId || draggedId;
+    if (!sourceId || sourceId === targetId) return;
+    const targetIndex = banners.findIndex((banner) => banner.id === targetId);
+    if (targetIndex >= 0) await reorderItem("banners", sourceId, targetIndex);
+    setDraggedId(null);
+    setDropTargetId(null);
+  }
 
   return (
     <>
@@ -46,12 +64,20 @@ export function BannersAdmin() {
 
       <AdminPanel
         title="Banners rotativos"
-        description="Organize as campanhas, acompanhe a visibilidade e abra a edição para conferir as prévias."
+        description="Arraste as campanhas para ordenar, acompanhe a visibilidade e confira as prévias."
         action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar banner</button>}
       >
         <div className="admin-list banner-admin-list">
           {banners.map((banner, index) => (
-            <article className="sortable-row" key={banner.id}>
+            <article
+              className={`sortable-row has-drag-handle ${draggedId === banner.id ? "is-dragging" : ""} ${dropTargetId === banner.id ? "is-drop-target" : ""}`}
+              key={banner.id}
+              onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; }}
+              onDragEnter={() => { if (draggedId && draggedId !== banner.id) setDropTargetId(banner.id); }}
+              onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setDropTargetId(null); }}
+              onDrop={(event) => { event.preventDefault(); void dropBanner(banner.id, event.dataTransfer.getData("text/plain")); }}
+            >
+              <button className="admin-drag-handle" type="button" draggable onDragStart={(event) => startDrag(event, banner.id)} onDragEnd={() => { setDraggedId(null); setDropTargetId(null); }} aria-label={`Arrastar ${banner.title || "banner"}`} title="Arraste para reorganizar"><GripVertical /></button>
               <div className="order-buttons">
                 <button disabled={index === 0} onClick={() => moveItem("banners", banner.id, -1)} aria-label={`Mover ${banner.title || "banner"} para cima`}>↑</button>
                 <button disabled={index === banners.length - 1} onClick={() => moveItem("banners", banner.id, 1)} aria-label={`Mover ${banner.title || "banner"} para baixo`}>↓</button>

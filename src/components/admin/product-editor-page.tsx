@@ -103,6 +103,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
   const [saving, setSaving] = useState(false);
   const [urlInput, setUrlInput] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const draftKey = `junior-imports:product-draft:${productId ?? "new"}`;
   const images = normalizeProductImages(form);
   const cover = form.imageUrl || images[0] || "";
@@ -372,12 +373,14 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
                   const isCover = image === cover;
                   return (
                     <article
-                      className={`product-photo-card ${isCover ? "is-cover" : ""}`}
+                      className={`product-photo-card ${isCover ? "is-cover" : ""} ${draggedIndex === index ? "is-dragging" : ""} ${dragOverIndex === index && draggedIndex !== index ? "is-drop-target" : ""}`}
                       key={`${image}-${index}`}
                       draggable
-                      onDragStart={() => setDraggedIndex(index)}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => { if (draggedIndex !== null) moveImage(draggedIndex, index); setDraggedIndex(null); }}
+                      onDragStart={(event) => { event.dataTransfer.effectAllowed = "move"; event.dataTransfer.setData("text/plain", String(index)); setDraggedIndex(index); }}
+                      onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = "move"; setDragOverIndex(index); }}
+                      onDragLeave={() => setDragOverIndex(null)}
+                      onDragEnd={() => { setDraggedIndex(null); setDragOverIndex(null); }}
+                      onDrop={(event) => { event.preventDefault(); if (draggedIndex !== null) moveImage(draggedIndex, index); setDraggedIndex(null); setDragOverIndex(null); }}
                     >
                       <div className="product-photo-image">
                         <img src={image} alt={`${form.name || "Produto"} — foto ${index + 1}`} />

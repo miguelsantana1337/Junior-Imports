@@ -41,6 +41,7 @@ import { useAdminData } from "@/components/admin/admin-data-provider";
 import { platformConfig } from "@/config/platform";
 import { clearAdminSensitiveBrowserStorage } from "@/lib/browser-storage";
 import { AdminPwaInstall } from "@/components/admin/admin-pwa-install";
+import { AdminLoadingScreen } from "@/components/admin/admin-loading-screen";
 
 const navigationGroups = [
   {
@@ -143,8 +144,10 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<AdminTheme>("light");
+  const [navigationPending, setNavigationPending] = useState(false);
   const createPopoverRef = useRef<HTMLDivElement>(null);
   const notificationsPopoverRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [eyebrow, title] = titles[pathname] ?? titles["/admin"];
   const productEditorPath = pathname === "/admin/products/new" || pathname.startsWith("/admin/products/");
   const isNavigationActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
@@ -166,10 +169,16 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     setOpen(false);
     setCreateOpen(false);
     setNotificationsOpen(false);
+    setNavigationPending(false);
   }, [pathname]);
 
   useEffect(() => {
     const closeMenus = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLocaleLowerCase() === "k") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
       if (event.key === "Escape") {
         setOpen(false);
         setCreateOpen(false);
@@ -224,7 +233,20 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   };
 
   return (
-    <div className={`admin-shell-next ${collapsed ? "is-collapsed" : ""}`}>
+    <div
+      className={`admin-shell-next ${collapsed ? "is-collapsed" : ""}`}
+      onClickCapture={(event) => {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+        if (!anchor || anchor.target === "_blank") return;
+        const destination = new URL(anchor.href, window.location.href);
+        if (destination.origin === window.location.origin && destination.pathname.startsWith("/admin") && `${destination.pathname}${destination.search}` !== `${window.location.pathname}${window.location.search}`) {
+          setNavigationPending(true);
+        }
+      }}
+    >
+      <AdminLoadingScreen autoDismiss />
+      <div className={`admin-navigation-progress ${navigationPending ? "is-active" : ""}`} aria-hidden="true"><span /></div>
       <aside className={`admin-sidebar-next ${open ? "open" : ""}`}>
         <div className="admin-sidebar-panel">
           <div className="admin-brand">
@@ -276,7 +298,8 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           <button className="admin-menu-toggle" onClick={() => setOpen(true)} aria-label="Abrir menu"><IconMenu2 /></button>
           <div className="admin-global-search" role="search">
             <IconSearch />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && query.trim()) window.location.assign(searchDestination); }} aria-label="Ir para uma área do painel" placeholder="Ir para produtos, pedidos ou configurações" />
+            <input ref={searchInputRef} value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && query.trim()) window.location.assign(searchDestination); }} aria-label="Ir para uma área do painel" placeholder="Ir para produtos, pedidos ou configurações" />
+            <kbd aria-hidden="true">⌘ K</kbd>
             <Link className="admin-search-submit" href={searchDestination} onClick={() => setQuery("")} aria-label="Buscar"><IconArrowRight /></Link>
           </div>
 
@@ -331,8 +354,10 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
         </header>
 
         <div className="admin-content-next">
-          {pathname !== "/admin" && !productEditorPath && <div className="admin-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div><small><IconCloudCheck /> {demoMode ? "Modo demonstrativo" : "Supabase conectado"}</small></div>}
-          {children}
+          <div className="admin-page-transition" key={pathname}>
+            {pathname !== "/admin" && !productEditorPath && <div className="admin-page-heading"><div><span>{eyebrow}</span><h1>{title}</h1></div><small><IconCloudCheck /> {demoMode ? "Modo demonstrativo" : "Supabase conectado"}</small></div>}
+            {children}
+          </div>
         </div>
       </section>
     </div>

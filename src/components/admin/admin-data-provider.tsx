@@ -113,6 +113,7 @@ interface AdminDataContextValue {
   importProducts: (products: Product[], filename: string) => Promise<void>;
   importStock: (rows: StockImportRow[], mode: StockImportMode, filename: string) => Promise<void>;
   moveItem: (key: OrderedKey, id: string, direction: -1 | 1) => Promise<void>;
+  reorderItem: (key: OrderedKey, id: string, targetIndex: number) => Promise<void>;
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
@@ -609,6 +610,20 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     }, (next) => persistOrder(table, next[key] as OrderedEntity[]));
   }, [commitMutation, persistOrder]);
 
+  const reorderItem = useCallback(async (key: OrderedKey, id: string, targetIndex: number) => {
+    const table = key === "sections" ? "home_sections" : key;
+    await commitMutation((current) => {
+      const list = [...(current[key] as OrderedEntity[])].sort((a, b) => a.order - b.order);
+      const currentIndex = list.findIndex((item) => item.id === id);
+      const boundedTarget = Math.max(0, Math.min(targetIndex, list.length - 1));
+      if (currentIndex < 0 || currentIndex === boundedTarget) return current;
+      const [moved] = list.splice(currentIndex, 1);
+      list.splice(boundedTarget, 0, moved);
+      const nextList = list.map((item, itemIndex) => ({ ...item, order: itemIndex + 1 }));
+      return { ...current, [key]: nextList } as StoreData;
+    }, (next) => persistOrder(table, next[key] as OrderedEntity[]));
+  }, [commitMutation, persistOrder]);
+
   const toggleItem = useCallback(async (key: OrderedKey, id: string) => {
     await commitMutation((current) => {
       const next = (current[key] as OrderedEntity[]).map((item) => item.id === id ? { ...item, active: !item.active } : item);
@@ -959,6 +974,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     importProducts,
     importStock,
     moveItem,
+    reorderItem,
     toggleItem,
     updateOrderStatus,
     saveOrderDetails,
@@ -971,7 +987,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }
