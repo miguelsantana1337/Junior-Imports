@@ -44,6 +44,8 @@ import { AdminPwaInstall } from "@/components/admin/admin-pwa-install";
 import { AdminLoadingScreen } from "@/components/admin/admin-loading-screen";
 import { AdminCommandPalette, type AdminCommandSource } from "@/components/admin/admin-command-palette";
 import { useAdminPreferences } from "@/components/admin/use-admin-preferences";
+import { CopilotJunior } from "@/components/admin/copilot-junior";
+import { TeamPresencePulse } from "@/components/admin/use-team-presence";
 
 const navigationGroups = [
   {
@@ -52,6 +54,7 @@ const navigationGroups = [
       { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
       { href: "/admin/crm", label: "CRM", icon: IconUsers, permission: "crm" },
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
+      { href: "/admin/collaboration", label: "Central da equipe", icon: IconMessageCircle, permission: "collaboration" },
     ],
   },
   {
@@ -117,6 +120,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/inventory": ["ERP", "Estoque e lotes"],
   "/admin/purchasing": ["ERP", "Compras e fornecedores"],
   "/admin/reports": ["INTELIGÊNCIA", "Relatórios e exportações"],
+  "/admin/collaboration": ["EQUIPE", "Colaboração e aprovações"],
   "/admin/settings": ["SISTEMA", "Configurações"],
   "/admin/users": ["SISTEMA", "Usuários e permissões"],
   "/admin/security": ["SISTEMA", "Segurança e MFA"],
@@ -250,6 +254,8 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       }}
     >
       <AdminLoadingScreen autoDismiss />
+      {can("collaboration") && <TeamPresencePulse />}
+      {can("copilot") && <CopilotJunior />}
       <AdminCommandPalette
         open={commandOpen}
         onClose={() => setCommandOpen(false)}

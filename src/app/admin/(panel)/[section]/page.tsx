@@ -5,6 +5,7 @@ import { CatalogImportAdmin } from "@/components/admin/catalog-import-admin";
 import { CouponsAdmin } from "@/components/admin/coupons-admin";
 import { CrmAdmin } from "@/components/admin/crm-admin";
 import { CustomersAdmin } from "@/components/admin/customers-admin";
+import { CollaborationAdmin } from "@/components/admin/collaboration-admin";
 import { DataAdmin } from "@/components/admin/data-admin";
 import { OrdersAdmin } from "@/components/admin/orders-admin";
 import { LayoutAdmin } from "@/components/admin/layout-admin";
@@ -31,6 +32,7 @@ const sections = {
   coupons: CouponsAdmin,
   crm: CrmAdmin,
   customers: CustomersAdmin,
+  collaboration: CollaborationAdmin,
   orders: OrdersAdmin,
   finance: FinanceAdmin,
   inventory: InventoryAdmin,

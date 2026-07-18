@@ -645,6 +645,8 @@ export type AdminPermission =
   | "inventory"
   | "purchasing"
   | "reports"
+  | "collaboration"
+  | "copilot"
   | "catalog"
   | "store"
   | "marketing"

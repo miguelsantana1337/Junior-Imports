@@ -14,6 +14,8 @@ export const adminPermissionCatalog: Array<{
   { key: "inventory", label: "Estoque e lotes", description: "Movimentos, saldos, inventário, estoque mínimo e validade." },
   { key: "purchasing", label: "Compras e fornecedores", description: "Fornecedores, ordens de compra e recebimentos." },
   { key: "reports", label: "Relatórios e exportações", description: "Indicadores consolidados, comparativos, relatórios salvos e arquivos exportados." },
+  { key: "collaboration", label: "Colaboração da equipe", description: "Caixa de entrada, discussões, menções, aprovações e presença online." },
+  { key: "copilot", label: "Copiloto Junior", description: "Consultas e orientações contextuais em modo somente leitura." },
   { key: "catalog", label: "Catálogo", description: "Produtos, categorias, estoque e ordenação." },
   { key: "store", label: "Loja e layout", description: "Páginas, containers, banners e conteúdo da home." },
   { key: "marketing", label: "Marketing", description: "Cupons e mensagens automáticas." },
@@ -34,10 +36,10 @@ export const adminRoleLabels: Record<AdminRole, string> = {
 
 export const adminRolePermissions: Record<AdminRole, AdminPermission[]> = {
   owner: allAdminPermissions,
-  manager: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "catalog", "store", "marketing", "settings", "data"],
-  editor: ["dashboard", "catalog", "store", "marketing"],
-  support: ["dashboard", "crm", "customers", "orders"],
-  viewer: ["dashboard"],
+  manager: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "collaboration", "copilot", "catalog", "store", "marketing", "settings", "data"],
+  editor: ["dashboard", "collaboration", "copilot", "catalog", "store", "marketing"],
+  support: ["dashboard", "crm", "customers", "orders", "collaboration", "copilot"],
+  viewer: ["dashboard", "copilot"],
 };
 
 export const sectionPermissions: Record<string, AdminPermission> = {
@@ -48,6 +50,7 @@ export const sectionPermissions: Record<string, AdminPermission> = {
   inventory: "inventory",
   purchasing: "purchasing",
   reports: "reports",
+  collaboration: "collaboration",
   import: "catalog",
   products: "catalog",
   categories: "catalog",

@@ -100,6 +100,7 @@ describe("validacao de relatorios", () => {
   it("aceita período consistente e a permissão de relatórios", () => {
     expect(savedReportSchema.safeParse({ id: "report-1", name: "Vendas mensais", type: "sales", dateFrom: "2026-07-01", dateTo: "2026-07-31", comparePrevious: true, filters: {}, shared: true, createdBy: "admin@exemplo.com", createdAt: "2026-07-18T12:00:00Z", updatedAt: "2026-07-18T12:00:00Z" }).success).toBe(true);
     expect(adminUserCreateSchema.safeParse({ fullName: "Equipe Financeira", email: "financeiro@exemplo.com", password: "senha-segura-123", role: "manager", permissions: ["dashboard", "reports"], active: true }).success).toBe(true);
+    expect(adminUserCreateSchema.safeParse({ fullName: "Equipe", email: "equipe@exemplo.com", password: "senha-segura-123", role: "support", permissions: ["collaboration", "copilot"], active: true }).success).toBe(true);
   });
 
   it("rejeita data final anterior à inicial", () => {

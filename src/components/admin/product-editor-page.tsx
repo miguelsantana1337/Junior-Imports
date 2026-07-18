@@ -10,6 +10,7 @@ import {
   IconChevronRight,
   IconGripVertical,
   IconInfoCircle,
+  IconLock,
   IconPackage,
   IconPhoto,
   IconPlus,
@@ -33,6 +34,7 @@ import { createUniqueProductSlug, toProductSaveError } from "@/lib/product-slug"
 import { productSchema } from "@/lib/validation";
 import type { Product } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
+import { useEntityEditLock } from "./use-entity-edit-lock";
 
 const steps = [
   { title: "Informações", description: "Nome, categoria e descrição", icon: IconPackage },
@@ -107,6 +109,8 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
   const draftKey = `junior-imports:product-draft:${productId ?? "new"}`;
   const images = normalizeProductImages(form);
   const cover = form.imageUrl || images[0] || "";
+  const editLock = useEntityEditLock("product", productId);
+  const lockedByAnotherUser = editLock.status === "locked";
 
   useEffect(() => {
     if (productId || restoredDraft.current) return;
@@ -197,6 +201,10 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (lockedByAnotherUser) {
+      setError(`${editLock.fullName || editLock.email || "Outro usuário"} está editando este produto. Aguarde a liberação para salvar.`);
+      return;
+    }
     const finalErrors = collectErrors(3);
     if (Object.keys(finalErrors).length) {
       setFieldErrors(finalErrors);
@@ -310,10 +318,10 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
           <div><span>CATÁLOGO</span><h1>{productId ? "Editar produto" : "Cadastrar produto"}</h1><p>{step + 1} de {steps.length} etapas · {steps[step].title}</p></div>
         </div>
         <div className="product-editor-header-actions">
-          <button type="button" className="admin-button" onClick={saveDraft}>Salvar rascunho</button>
+          <button type="button" className="admin-button" onClick={saveDraft} disabled={lockedByAnotherUser}>Salvar rascunho</button>
           {step < steps.length - 1
             ? <button type="button" className="admin-button primary" onClick={continueFlow}>Continuar <IconArrowRight /></button>
-            : <button type="submit" className="admin-button primary" disabled={saving || uploading}>{saving ? "Salvando..." : "Salvar produto"} <IconCheck /></button>}
+            : <button type="submit" className="admin-button primary" disabled={saving || uploading || lockedByAnotherUser}>{saving ? "Salvando..." : "Salvar produto"} <IconCheck /></button>}
         </div>
       </header>
 
@@ -337,6 +345,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
         </nav>
 
         <main className="product-editor-main">
+          {lockedByAnotherUser && <div className="product-editor-alert product-editor-lock-alert" role="status"><IconLock /><span><strong>{editLock.fullName || editLock.email || "Outro usuário"}</strong> está editando este produto. O salvamento ficará bloqueado até a trava expirar.</span></div>}
           {error && <div className="product-editor-alert" role="alert"><IconInfoCircle /><span>{error}</span></div>}
 
           {step === 0 && (

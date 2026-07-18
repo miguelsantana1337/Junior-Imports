@@ -89,9 +89,9 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
 | Papéis, permissões e MFA | Concluído | Revisões periódicas de acesso. |
-| Tarefas e responsáveis | Parcial | CRM possui tarefas; falta caixa de entrada unificada. |
-| Comentários, menções e aprovações | Planejado | Thread auditável por entidade. |
-| Usuários online e edição concorrente | Planejado | Presença e bloqueio otimista no Supabase. |
+| Tarefas e responsáveis | Concluído | Caixa unificada combina tarefas do CRM, menções e decisões pendentes. |
+| Comentários, menções e aprovações | Concluído | Threads por entidade, menções, decisões e auditoria protegida por tenant. |
+| Usuários online e edição concorrente | Concluído | Presença em tempo real e lease de edição aplicado ao cadastro de produto. |
 
 ## 8. Relatórios e integrações
 
@@ -106,12 +106,12 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Painel lateral do chat | Planejado | Interface contextual e histórico de sessão. |
-| Ajuda sobre o software | Planejado | Base de conhecimento das telas e processos. |
-| Consulta a produtos, clientes, pedidos, estoque e cashback | Dependência externa | Implementar após disponibilização segura da chave da API. |
-| Cards, links profundos, resumos e sugestões | Planejado | Começar somente leitura. |
+| Painel lateral do chat | Concluído | Interface contextual, atalho Cmd/Ctrl + J e histórico seguro da sessão. |
+| Ajuda sobre o software | Concluído | Base local auditável orienta telas e processos principais. |
+| Consulta a produtos, clientes, pedidos, estoque e cashback | Parcial | Consultas locais somente leitura concluídas; linguagem generativa aguarda chave segura da API. |
+| Cards, links profundos, resumos e sugestões | Concluído | Respostas locais exibem cards e atalhos sem executar mutações. |
 | Ações com confirmação, RBAC, auditoria e desfazer | Planejado | Liberar apenas após avaliação da fase somente leitura. |
-| Transparência de dados e limite de custos | Planejado | Tela de política, consumo e limites por usuário. |
+| Transparência de dados e limite de custos | Parcial | Fontes visíveis, zero envio externo e telemetria local; limites monetários entram com a API. |
 
 ## 10. Experiência premium e qualidade
 
@@ -131,4 +131,4 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 3. **Lote 3 — concluído nesta entrega:** carteira/extrato de cashback, campanhas segmentadas e Cliente 360.
 4. **Lote 4 — concluído nesta entrega:** calendário de campanhas, workflow de publicação e construtor de automações.
 5. **Lote 5 — concluído nesta entrega:** análises de estoque, relatórios comparativos, configurações salvas e exportações CSV, Excel e PDF.
-6. **Lote 6:** colaboração de equipe e Copiloto Junior em modo somente leitura.
+6. **Lote 6 — concluído nesta entrega:** colaboração de equipe, presença, edição concorrente e Copiloto Junior em modo somente leitura.

@@ -395,7 +395,7 @@ export const marketingPublicationSchema = z.object({
 });
 
 const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
-const adminPermissionSchema = z.enum(["dashboard", "audit", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "catalog", "store", "marketing", "settings", "data", "users"]);
+const adminPermissionSchema = z.enum(["dashboard", "audit", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "collaboration", "copilot", "catalog", "store", "marketing", "settings", "data", "users"]);
 
 export const savedReportSchema = z.object({
   id: z.string().min(1),
