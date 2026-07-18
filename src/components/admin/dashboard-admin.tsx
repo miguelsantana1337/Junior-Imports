@@ -5,6 +5,7 @@ import {
   IconArrowRight,
   IconBox,
   IconBuildingStore,
+  IconCalendarEvent,
   IconCircleCheck,
   IconCloudCheck,
   IconCoin,
@@ -15,6 +16,7 @@ import {
   IconPhoto,
   IconShoppingBag,
   IconShoppingCartOff,
+  IconSparkles,
   IconTag,
   IconTicket,
   IconUsers,
@@ -102,23 +104,27 @@ export function DashboardAdmin() {
   return (
     <div className="admin-dashboard-command">
       <header className="admin-dashboard-hero">
-        <div>
+        <div className="admin-dashboard-welcome">
+          <span className="admin-dashboard-kicker"><IconSparkles /> Centro de controle</span>
           <h1>{greeting}, {accountName}</h1>
           <div className="admin-dashboard-subtitle">
             <span>Sua loja está pronta para testes</span>
             <strong><IconFlask /> Demonstração — não realiza vendas reais</strong>
           </div>
         </div>
-        <time dateTime={todayKey}>{dateLabel}</time>
+        <div className="admin-dashboard-date">
+          <IconCalendarEvent />
+          <div><span>Visão de hoje</span><time dateTime={todayKey}>{dateLabel}</time></div>
+        </div>
       </header>
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
-        <article><span className="blue"><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
-        <article><span className="blue"><IconCoin /></span><div><small>Receita simulada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Últimos 7 dias</p></div></article>
-        <article><span className="blue"><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
-        <article><span className="blue"><IconTicket /></span><div><small>Cupons ativos</small><strong>{activeCoupons.length}</strong><p>{activeCoupons.length === 1 ? "1 disponível" : `${activeCoupons.length} disponíveis`}</p></div></article>
-        <article><span className="blue"><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
-        <article><span className="blue"><IconShoppingBag /></span><div><small>Recompra</small><strong>{recurrenceRate.toFixed(0)}%</strong><p>{customerInsights.filter((customer) => customer.orderCount > 1).length} recorrentes</p></div></article>
+        <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
+        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita simulada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Últimos 7 dias</p></div></article>
+        <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
+        <article className="stat-coupons"><span><IconTicket /></span><div><small>Cupons ativos</small><strong>{activeCoupons.length}</strong><p>{activeCoupons.length === 1 ? "1 disponível" : `${activeCoupons.length} disponíveis`}</p></div></article>
+        <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
+        <article className="stat-recurrence"><span><IconShoppingBag /></span><div><small>Recompra</small><strong>{recurrenceRate.toFixed(0)}%</strong><p>{customerInsights.filter((customer) => customer.orderCount > 1).length} recorrentes</p></div></article>
       </section>
 
       <div className="admin-command-grid">
