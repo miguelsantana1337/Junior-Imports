@@ -78,8 +78,8 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
 | Estoque, lotes, fornecedores e compras | Concluído | Evoluir análises e sugestões. |
-| Previsão de ruptura e sugestão de compra | Planejado | Usar giro, estoque mínimo e lead time. |
-| Baixo giro, margem e inconsistências | Parcial | Margem existe no financeiro; falta central de alertas do catálogo. |
+| Previsão de ruptura e sugestão de compra | Concluído | Radar usa giro, estoque mínimo, compras em trânsito e lead time; gera rascunho revisável. |
+| Baixo giro, margem e inconsistências | Concluído | Fila priorizada por risco, ausência de giro, margem baixa e inconsistências cadastrais. |
 | Leitura de código de barras no celular | Planejado | PWA com câmera e confirmação de produto. |
 | Importação em massa | Concluído | Adicionar templates, histórico detalhado e reversão. |
 | Histórico de mudanças por produto | Parcial | Auditoria geral existe; falta timeline no produto. |
@@ -97,9 +97,9 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Métricas operacionais e financeiras | Parcial | Criar construtor e comparativos por período. |
-| Exportação CSV, Excel e PDF | Parcial | JSON e planilhas de importação existem; falta central de exportações. |
-| Relatórios salvos e compartilhados | Planejado | Preferências e permissões por usuário. |
+| Métricas operacionais e financeiras | Concluído | Construtor cobre vendas, financeiro, estoque, clientes, cashback e compras com comparativo. |
+| Exportação CSV, Excel e PDF | Concluído | Arquivos reais, cabeçalhos preservados e histórico auditável por usuário. |
+| Relatórios salvos e compartilhados | Concluído | Configurações persistidas, compartilhamento e permissão específica de relatórios. |
 | Status de Supabase, WhatsApp, e-mail e IA | Planejado | Health center, teste, último sync e logs. |
 
 ## 9. Copiloto Junior
@@ -130,5 +130,5 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 2. **Lote 2 — concluído nesta entrega:** health center, proteção contra demo em produção, backup/restore e monitoramento interno.
 3. **Lote 3 — concluído nesta entrega:** carteira/extrato de cashback, campanhas segmentadas e Cliente 360.
 4. **Lote 4 — concluído nesta entrega:** calendário de campanhas, workflow de publicação e construtor de automações.
-5. **Lote 5:** análises de estoque, relatórios e exportações.
+5. **Lote 5 — concluído nesta entrega:** análises de estoque, relatórios comparativos, configurações salvas e exportações CSV, Excel e PDF.
 6. **Lote 6:** colaboração de equipe e Copiloto Junior em modo somente leitura.

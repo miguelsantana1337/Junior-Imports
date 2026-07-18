@@ -13,6 +13,7 @@ import { InventoryAdmin } from "@/components/admin/inventory-admin";
 import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ProductsAdmin } from "@/components/admin/products-admin";
 import { PurchasingAdmin } from "@/components/admin/purchasing-admin";
+import { ReportsAdmin } from "@/components/admin/reports-admin";
 import { SectionsAdmin } from "@/components/admin/sections-admin";
 import { SecurityMfaAdmin } from "@/components/admin/security-mfa-admin";
 import { SettingsAdmin } from "@/components/admin/settings-admin";
@@ -34,6 +35,7 @@ const sections = {
   finance: FinanceAdmin,
   inventory: InventoryAdmin,
   purchasing: PurchasingAdmin,
+  reports: ReportsAdmin,
   messages: MessagesAdmin,
   security: SecurityMfaAdmin,
   settings: SettingsAdmin,

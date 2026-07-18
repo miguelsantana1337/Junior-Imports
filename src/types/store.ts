@@ -495,6 +495,36 @@ export interface PurchaseOrder {
   createdAt: string;
 }
 
+export type ReportType = "sales" | "finance" | "inventory" | "customers" | "cashback" | "purchases";
+export type ReportFormat = "csv" | "xlsx" | "pdf";
+
+export interface SavedReport {
+  id: string;
+  name: string;
+  type: ReportType;
+  dateFrom: string;
+  dateTo: string;
+  comparePrevious: boolean;
+  filters: Record<string, string>;
+  shared: boolean;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExportRun {
+  id: string;
+  reportId: string;
+  reportName: string;
+  format: ReportFormat;
+  rowCount: number;
+  status: "completed" | "failed";
+  fileName: string;
+  errorMessage: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
 export type MessageChannel = "whatsapp" | "email";
 
 export type MarketingPublicationKind = "campaign" | "banner" | "coupon" | "cashback" | "message";
@@ -614,6 +644,7 @@ export type AdminPermission =
   | "finance"
   | "inventory"
   | "purchasing"
+  | "reports"
   | "catalog"
   | "store"
   | "marketing"
@@ -672,6 +703,8 @@ export interface StoreData {
   productLots: ProductLot[];
   suppliers: Supplier[];
   purchaseOrders: PurchaseOrder[];
+  savedReports: SavedReport[];
+  exportRuns: ExportRun[];
   marketingPublications: MarketingPublication[];
   marketingPublicationVersions: MarketingPublicationVersion[];
   messageAutomations: MessageAutomation[];

@@ -20,6 +20,7 @@ import type {
   CustomerContact,
   CustomerTask,
   Faq,
+  ExportRun,
   FinancialTransaction,
   HomeSection,
   InventoryMovement,
@@ -32,6 +33,7 @@ import type {
   Product,
   ProductLot,
   PurchaseOrder,
+  SavedReport,
   StoreData,
   StorefrontData,
   StorefrontProduct,
@@ -382,6 +384,23 @@ function mapPurchaseOrder(row: Row): PurchaseOrder {
     notes: str(row.notes),
     items: items.map((item) => ({ id: str(item.id), productId: str(item.product_id), name: str(item.product_name), quantity: num(item.quantity), unitCost: num(item.unit_cost), lotCode: str(item.lot_code), expiryDate: str(item.expiry_date) })),
     createdAt: str(row.created_at),
+  };
+}
+
+function mapSavedReport(row: Row): SavedReport {
+  return {
+    id: str(row.id), name: str(row.name), type: str(row.report_type) as SavedReport["type"],
+    dateFrom: str(row.date_from), dateTo: str(row.date_to), comparePrevious: Boolean(row.compare_previous),
+    filters: objectValue(row.filters) as Record<string, string>, shared: Boolean(row.shared), createdBy: str(row.created_by),
+    createdAt: str(row.created_at), updatedAt: str(row.updated_at),
+  };
+}
+
+function mapExportRun(row: Row): ExportRun {
+  return {
+    id: str(row.id), reportId: str(row.report_id), reportName: str(row.report_name), format: str(row.format) as ExportRun["format"],
+    rowCount: num(row.row_count), status: str(row.status) as ExportRun["status"], fileName: str(row.file_name),
+    errorMessage: str(row.error_message), actorEmail: str(row.actor_email), createdAt: str(row.created_at),
   };
 }
 
@@ -780,6 +799,12 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     options.admin
       ? scopeTenant(supabase.from("automation_runs").select("*"), tenantId).order("created_at", { ascending: false }).limit(300)
       : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("saved_reports").select("*"), tenantId).order("updated_at", { ascending: false }).limit(100)
+      : Promise.resolve({ data: [], error: null }),
+    options.admin
+      ? scopeTenant(supabase.from("export_runs").select("*"), tenantId).order("created_at", { ascending: false }).limit(200)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   if (resolution.persisted) {
@@ -806,6 +831,9 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     }
     if (queries[28].error || queries[29].error || queries[30].error) {
       throw new Error("Não foi possível carregar o Marketing Studio.");
+    }
+    if (queries[31].error || queries[32].error) {
+      throw new Error("Não foi possível carregar relatórios e exportações.");
     }
   }
 
@@ -874,6 +902,8 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     productLots: options.admin && !queries[23].error ? ((queries[23].data ?? []) as Row[]).map(mapProductLot) : fallback.productLots,
     suppliers: options.admin && !queries[24].error ? ((queries[24].data ?? []) as Row[]).map(mapSupplier) : fallback.suppliers,
     purchaseOrders: options.admin && !queries[25].error ? ((queries[25].data ?? []) as Row[]).map(mapPurchaseOrder) : fallback.purchaseOrders,
+    savedReports: options.admin && !queries[31].error ? ((queries[31].data ?? []) as Row[]).map(mapSavedReport) : fallback.savedReports,
+    exportRuns: options.admin && !queries[32].error ? ((queries[32].data ?? []) as Row[]).map(mapExportRun) : fallback.exportRuns,
     marketingPublications: options.admin && !queries[28].error ? ((queries[28].data ?? []) as Row[]).map(mapMarketingPublication) : fallback.marketingPublications,
     marketingPublicationVersions: options.admin && !queries[29].error ? ((queries[29].data ?? []) as Row[]).map(mapMarketingPublicationVersion) : fallback.marketingPublicationVersions,
     pages: queries[10].error || (!resolution.persisted && !queries[10].data?.length) ? fallback.pages : ((queries[10].data ?? []) as Row[]).map(mapPage),

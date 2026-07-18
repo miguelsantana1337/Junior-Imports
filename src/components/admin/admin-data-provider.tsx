@@ -46,6 +46,7 @@ import type {
   Customer,
   CustomerContact,
   CustomerTask,
+  ExportRun,
   FinancialTransaction,
   HomeSection,
   InventoryMovement,
@@ -60,6 +61,7 @@ import type {
   Product,
   ProductLot,
   PurchaseOrder,
+  SavedReport,
   StorePage,
   StoreData,
   StoreSettings,
@@ -171,6 +173,9 @@ interface AdminDataContextValue {
   saveSupplier: (supplier: Supplier) => Promise<void>;
   savePurchaseOrder: (order: PurchaseOrder) => Promise<void>;
   receivePurchaseOrder: (id: string) => Promise<void>;
+  saveReport: (report: SavedReport) => Promise<void>;
+  deleteReport: (id: string) => Promise<void>;
+  recordExportRun: (run: ExportRun) => Promise<void>;
   importProducts: (products: Product[], filename: string) => Promise<void>;
   importStock: (rows: StockImportRow[], mode: StockImportMode, filename: string) => Promise<void>;
   moveItem: (key: OrderedKey, id: string, direction: -1 | 1) => Promise<void>;
@@ -983,6 +988,29 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     );
   }, [commitMutation, currentUser.email, supabase]);
 
+  const saveReport = useCallback(async (report: SavedReport) => {
+    await commitMutation(
+      (current) => ({ ...current, savedReports: current.savedReports.some((item) => item.id === report.id) ? current.savedReports.map((item) => item.id === report.id ? report : item) : [report, ...current.savedReports] }),
+      () => persist("saved_reports", { id: report.id, name: report.name, report_type: report.type, date_from: report.dateFrom, date_to: report.dateTo, compare_previous: report.comparePrevious, filters: report.filters, shared: report.shared, created_by: report.createdBy, created_at: report.createdAt, updated_at: report.updatedAt }),
+      "Relatório salvo.",
+    );
+  }, [commitMutation, persist]);
+
+  const deleteReport = useCallback(async (id: string) => {
+    await commitMutation(
+      (current) => ({ ...current, savedReports: current.savedReports.filter((item) => item.id !== id) }),
+      () => remove("saved_reports", id),
+      "Relatório removido.",
+    );
+  }, [commitMutation, remove]);
+
+  const recordExportRun = useCallback(async (run: ExportRun) => {
+    await commitMutation(
+      (current) => ({ ...current, exportRuns: [run, ...current.exportRuns].slice(0, 200) }),
+      () => persist("export_runs", { id: run.id, report_id: run.reportId, report_name: run.reportName, format: run.format, row_count: run.rowCount, status: run.status, file_name: run.fileName, error_message: run.errorMessage, actor_email: run.actorEmail, created_at: run.createdAt }),
+    );
+  }, [commitMutation, persist]);
+
   const importProducts = useCallback(async (products: Product[], filename: string) => {
     const run: CatalogImportRun = { id: crypto.randomUUID(), kind: "products", filename, mode: "upsert", totalRows: products.length, successRows: products.length, errorRows: 0, createdAt: new Date().toISOString(), actorEmail: currentUser.email };
     let candidates = products;
@@ -1407,6 +1435,9 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     saveSupplier,
     savePurchaseOrder,
     receivePurchaseOrder,
+    saveReport,
+    deleteReport,
+    recordExportRun,
     importProducts,
     importStock,
     moveItem,
@@ -1423,7 +1454,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

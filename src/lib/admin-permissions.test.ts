@@ -15,4 +15,9 @@ describe("permissoes administrativas", () => {
   it("direciona para a primeira area permitida", () => {
     expect(firstAllowedAdminPath("support", ["orders"])).toBe("/admin/orders");
   });
+
+  it("libera a central de relatórios somente para quem recebeu a permissão", () => {
+    expect(hasAdminPermission("manager", adminRolePermissions.manager, "reports")).toBe(true);
+    expect(hasAdminPermission("viewer", adminRolePermissions.viewer, "reports")).toBe(false);
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminUserCreateSchema, adminUserPasswordResetSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, storePageSchema } from "./validation";
+import { adminUserCreateSchema, adminUserPasswordResetSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, savedReportSchema, storePageSchema } from "./validation";
 
 describe("validacao do checkout", () => {
   const validCheckout = {
@@ -93,5 +93,16 @@ describe("validacao de usuarios administrativos", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "Senha-Forte-2026!" }).success).toBe(true);
     expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "outra-senha" }).success).toBe(false);
+  });
+});
+
+describe("validacao de relatorios", () => {
+  it("aceita período consistente e a permissão de relatórios", () => {
+    expect(savedReportSchema.safeParse({ id: "report-1", name: "Vendas mensais", type: "sales", dateFrom: "2026-07-01", dateTo: "2026-07-31", comparePrevious: true, filters: {}, shared: true, createdBy: "admin@exemplo.com", createdAt: "2026-07-18T12:00:00Z", updatedAt: "2026-07-18T12:00:00Z" }).success).toBe(true);
+    expect(adminUserCreateSchema.safeParse({ fullName: "Equipe Financeira", email: "financeiro@exemplo.com", password: "senha-segura-123", role: "manager", permissions: ["dashboard", "reports"], active: true }).success).toBe(true);
+  });
+
+  it("rejeita data final anterior à inicial", () => {
+    expect(savedReportSchema.safeParse({ id: "report-1", name: "Vendas mensais", type: "sales", dateFrom: "2026-07-31", dateTo: "2026-07-01", comparePrevious: false, filters: {}, shared: false, createdBy: "", createdAt: "", updatedAt: "" }).success).toBe(false);
   });
 });

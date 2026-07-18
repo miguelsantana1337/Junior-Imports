@@ -480,6 +480,13 @@ export const seedData: StoreData = {
   purchaseOrders: [
     { id: "purchase-demo-1", code: "OC-1001", supplierId: "supplier-demo-1", status: "ordered", expectedAt: "2026-07-22", receivedAt: "", total: 2014.7, notes: "Reposição sugerida pelo estoque mínimo.", items: [{ id: "purchase-item-demo-1", productId: "tg15", name: "T.G. 15", quantity: 5, unitCost: 402.94, lotCode: "TG-2607-B", expiryDate: "2027-07-31" }], createdAt: "2026-07-15T09:00:00-03:00" },
   ],
+  savedReports: [
+    { id: "report-demo-sales", name: "Vendas dos últimos 30 dias", type: "sales", dateFrom: "2026-06-19", dateTo: "2026-07-18", comparePrevious: true, filters: {}, shared: true, createdBy: platformConfig.demoAdmin.email, createdAt: "2026-07-18T12:00:00-03:00", updatedAt: "2026-07-18T12:00:00-03:00" },
+    { id: "report-demo-stock", name: "Ruptura e reposição", type: "inventory", dateFrom: "2026-04-20", dateTo: "2026-07-18", comparePrevious: false, filters: {}, shared: false, createdBy: platformConfig.demoAdmin.email, createdAt: "2026-07-18T12:05:00-03:00", updatedAt: "2026-07-18T12:05:00-03:00" },
+  ],
+  exportRuns: [
+    { id: "export-demo-1", reportId: "report-demo-sales", reportName: "Vendas dos últimos 30 dias", format: "xlsx", rowCount: 3, status: "completed", fileName: "vendas-dos-ultimos-30-dias-2026-07-18.xlsx", errorMessage: "", actorEmail: platformConfig.demoAdmin.email, createdAt: "2026-07-18T12:10:00-03:00" },
+  ],
   marketingPublications: [
     { id: "publication-cashback-vip", name: "Cashback em dobro — VIP", description: "Campanha de retenção para clientes VIP e recorrentes.", kind: "cashback", entityId: "cashback-campaign-demo", status: "published", startsAt: "2026-07-01T00:00:00-03:00", endsAt: "2026-08-31T23:59:59-03:00", ownerEmail: platformConfig.demoAdmin.email, reviewerEmail: `conteudo@${platformConfig.clientId}.demo`, revision: 3, notes: "Monitorar custo do cashback semanalmente.", lastPublishedAt: "2026-07-01T09:00:00-03:00", createdAt: "2026-06-25T09:00:00-03:00", updatedAt: "2026-07-01T09:00:00-03:00" },
     { id: "publication-banner-august", name: "Banner institucional de agosto", description: "Atualização da mensagem institucional da página inicial.", kind: "banner", entityId: "banner-2", status: "in_review", startsAt: "2026-08-01T08:00:00-03:00", endsAt: "2026-08-31T23:59:59-03:00", ownerEmail: `conteudo@${platformConfig.clientId}.demo`, reviewerEmail: platformConfig.demoAdmin.email, revision: 2, notes: "Validar contraste da versão mobile.", lastPublishedAt: "", createdAt: "2026-07-17T10:00:00-03:00", updatedAt: "2026-07-18T09:30:00-03:00" },
@@ -501,7 +508,7 @@ export const seedData: StoreData = {
   ],
   auditLogs: [],
   teamMembers: [
-    { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: "2026-07-01T09:00:00-03:00", lastSignInAt: "2026-07-13T13:10:00-03:00", isCurrent: true },
+    { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: "2026-07-01T09:00:00-03:00", lastSignInAt: "2026-07-13T13:10:00-03:00", isCurrent: true },
     { id: "00000000-0000-4000-8000-000000000002", fullName: "Equipe de Conteúdo", email: `conteudo@${platformConfig.clientId}.demo`, role: "editor", permissions: ["dashboard", "catalog", "store", "marketing"], active: true, createdAt: "2026-07-08T14:30:00-03:00", lastSignInAt: "2026-07-12T16:45:00-03:00" },
   ],
 };

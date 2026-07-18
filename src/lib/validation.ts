@@ -395,7 +395,23 @@ export const marketingPublicationSchema = z.object({
 });
 
 const adminRoleSchema = z.enum(["owner", "manager", "editor", "support", "viewer"]);
-const adminPermissionSchema = z.enum(["dashboard", "audit", "crm", "customers", "orders", "finance", "inventory", "purchasing", "catalog", "store", "marketing", "settings", "data", "users"]);
+const adminPermissionSchema = z.enum(["dashboard", "audit", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "catalog", "store", "marketing", "settings", "data", "users"]);
+
+export const savedReportSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().trim().min(2, "Informe o nome do relatório.").max(120),
+  type: z.enum(["sales", "finance", "inventory", "customers", "cashback", "purchases"]),
+  dateFrom: z.string().date(),
+  dateTo: z.string().date(),
+  comparePrevious: z.boolean(),
+  filters: z.record(z.string(), z.string()),
+  shared: z.boolean(),
+  createdBy: z.string(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+}).superRefine((report, context) => {
+  if (report.dateTo < report.dateFrom) context.addIssue({ code: "custom", path: ["dateTo"], message: "A data final deve ser posterior à inicial." });
+});
 
 export const adminUserCreateSchema = z.object({
   fullName: z.string().trim().min(3, "Informe o nome completo."),
@@ -486,6 +502,7 @@ export type StorePageInput = z.infer<typeof storePageSchema>;
 export type PageBlockInput = z.infer<typeof pageBlockSchema>;
 export type MessageAutomationInput = z.infer<typeof messageAutomationSchema>;
 export type MarketingPublicationInput = z.infer<typeof marketingPublicationSchema>;
+export type SavedReportInput = z.infer<typeof savedReportSchema>;
 export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
 export type AdminUserPasswordResetInput = z.infer<typeof adminUserPasswordResetSchema>;
