@@ -20,6 +20,7 @@
 # misc
 .DS_Store
 *.pem
+*.jibackup
 *.tsbuildinfo
 next-env.d.ts.tmp
 .vercel

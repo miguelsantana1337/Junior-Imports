@@ -8,6 +8,7 @@ import { useConfirm } from "@/components/providers/confirm-provider";
 import { formatDateTime } from "@/lib/format";
 import { auditChanges } from "@/lib/audit-log";
 import type { StoreData } from "@/types/store";
+import { AdminHealthCenter } from "./admin-health-center";
 
 function isStoreDataBackup(value: unknown): value is StoreData {
   if (!value || typeof value !== "object") return false;
@@ -61,6 +62,7 @@ export function DataAdmin() {
 
   return (
     <>
+      <AdminHealthCenter />
       <div className="admin-inline-note">
         {demoMode
           ? "No modo local, os dados ficam neste navegador. Exporte um backup antes de limpar o armazenamento."

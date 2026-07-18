@@ -20,12 +20,12 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Supabase em produção e eliminação da dependência de demo | Parcial | Criar verificação de saúde e bloquear modo demo no domínio de produção. |
+| Supabase em produção e eliminação da dependência de demo | Concluído | Acompanhar a Central de saúde e manter o bloqueio de demo em produção. |
 | RLS multiempresa e isolamento por tenant | Concluído | Manter testes de regressão a cada migration. |
 | Chaves administrativas somente no servidor | Concluído | Manter varredura de segredos no CI. |
-| Auditoria com valores antes/depois | Em execução | Comparador visual, busca, filtros e mascaramento de campos sensíveis neste lote. |
-| Backup, restauração e contingência | Parcial | Formalizar backup remoto, teste de restauração e runbook operacional. |
-| Monitoramento e alertas | Planejado | Health center com Supabase, integrações e erros recentes. |
+| Auditoria com valores antes/depois | Concluído | Manter testes de mascaramento e ampliar a timeline por entidade. |
+| Backup, restauração e contingência | Parcial | Backup criptografado, checksum, restauração controlada e runbook concluídos; falta contratar guarda externa/PITR. |
+| Monitoramento e alertas | Parcial | Central de saúde acompanha banco, Auth, auditoria, backup e deploy; falta canal externo de alertas. |
 | Testes unitários e E2E | Parcial | Expandir fluxos críticos e incluir a central de comandos. |
 | Privacidade e termos | Parcial | Revisão jurídica e versionamento dos termos aceitos. |
 
@@ -33,10 +33,10 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Central de comandos com `Cmd/Ctrl + K` | Em execução | Busca global por área, ação, produto, pedido e cliente neste lote. |
-| Favoritos | Em execução | Favoritos por usuário dentro da central de comandos neste lote. |
-| Preferências persistentes | Em execução | Fundação versionada e isolada por usuário neste lote. |
-| Visualizações e filtros salvos | Em execução | Catálogo de produtos neste lote; expandir para clientes e pedidos. |
+| Central de comandos com `Cmd/Ctrl + K` | Concluído | Expandir fontes conforme novos módulos forem entregues. |
+| Favoritos | Concluído | Expandir fontes conforme novos módulos forem entregues. |
+| Preferências persistentes | Concluído | Manter compatibilidade de versões. |
+| Visualizações e filtros salvos | Parcial | Catálogo concluído; expandir para clientes e pedidos. |
 | Densidade e colunas das tabelas | Parcial | Densidade do catálogo neste lote; seletor de colunas depois. |
 | Autosave e indicador de status | Parcial | Editor de produto já salva rascunho; padronizar nos demais editores. |
 | Desfazer e refazer | Planejado | Criar histórico reversível para operações compatíveis. |
@@ -117,17 +117,17 @@ Atualizado em 18/07/2026. Este documento transforma a lista aprovada em entregas
 
 | Item | Status | Próxima entrega |
 | --- | --- | --- |
-| Motion, splash, transições e feedback de navegação | Concluído | Restringir splash à primeira abertura da sessão. |
+| Motion, splash, transições e feedback de navegação | Concluído | Splash restrita à primeira abertura da sessão. |
 | Skeletons e carregamento em segundo plano | Parcial | Padronizar por rota e eliminar esperas artificiais. |
 | Empty states e ajuda contextual | Parcial | Cobrir todas as páginas e ações sem dados. |
-| Tour, changelog e central de saúde | Planejado | Entrega após estabilizar os novos fluxos. |
+| Tour, changelog e central de saúde | Parcial | Central de saúde concluída; tour e changelog seguem planejados. |
 | PWA | Concluído | Ampliar suporte offline apenas para leitura segura. |
 | Performance e acessibilidade reais | Em execução | Validar teclado, contraste, mobile e E2E a cada lote. |
 
 ## Ordem dos próximos lotes
 
-1. **Lote 1:** central de comandos, favoritos, preferências, filtros salvos e auditoria visual.
-2. **Lote 2:** health center, proteção contra demo em produção, backup/restore e monitoramento.
+1. **Lote 1 — concluído:** central de comandos, favoritos, preferências, filtros salvos e auditoria visual.
+2. **Lote 2 — concluído nesta entrega:** health center, proteção contra demo em produção, backup/restore e monitoramento interno.
 3. **Lote 3:** carteira/extrato de cashback e Cliente 360.
 4. **Lote 4:** calendário de campanhas, workflow de publicação e construtor de automações.
 5. **Lote 5:** análises de estoque, relatórios e exportações.
