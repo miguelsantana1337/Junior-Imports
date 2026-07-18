@@ -9,6 +9,7 @@ describe("catálogo público", () => {
     const serialized = JSON.stringify(publicProduct);
 
     expect(publicProduct.stock).toBe(10);
+    expect(publicProduct.cashback).toBe(internalProduct.cashback);
     expect(serialized).not.toContain("costPrice");
     expect(serialized).not.toContain("minStock");
     expect(serialized).not.toContain('"sku"');

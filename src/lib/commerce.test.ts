@@ -14,6 +14,7 @@ describe("calculateCart", () => {
       discount: 0,
       shipping: 0,
       total: 0,
+      cashback: 0,
     });
   });
 
@@ -31,6 +32,7 @@ describe("calculateCart", () => {
     expect(result.paymentDiscount).toBeCloseTo(29.2455);
     expect(result.shipping).toBe(0);
     expect(result.total).toBeCloseTo(555.6645);
+    expect(result.cashback).toBe(50);
   });
 
   it("limita quantidade e contagem ao estoque disponivel", () => {
@@ -42,6 +44,7 @@ describe("calculateCart", () => {
 
     expect(result.items).toBe(product.stock);
     expect(result.subtotal).toBeCloseTo(product.price * product.stock);
+    expect(result.cashback).toBeCloseTo(product.cashback * product.stock);
   });
 
   it("cobra o frete fixo quando a regra de frete gratis esta desativada", () => {

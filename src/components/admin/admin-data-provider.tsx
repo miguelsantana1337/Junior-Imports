@@ -72,6 +72,7 @@ type PersistedOrder = {
   discount: number;
   shipping: number;
   total: number;
+  cashback_total?: number;
   status: OrderStatus;
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
@@ -129,7 +130,7 @@ interface AdminDataContextValue {
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 function productRecord(product: Product) {
-  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
+  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cashback: product.cashback, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
 }
 
 export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
@@ -660,6 +661,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       quantity,
       unitPrice: product.price,
       unitCost: product.costPrice,
+      unitCashback: product.cashback,
     }));
     const nextNumber = current.orders.reduce(
       (max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000),
@@ -689,6 +691,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       discount: persisted?.discount ?? calculation.discount,
       shipping: persisted?.shipping ?? calculation.shipping,
       total: persisted?.total ?? calculation.total,
+      cashbackTotal: persisted?.cashback_total ?? calculation.cashback,
       payment: input.payment,
       status: persisted?.status ?? "Novo",
       couponCode: coupon?.code ?? "",

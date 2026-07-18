@@ -18,6 +18,7 @@ function product(id: string, categoryId: string, category: string, price: number
     brand: "Marca",
     price,
     compareAt: price,
+    cashback: 0,
     stock: 5,
     badge: "",
     accent: "#1677ff",

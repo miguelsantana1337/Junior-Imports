@@ -48,6 +48,9 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
     (message, [placeholder, value]) => message.replaceAll(placeholder, value),
     resolveMessageTemplate(settings.whatsappMessage),
   );
+  const cashbackNotice = order.cashbackTotal > 0
+    ? `\n\n🟢 *Cashback previsto:* ${formatMoney(order.cashbackTotal)} (após a confirmação do pedido)`
+    : "";
 
-  return `${rendered}\n\n✅ *${checkoutTermsConfirmation}*`;
+  return `${rendered}${cashbackNotice}\n\n✅ *${checkoutTermsConfirmation}*`;
 }

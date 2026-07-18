@@ -15,6 +15,16 @@ describe("importação de catálogo por planilha", () => {
     expect(result.products[0].stock).toBe(12);
   });
 
+  it("importa cashback e rejeita valor maior que o preço", () => {
+    const product = seedData.products.at(-1)!;
+    const valid = parseProductImport(`sku;nome;categoria;preco;cashback\n${product.sku};${product.name};${product.category};99,90;12,50`, seedData.products, seedData.categories);
+    const invalid = parseProductImport(`sku;nome;categoria;preco;cashback\n${product.sku};${product.name};${product.category};99,90;120,00`, seedData.products, seedData.categories);
+
+    expect(valid.errors).toHaveLength(0);
+    expect(valid.products[0].cashback).toBe(12.5);
+    expect(invalid.errors[0]?.message).toContain("Cashback");
+  });
+
   it("gera endereços diferentes para produtos importados com o mesmo nome", () => {
     const category = seedData.categories[0];
     const result = parseProductImport(

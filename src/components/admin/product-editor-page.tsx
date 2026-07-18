@@ -44,8 +44,8 @@ const steps = [
 const stepFields: Array<Array<keyof Product>> = [
   ["name", "sku", "categoryId", "brand", "description"],
   ["imageUrl", "imageUrls"],
-  ["price", "compareAt", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent"],
-  ["name", "sku", "categoryId", "brand", "description", "imageUrl", "imageUrls", "price", "compareAt", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent", "featured", "active"],
+  ["price", "compareAt", "cashback", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent"],
+  ["name", "sku", "categoryId", "brand", "description", "imageUrl", "imageUrls", "price", "compareAt", "cashback", "costPrice", "stock", "minStock", "badge", "rating", "reviews", "accent", "featured", "active"],
 ];
 
 function withGallery(product: Product): Product {
@@ -69,6 +69,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
     brand: "",
     price: 0,
     compareAt: 0,
+    cashback: 0,
     costPrice: 0,
     stock: 0,
     minStock: 5,
@@ -407,6 +408,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
               <div className="product-editor-fields">
                 <label>Preço de venda (R$)<input type="number" step="0.01" min="0" value={form.price} aria-invalid={Boolean(fieldErrors.price)} onChange={(event) => field("price", Number(event.target.value))} autoFocus />{issue("price")}</label>
                 <label>Preço anterior (R$)<input type="number" step="0.01" min="0" value={form.compareAt} aria-invalid={Boolean(fieldErrors.compareAt)} onChange={(event) => field("compareAt", Number(event.target.value))} />{issue("compareAt")}</label>
+                <label>Cashback por unidade (R$)<input type="number" step="0.01" min="0" max={form.price || undefined} value={form.cashback} aria-invalid={Boolean(fieldErrors.cashback)} onChange={(event) => field("cashback", Number(event.target.value))} />{issue("cashback")}<small>Valor que o cliente acumula por unidade. Use 0 para desativar.</small></label>
                 <label>Custo do produto (R$)<input type="number" step="0.01" min="0" value={form.costPrice} aria-invalid={Boolean(fieldErrors.costPrice)} onChange={(event) => field("costPrice", Number(event.target.value))} />{issue("costPrice")}<small>Usado para calcular margem e lucro.</small></label>
                 <label>Quantidade em estoque<input type="number" min="0" value={form.stock} aria-invalid={Boolean(fieldErrors.stock)} onChange={(event) => field("stock", Number(event.target.value))} />{issue("stock")}</label>
                 <label>Estoque mínimo<input type="number" min="0" value={form.minStock} aria-invalid={Boolean(fieldErrors.minStock)} onChange={(event) => field("minStock", Number(event.target.value))} />{issue("minStock")}<small>Gera alerta de reposição.</small></label>
@@ -415,6 +417,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
                 <label>Número de avaliações<input type="number" min="0" value={form.reviews} aria-invalid={Boolean(fieldErrors.reviews)} onChange={(event) => field("reviews", Number(event.target.value))} />{issue("reviews")}</label>
               </div>
               {form.price > 0 && <div className="product-profit-preview"><span>Lucro bruto por unidade</span><strong>{formatMoney(Math.max(0, form.price - form.costPrice))}</strong><small>{form.price ? `${(((form.price - form.costPrice) / form.price) * 100).toFixed(1)}% de margem antes das demais despesas` : "Defina o preço de venda"}</small></div>}
+              {form.cashback > 0 && <div className="product-cashback-preview"><span>CASHBACK CONFIGURADO</span><strong>{formatMoney(form.cashback)} por unidade</strong><small>Este valor será mostrado na loja e registrado no pedido.</small></div>}
               {form.compareAt > form.price && form.price > 0 && <div className="product-editor-discount"><IconCheck /><div><strong>Oferta configurada</strong><small>O cliente verá {Math.round((1 - form.price / form.compareAt) * 100)}% de desconto.</small></div></div>}
             </section>
           )}
@@ -428,7 +431,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
               </div>
               <div className="product-review-card">
                 <div className="product-review-image">{cover ? <img src={cover} alt="Capa selecionada" /> : <ProductArt product={form} />}</div>
-                <div><span>REVISÃO FINAL</span><h3>{form.name || "Produto sem nome"}</h3><p>{form.category} · {form.brand || "Marca não informada"}</p><strong>{formatMoney(form.price)}</strong><small>{images.length} {images.length === 1 ? "imagem" : "imagens"} · {form.stock} em estoque</small></div>
+                <div><span>REVISÃO FINAL</span><h3>{form.name || "Produto sem nome"}</h3><p>{form.category} · {form.brand || "Marca não informada"}</p><strong>{formatMoney(form.price)}</strong>{form.cashback > 0 && <em>Cashback de {formatMoney(form.cashback)}</em>}<small>{images.length} {images.length === 1 ? "imagem" : "imagens"} · {form.stock} em estoque</small></div>
               </div>
             </section>
           )}
@@ -445,7 +448,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
           <div className="product-editor-summary-sticky">
             <div className="product-editor-summary-heading"><span>PRÉVIA DO PRODUTO</span><small>{form.active ? "Visível" : "Oculto"}</small></div>
             <div className="product-editor-summary-image" style={{ "--product-accent": form.accent } as React.CSSProperties}>{cover ? <img src={cover} alt={form.name || "Prévia do produto"} /> : <ProductArt product={form} large />}</div>
-            <div className="product-editor-summary-copy"><span>{form.category || "Sem categoria"}</span><h3>{form.name || "Nome do produto"}</h3><p>{form.description || "A descrição do produto aparecerá aqui."}</p><div><strong>{formatMoney(form.price)}</strong>{form.compareAt > form.price && <del>{formatMoney(form.compareAt)}</del>}</div><small>{form.stock > 0 ? `${form.stock} unidades disponíveis` : "Sem estoque cadastrado"}</small></div>
+            <div className="product-editor-summary-copy"><span>{form.category || "Sem categoria"}</span><h3>{form.name || "Nome do produto"}</h3><p>{form.description || "A descrição do produto aparecerá aqui."}</p><div><strong>{formatMoney(form.price)}</strong>{form.compareAt > form.price && <del>{formatMoney(form.compareAt)}</del>}</div>{form.cashback > 0 && <b className="product-editor-summary-cashback">Ganhe {formatMoney(form.cashback)} de cashback</b>}<small>{form.stock > 0 ? `${form.stock} unidades disponíveis` : "Sem estoque cadastrado"}</small></div>
             <div className="product-editor-summary-tip"><IconInfoCircle /><p><strong>Dica</strong>Fotos claras e com o mesmo enquadramento deixam o catálogo mais profissional.</p></div>
           </div>
         </aside>

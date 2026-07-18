@@ -11,6 +11,7 @@ const base: Product = {
   brand: "Marca",
   price: 10,
   compareAt: 0,
+  cashback: 0,
   costPrice: 6,
   stock: 1,
   minStock: 1,

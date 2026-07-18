@@ -23,6 +23,20 @@ describe("compatibilidade dos dados administrativos locais", () => {
     expect(normalized.auditLogs).toEqual(seedData.auditLogs);
   });
 
+  it("assume cashback zero em produtos e pedidos salvos antes da campanha", () => {
+    const product = { ...seedData.products[0] } as Record<string, unknown>;
+    const order = { ...seedData.orders[0], items: seedData.orders[0].items.map((item) => ({ ...item })) } as Record<string, unknown>;
+    delete product.cashback;
+    delete order.cashbackTotal;
+    (order.items as Array<Record<string, unknown>>).forEach((item) => delete item.unitCashback);
+
+    const normalized = normalizeAdminStoreData({ products: [product], orders: [order] }, seedData);
+
+    expect(normalized.products[0].cashback).toBe(0);
+    expect(normalized.orders[0].cashbackTotal).toBe(0);
+    expect(normalized.orders[0].items[0].unitCashback).toBe(0);
+  });
+
   it("mantém campos privados dos produtos ao sincronizar a vitrine", () => {
     const storefront = {
       tenant: seedData.tenant,

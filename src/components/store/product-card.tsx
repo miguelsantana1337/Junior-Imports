@@ -39,6 +39,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
         <div className="product-meta"><span>{product.category}</span><small className={`stock-${stock.tone}`}>{stock.label}</small></div>
         <Link href={detailHref}><h3>{product.name}</h3></Link>
         <p>{product.description}</p>
+        {product.cashback > 0 && <div className="product-cashback-badge">Ganhe {formatMoney(product.cashback)} de cashback</div>}
         <div className="rating" aria-label={`${product.rating} de 5 estrelas`}>★★★★★ <span>{product.rating} ({product.reviews})</span></div>
         <div className="product-bottom">
           <div className="price-stack">

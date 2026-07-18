@@ -56,6 +56,7 @@ export function CartDrawer() {
                   <div>
                     <h3>{product.name}</h3>
                     <strong>{formatMoney(product.price * line.quantity)}</strong>
+                    {product.cashback > 0 && <small className="cart-item-cashback">+ {formatMoney(product.cashback * line.quantity)} de cashback</small>}
                     <div className="quantity-control">
                       <button onClick={() => updateItem(product.id, line.quantity - 1)} aria-label={`Diminuir ${product.name}`}><Minus /></button>
                       <span>{line.quantity}</span>
@@ -90,6 +91,7 @@ export function CartDrawer() {
           {calculation.discount > 0 && <div className="total-line"><span>Desconto</span><strong>- {formatMoney(calculation.discount)}</strong></div>}
           <div className="total-line"><span>{data.settings.checkoutMode === "whatsapp" ? "Frete estimado" : "Frete demonstrativo"}</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
           <div className="total-line grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>
+          {calculation.cashback > 0 && <div className="total-line cart-cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}
           <Link className={`button button-primary button-full button-large ${lines.length ? "" : "disabled"}`} href={lines.length ? withStorefrontPath(data.tenant.storefrontPath, "/checkout") : "#"} onClick={() => lines.length && setDrawerOpen(false)}>Ir para o checkout</Link>
           <button className="text-button" onClick={clearCart} disabled={!lines.length}>Esvaziar carrinho</button>
         </div>

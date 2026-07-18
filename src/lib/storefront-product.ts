@@ -24,6 +24,7 @@ export function sanitizeProductForStorefront(
     brand: product.brand,
     price: product.price,
     compareAt: product.compareAt,
+    cashback: Number(product.cashback) || 0,
     stock: publicPurchaseLimit,
     badge: product.badge,
     accent: product.accent,

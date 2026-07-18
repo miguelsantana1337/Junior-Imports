@@ -27,6 +27,7 @@ type PersistedOrder = {
   discount: number;
   shipping: number;
   total: number;
+  cashback_total?: number;
   status: Order["status"];
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
@@ -80,6 +81,7 @@ export function CheckoutScreen() {
       quantity: line.quantity,
       unitPrice: product!.price,
       unitCost: 0,
+      unitCashback: product!.cashback,
     }));
     const nextNumber = data.orders.reduce((max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000), 1000) + 1;
     let persisted: PersistedOrder | null = null;
@@ -124,6 +126,7 @@ export function CheckoutScreen() {
       discount: persisted?.discount ?? calculation.discount,
       shipping: persisted?.shipping ?? calculation.shipping,
       total: persisted?.total ?? calculation.total,
+      cashbackTotal: persisted?.cashback_total ?? calculation.cashback,
       payment: values.payment,
       status: persisted?.status ?? "Novo",
       couponCode: coupon?.code ?? "",
@@ -162,7 +165,7 @@ export function CheckoutScreen() {
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {data.settings.checkoutMode === "whatsapp" ? "Enviar pedido pelo WhatsApp" : "Criar pedido demonstrativo"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div></div><p className="summary-demo"><CheckCircle2 /> Pagamento e envio serão confirmados pela equipe.</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{product!.cashback > 0 ? ` · ${formatMoney(product!.cashback * line.quantity)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> {calculation.cashback > 0 ? "Cashback liberado após a confirmação do pedido pela equipe." : "Pagamento e envio serão confirmados pela equipe."}</p></aside>
       </div>
     </section>
   );

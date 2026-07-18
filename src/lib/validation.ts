@@ -55,6 +55,7 @@ export const productSchema = z.object({
   brand: z.string().trim().min(2, "Informe a marca."),
   price: money,
   compareAt: money,
+  cashback: money,
   costPrice: money,
   stock: z.coerce.number().int().min(0),
   minStock: z.coerce.number().int().min(0),
@@ -82,6 +83,9 @@ export const productSchema = z.object({
   });
   if (product.imageUrl && !product.imageUrls.includes(product.imageUrl)) {
     context.addIssue({ code: "custom", path: ["imageUrl"], message: "A capa precisa fazer parte da galeria." });
+  }
+  if (product.cashback > product.price) {
+    context.addIssue({ code: "custom", path: ["cashback"], message: "O cashback não pode ser maior que o preço de venda." });
   }
   if (product.regulatoryStatus === "approved" && product.productType === "unclassified") {
     context.addIssue({ code: "custom", path: ["productType"], message: "Classifique o produto antes de liberá-lo." });

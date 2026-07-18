@@ -1,4 +1,4 @@
-import type { Product, StoreData, StorefrontData, StorefrontProduct } from "@/types/store";
+import type { Order, Product, StoreData, StorefrontData, StorefrontProduct } from "@/types/store";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -14,7 +14,7 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
   return {
     tenant: isRecord(candidate.tenant) ? { ...fallback.tenant, ...candidate.tenant } : fallback.tenant,
     settings: isRecord(candidate.settings) ? { ...fallback.settings, ...candidate.settings } : fallback.settings,
-    products: arrayOrFallback(candidate.products, fallback.products),
+    products: arrayOrFallback<Product>(candidate.products, fallback.products).map((product) => ({ ...product, cashback: Number(product.cashback) || 0 })),
     categories: arrayOrFallback(candidate.categories, fallback.categories),
     banners: arrayOrFallback(candidate.banners, fallback.banners),
     sections: arrayOrFallback(candidate.sections, fallback.sections),
@@ -29,7 +29,11 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     trustItems: arrayOrFallback(candidate.trustItems, fallback.trustItems),
     benefits: arrayOrFallback(candidate.benefits, fallback.benefits),
     faqs: arrayOrFallback(candidate.faqs, fallback.faqs),
-    orders: arrayOrFallback(candidate.orders, fallback.orders),
+    orders: arrayOrFallback<Order>(candidate.orders, fallback.orders).map((order) => ({
+      ...order,
+      cashbackTotal: Number(order.cashbackTotal) || 0,
+      items: order.items.map((item) => ({ ...item, unitCashback: Number(item.unitCashback) || 0 })),
+    })),
     financialTransactions: arrayOrFallback(candidate.financialTransactions, fallback.financialTransactions),
     inventoryMovements: arrayOrFallback(candidate.inventoryMovements, fallback.inventoryMovements),
     productLots: arrayOrFallback(candidate.productLots, fallback.productLots),

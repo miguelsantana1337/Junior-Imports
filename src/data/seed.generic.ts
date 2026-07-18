@@ -31,6 +31,7 @@ const products = productRows.map((row, index) => {
     brand: row[3],
     price: row[4],
     compareAt: row[5],
+    cashback: index === 0 ? 10 : 0,
     costPrice: 0,
     stock: row[6],
     minStock: 5,

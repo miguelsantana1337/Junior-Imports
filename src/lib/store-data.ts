@@ -68,6 +68,7 @@ function mapProduct(row: Row, categories: Category[]): Product {
     brand: str(row.brand),
     price: num(row.price),
     compareAt: num(row.compare_at),
+    cashback: num(row.cashback),
     costPrice: num(row.cost_price),
     stock: num(row.stock),
     minStock: num(row.min_stock),
@@ -227,6 +228,7 @@ function mapStorefrontProduct(row: Row, categories: Category[]): StorefrontProdu
     brand: str(row.brand),
     price: num(row.price),
     compareAt: num(row.compare_at),
+    cashback: num(row.cashback),
     stock: num(row.purchase_limit),
     badge: str(row.badge),
     accent: str(row.accent) || "#1677ff",
@@ -490,11 +492,13 @@ function mapOrder(row: Row): Order {
       quantity: num(item.quantity),
       unitPrice: num(item.unit_price),
       unitCost: num(item.unit_cost),
+      unitCashback: num(item.unit_cashback),
     })),
     subtotal: num(row.subtotal),
     discount: num(row.discount),
     shipping: num(row.shipping),
     total: num(row.total),
+    cashbackTotal: num(row.cashback_total),
     payment: str(row.payment) as Order["payment"],
     status: str(row.status) as Order["status"],
     couponCode: str(row.coupon_code),
@@ -604,7 +608,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     scopeTenant(supabase.from("categories").select("*"), tenantId).order("order_index"),
     options.admin
       ? scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index")
-      : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
+      : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
     scopeTenant(supabase.from("banners").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("home_sections").select("*"), tenantId).order("order_index"),
     options.admin

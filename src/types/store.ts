@@ -78,6 +78,7 @@ export interface StorefrontProduct {
   brand: string;
   price: number;
   compareAt: number;
+  cashback: number;
   stock: number;
   badge: string;
   accent: string;
@@ -328,6 +329,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   unitCost: number;
+  unitCashback: number;
 }
 
 export interface OrderCustomer {
@@ -355,6 +357,7 @@ export interface Order {
   discount: number;
   shipping: number;
   total: number;
+  cashbackTotal: number;
   payment: PaymentMethod;
   status: OrderStatus;
   couponCode: string;
@@ -576,4 +579,5 @@ export interface CartCalculation {
   discount: number;
   shipping: number;
   total: number;
+  cashback: number;
 }

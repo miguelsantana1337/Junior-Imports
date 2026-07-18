@@ -11,6 +11,8 @@ describe("pedido direcionado ao WhatsApp", () => {
     expect(message).toContain(`📦 *Pedido:* ${seedData.orders[0].code}`);
     expect(message).toContain("💳 *Forma de pagamento:* Pix");
     expect(message).toContain(`🎟️ *Cupom utilizado:* ${seedData.orders[0].couponCode}`);
+    expect(message).toContain("*Cashback previsto:*");
+    expect(message).toContain("50,00");
     expect(message).toContain("\n\n*Produtos:*\n• 1x");
     expect(message).not.toContain("\\n");
     expect(message).not.toContain("{{pedido}}");

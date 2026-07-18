@@ -35,6 +35,12 @@ export function calculateCart(
     return sum + product.price * safeQuantity;
   }, 0);
 
+  const cashback = validLines.reduce((sum, line) => {
+    const product = productMap.get(line.productId)!;
+    const safeQuantity = Math.min(line.quantity, Math.max(product.stock, 0));
+    return sum + product.cashback * safeQuantity;
+  }, 0);
+
   let couponDiscount = 0;
   if (coupon && isCouponValid(coupon, subtotal)) {
     couponDiscount =
@@ -64,6 +70,7 @@ export function calculateCart(
     discount: couponDiscount + paymentDiscount,
     shipping,
     total: afterDiscounts + shipping,
+    cashback,
   };
 }
 
