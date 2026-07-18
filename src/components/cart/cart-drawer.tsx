@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { formatMoney } from "@/lib/format";
@@ -23,7 +23,45 @@ export function CartDrawer() {
   const [couponCode, setCouponCode] = useState("");
   const [couponMessage, setCouponMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [couponApplying, setCouponApplying] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
   const calculation = calculate();
+
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    const previousFocus = document.activeElement as HTMLElement | null;
+    closeButtonRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDrawerOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab" || !panelRef.current) return;
+      const focusable = Array.from(panelRef.current.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [drawerOpen, setDrawerOpen]);
 
   return (
     <aside
@@ -34,10 +72,10 @@ export function CartDrawer() {
       aria-labelledby="cart-title"
     >
       <button className="drawer-overlay" onClick={() => setDrawerOpen(false)} aria-label="Fechar carrinho" />
-      <div className="drawer-panel">
+      <div className="drawer-panel" ref={panelRef}>
         <header>
           <div><span>SEU PEDIDO</span><h2 id="cart-title">Carrinho</h2></div>
-          <button className="close-button" onClick={() => setDrawerOpen(false)} aria-label="Fechar carrinho"><X /></button>
+          <button ref={closeButtonRef} className="close-button" onClick={() => setDrawerOpen(false)} aria-label="Fechar carrinho"><X /></button>
         </header>
         <div className="drawer-content">
           {lines.length === 0 ? (

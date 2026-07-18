@@ -1,4 +1,4 @@
-const CACHE_VERSION = "ji-admin-static-v1";
+const CACHE_VERSION = "ji-admin-static-v3";
 const OFFLINE_PAGE = "/admin-offline.html";
 const PRECACHE_URLS = [
   OFFLINE_PAGE,
@@ -39,14 +39,17 @@ self.addEventListener("message", (event) => {
 
 async function staticAssetResponse(request) {
   const cache = await caches.open(CACHE_VERSION);
-  const cached = await cache.match(request);
-  if (cached) return cached;
-
-  const response = await fetch(request);
-  if (response.ok && response.type === "basic") {
-    await cache.put(request, response.clone());
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (response.ok && response.type === "basic") {
+      await cache.put(request, response.clone());
+    }
+    return response;
+  } catch (error) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
+    throw error;
   }
-  return response;
 }
 
 self.addEventListener("fetch", (event) => {

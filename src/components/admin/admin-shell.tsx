@@ -33,7 +33,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { logoutAction } from "@/app/admin/auth-actions";
 import { adminRoleLabels, hasAdminPermission } from "@/lib/admin-permissions";
 import type { AdminPermission, AdminRole } from "@/types/store";
@@ -143,6 +143,8 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [theme, setTheme] = useState<AdminTheme>("light");
+  const createPopoverRef = useRef<HTMLDivElement>(null);
+  const notificationsPopoverRef = useRef<HTMLDivElement>(null);
   const [eyebrow, title] = titles[pathname] ?? titles["/admin"];
   const productEditorPath = pathname === "/admin/products/new" || pathname.startsWith("/admin/products/");
   const isNavigationActive = (href: string) => pathname === href || (href !== "/admin" && pathname.startsWith(`${href}/`));
@@ -177,6 +179,19 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     window.addEventListener("keydown", closeMenus);
     return () => window.removeEventListener("keydown", closeMenus);
   }, []);
+
+  useEffect(() => {
+    if (!createOpen && !notificationsOpen) return;
+
+    const closeOnOutsideInteraction = (event: PointerEvent) => {
+      const target = event.target as Node;
+      if (createOpen && !createPopoverRef.current?.contains(target)) setCreateOpen(false);
+      if (notificationsOpen && !notificationsPopoverRef.current?.contains(target)) setNotificationsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideInteraction);
+    return () => document.removeEventListener("pointerdown", closeOnOutsideInteraction);
+  }, [createOpen, notificationsOpen]);
 
   useLayoutEffect(() => {
     const savedTheme = window.localStorage.getItem(adminThemeStorageKey);
@@ -267,11 +282,20 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
           <div className="admin-topbar-actions">
             <AdminPwaInstall />
-            <div className="admin-popover-wrap">
-              <button className="admin-create-button" onClick={() => setCreateOpen((current) => !current)} aria-expanded={createOpen}>
+            <div className="admin-popover-wrap" ref={createPopoverRef}>
+              <button
+                className="admin-create-button"
+                onClick={() => {
+                  setCreateOpen((current) => !current);
+                  setNotificationsOpen(false);
+                }}
+                aria-expanded={createOpen}
+                aria-haspopup="menu"
+                aria-controls="admin-create-menu"
+              >
                 <IconPlus /> Criar <span /><IconChevronDown />
               </button>
-              {createOpen && <div className="admin-popover admin-create-menu">{visibleCreateLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={label}><Icon />{label}</Link>)}</div>}
+              {createOpen && <div className="admin-popover admin-create-menu" id="admin-create-menu" role="menu">{visibleCreateLinks.map(({ href, label, icon: Icon }) => <Link href={href} key={label} role="menuitem"><Icon />{label}</Link>)}</div>}
             </div>
             <button
               className="admin-theme-toggle"
@@ -283,11 +307,20 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
             >
               {theme === "dark" ? <IconSun /> : <IconMoon />}
             </button>
-            <div className="admin-popover-wrap">
-              <button className="admin-notification-button" onClick={() => setNotificationsOpen((current) => !current)} aria-label="Notificações" aria-expanded={notificationsOpen}>
+            <div className="admin-popover-wrap" ref={notificationsPopoverRef}>
+              <button
+                className="admin-notification-button"
+                onClick={() => {
+                  setNotificationsOpen((current) => !current);
+                  setCreateOpen(false);
+                }}
+                aria-label="Notificações"
+                aria-expanded={notificationsOpen}
+                aria-controls="admin-notifications"
+              >
                 <IconBell />{notificationCount > 0 && <span>{notificationCount}</span>}
               </button>
-              {notificationsOpen && <div className="admin-popover admin-notifications"><strong>Notificações</strong>{lowStockCount > 0 && <p>{lowStockCount} produto{lowStockCount === 1 ? "" : "s"} com estoque baixo.</p>}{pendingOrderCount > 0 && <p>{pendingOrderCount} pedido{pendingOrderCount === 1 ? "" : "s"} aguardando acompanhamento.</p>}{notificationCount === 0 && <p>Nenhuma pendência no momento.</p>}<Link href={pendingOrderCount ? "/admin/orders" : "/admin/products"}>Revisar painel</Link></div>}
+              {notificationsOpen && <div className="admin-popover admin-notifications" id="admin-notifications" role="region" aria-label="Notificações do painel"><strong>Notificações</strong>{lowStockCount > 0 && <p>{lowStockCount} produto{lowStockCount === 1 ? "" : "s"} com estoque baixo.</p>}{pendingOrderCount > 0 && <p>{pendingOrderCount} pedido{pendingOrderCount === 1 ? "" : "s"} aguardando acompanhamento.</p>}{notificationCount === 0 && <p>Nenhuma pendência no momento.</p>}<Link href={pendingOrderCount ? "/admin/orders" : "/admin/products"}>Revisar painel</Link></div>}
             </div>
             <Link className="admin-view-store" href={data.tenant.storefrontPath || "/"} target="_blank">Ver loja <IconExternalLink /></Link>
             <div className="admin-account">

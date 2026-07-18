@@ -1,5 +1,6 @@
 "use client";
 
+import { CircleAlert, CircleCheck, Info, X } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -16,23 +17,45 @@ export type ToastInput = string | { message: string; kind?: ToastKind; duration?
 
 const ToastContext = createContext<((input: ToastInput) => void) | null>(null);
 
+interface ToastRecord {
+  id: number;
+  message: string;
+  kind: ToastKind;
+  closing: boolean;
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [message, setMessage] = useState("");
-  const [kind, setKind] = useState<ToastKind>("success");
-  const [visible, setVisible] = useState(false);
-  const timer = useRef<number | null>(null);
+  const [toasts, setToasts] = useState<ToastRecord[]>([]);
+  const nextId = useRef(0);
+  const timers = useRef(new Map<number, { dismiss: number; remove?: number }>());
+
+  const dismiss = useCallback((id: number) => {
+    const currentTimers = timers.current.get(id);
+    if (currentTimers?.remove) return;
+    if (currentTimers?.dismiss) window.clearTimeout(currentTimers.dismiss);
+
+    setToasts((current) => current.map((item) => item.id === id ? { ...item, closing: true } : item));
+    const remove = window.setTimeout(() => {
+      setToasts((current) => current.filter((item) => item.id !== id));
+      timers.current.delete(id);
+    }, 200);
+    timers.current.set(id, { dismiss: currentTimers?.dismiss ?? 0, remove });
+  }, []);
 
   const toast = useCallback((input: ToastInput) => {
     const next = typeof input === "string" ? { message: input, kind: "success" as const, duration: 3200 } : input;
-    if (timer.current) window.clearTimeout(timer.current);
-    setMessage(next.message);
-    setKind(next.kind ?? "success");
-    setVisible(true);
-    timer.current = window.setTimeout(() => setVisible(false), next.duration ?? 4200);
-  }, []);
+    const id = ++nextId.current;
+    setToasts((current) => [...current, { id, message: next.message, kind: next.kind ?? "success", closing: false }]);
+    const dismissTimer = window.setTimeout(() => dismiss(id), next.duration ?? 4200);
+    timers.current.set(id, { dismiss: dismissTimer });
+  }, [dismiss]);
 
   useEffect(() => () => {
-    if (timer.current) window.clearTimeout(timer.current);
+    timers.current.forEach(({ dismiss: dismissTimer, remove }) => {
+      window.clearTimeout(dismissTimer);
+      if (remove) window.clearTimeout(remove);
+    });
+    timers.current.clear();
   }, []);
 
   const value = useMemo(() => toast, [toast]);
@@ -40,13 +63,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div
-        className={`toast ${kind} ${visible ? "show" : ""}`}
-        role={kind === "error" ? "alert" : "status"}
-        aria-live={kind === "error" ? "assertive" : "polite"}
-      >
-        {message}
-      </div>
+      <section className="toast-viewport" aria-label="Notificações">
+        {toasts.map((item) => {
+          const Icon = item.kind === "success" ? CircleCheck : item.kind === "error" ? CircleAlert : Info;
+          return (
+            <div
+              className={`toast ${item.kind} ${item.closing ? "closing" : ""}`}
+              key={item.id}
+              role={item.kind === "error" ? "alert" : "status"}
+              aria-live={item.kind === "error" ? "assertive" : "polite"}
+              aria-atomic="true"
+            >
+              <Icon className="toast-icon" aria-hidden="true" />
+              <span>{item.message}</span>
+              <button type="button" onClick={() => dismiss(item.id)} aria-label="Fechar notificação"><X /></button>
+            </div>
+          );
+        })}
+      </section>
     </ToastContext.Provider>
   );
 }
