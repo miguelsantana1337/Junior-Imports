@@ -29,11 +29,10 @@ export function useAdminPreferences(userId: string) {
   }, [userId]);
 
   const updatePreferences = useCallback((update: (current: AdminPreferences) => AdminPreferences) => {
-    setPreferences((current) => {
-      const next = writeAdminPreferences(userId, update(current));
-      window.dispatchEvent(new CustomEvent(preferencesEvent, { detail: { userId } }));
-      return next;
-    });
+    const current = readAdminPreferences(userId);
+    const next = writeAdminPreferences(userId, update(current));
+    setPreferences(next);
+    window.dispatchEvent(new CustomEvent(preferencesEvent, { detail: { userId } }));
   }, [userId]);
 
   return { preferences, updatePreferences };
