@@ -17,7 +17,13 @@ export function useTeamPresence(subscribe = false) {
       setPresence([{ userId: currentUser.id, email: currentUser.email, fullName: currentUser.fullName, route: pathname, entityType: "", entityId: "", lastSeenAt: new Date().toISOString() }]);
       return;
     }
-    const { data: rows } = await supabase.from("team_presence").select("*").eq("tenant_id", data.tenant.id).order("last_seen_at", { ascending: false });
+    const recentThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: rows } = await supabase
+      .from("team_presence")
+      .select("*")
+      .eq("tenant_id", data.tenant.id)
+      .gte("last_seen_at", recentThreshold)
+      .order("last_seen_at", { ascending: false });
     if (rows) setPresence(rows.map((row) => mapTeamPresence(row as Record<string, unknown>)));
   }, [currentUser.email, currentUser.fullName, currentUser.id, data.tenant.id, pathname, supabase]);
 
@@ -58,4 +64,3 @@ export function TeamPresencePulse() {
   useTeamPresence(false);
   return null;
 }
-

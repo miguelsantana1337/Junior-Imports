@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminUserCreateSchema, adminUserPasswordResetSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, savedReportSchema, storePageSchema } from "./validation";
+import { adminBackupCompleteSchema, adminBackupPrepareSchema, adminUserCreateSchema, adminUserPasswordResetSchema, bannerSchema, checkoutSchema, messageAutomationSchema, pageBlockSchema, productSchema, savedReportSchema, storePageSchema } from "./validation";
 
 describe("validacao do checkout", () => {
   const validCheckout = {
@@ -21,6 +21,11 @@ describe("validacao do checkout", () => {
 
   it("aceita dados completos", () => {
     expect(checkoutSchema.safeParse(validCheckout).success).toBe(true);
+  });
+
+  it("aceita dinheiro e rejeita boleto em novos pedidos", () => {
+    expect(checkoutSchema.safeParse({ ...validCheckout, payment: "Dinheiro" }).success).toBe(true);
+    expect(checkoutSchema.safeParse({ ...validCheckout, payment: "Boleto" }).success).toBe(false);
   });
 
   it("exige consentimento e dados de contato validos", () => {
@@ -93,6 +98,21 @@ describe("validacao de usuarios administrativos", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "Senha-Forte-2026!" }).success).toBe(true);
     expect(adminUserPasswordResetSchema.safeParse({ id, password: "Senha-Forte-2026!", confirmation: "outra-senha" }).success).toBe(false);
+  });
+});
+
+describe("validação do backup administrativo", () => {
+  const runId = "11111111-1111-4111-8111-111111111111";
+  const factorId = "22222222-2222-4222-8222-222222222222";
+
+  it("aceita somente um código TOTP de seis dígitos", () => {
+    expect(adminBackupPrepareSchema.safeParse({ factorId, code: "123456" }).success).toBe(true);
+    expect(adminBackupPrepareSchema.safeParse({ factorId, code: "12345a" }).success).toBe(false);
+  });
+
+  it("exige checksum e tamanho para concluir um backup verificado", () => {
+    expect(adminBackupCompleteSchema.safeParse({ runId, completionToken: "x".repeat(80), status: "verified" }).success).toBe(false);
+    expect(adminBackupCompleteSchema.safeParse({ runId, completionToken: "x".repeat(80), status: "verified", fileSha256: "a".repeat(64), sizeBytes: 1024 }).success).toBe(true);
   });
 });
 

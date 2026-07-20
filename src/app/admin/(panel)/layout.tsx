@@ -32,6 +32,8 @@ export default async function AdminPanelLayout({ children }: { children: React.R
   const data = await getStoreData({
     admin: true,
     tenantSlug: user.tenantSlug,
+    role: user.role,
+    permissions: user.permissions,
     includeAudit: hasAdminPermission(user.role, user.permissions, "audit"),
   });
   return <AdminDataProvider initialData={data} currentUser={user}><AdminShell user={user} demoMode={!isSupabaseConfigured()}>{children}</AdminShell></AdminDataProvider>;

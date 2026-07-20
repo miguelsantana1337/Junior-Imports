@@ -15,7 +15,7 @@ export const checkoutCustomerSchema = z.object({
 });
 
 export const checkoutSchema = checkoutCustomerSchema.extend({
-  payment: z.enum(["Pix", "Cartao", "Boleto"]),
+  payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
   consent: z.boolean().refine(Boolean, "Confirme que autoriza o envio dos dados para atendimento."),
   termsAccepted: z.boolean().refine(Boolean, "Leia e aceite os termos para concluir o pedido."),
   botField: z.string().max(0, "Solicitação inválida."),
@@ -33,7 +33,7 @@ export const manualOrderSchema = z.object({
   address: z.string().trim().max(160),
   number: z.string().trim().max(30),
   complement: z.string().trim().max(120),
-  payment: z.enum(["Pix", "Cartao", "Boleto"]),
+  payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
   couponCode: z.string().trim().max(30).transform((value) => value.toUpperCase()),
   internalNotes: z.string().trim().max(1000, "Use no máximo 1.000 caracteres."),
   items: z.array(z.object({
@@ -149,6 +149,8 @@ export const couponSchema = z.object({
   perCustomerLimit: z.coerce.number().int().min(0, "Use zero para ilimitado."),
   firstOrderOnly: z.boolean(),
   usageCount: z.coerce.number().int().min(0),
+  applicableCategoryIds: z.array(z.string()).default([]),
+  applicableProductIds: z.array(z.string()).default([]),
   active: z.boolean(),
 }).superRefine((coupon, context) => {
   if (coupon.startsAt && coupon.expiresAt && coupon.startsAt > coupon.expiresAt) {
@@ -211,7 +213,7 @@ export const cashbackCampaignSchema = z.object({
   status: z.enum(["draft", "active", "paused", "ended"]),
   startsAt: z.string().min(1, "Informe o início da campanha."),
   endsAt: z.string(),
-  multiplier: z.coerce.number().min(1, "O multiplicador mínimo é 1x.").max(10),
+  multiplier: z.coerce.number().min(0.1, "O percentual mínimo é 0.1%.").max(100),
   fixedBonus: z.coerce.number().min(0).max(10000),
   creditValidDays: z.coerce.number().int().min(1).max(730),
   priority: z.coerce.number().int().min(0).max(1000),
@@ -223,8 +225,8 @@ export const cashbackCampaignSchema = z.object({
   if (campaign.endsAt && new Date(campaign.endsAt).getTime() <= new Date(campaign.startsAt).getTime()) {
     context.addIssue({ code: "custom", path: ["endsAt"], message: "O término deve ser posterior ao início." });
   }
-  if (campaign.multiplier === 1 && campaign.fixedBonus === 0) {
-    context.addIssue({ code: "custom", path: ["multiplier"], message: "Defina um multiplicador acima de 1x ou um bônus fixo." });
+  if (campaign.multiplier === 0 && campaign.fixedBonus === 0) {
+    context.addIssue({ code: "custom", path: ["multiplier"], message: "Defina um percentual ou um bônus fixo." });
   }
 });
 
@@ -276,6 +278,7 @@ export const supplierSchema = z.object({
 export const settingsSchema = z.object({
   storeName: z.string().trim().min(2),
   logoUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para a logo.")]),
+  mobileLogoUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para a logo mobile.")]),
   faviconUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para o favicon.")]),
   whatsapp: z.string().trim().regex(/^\D*(?:\d\D*){10,13}$/),
   orderPrefix: z.string().trim().min(2).max(5).regex(/^[A-Za-z0-9]+$/).transform((value) => value.toUpperCase()),
@@ -482,6 +485,24 @@ export const adminMfaAuditSchema = z.object({
   friendlyName: z.string().trim().min(3).max(50),
 });
 
+export const adminBackupPrepareSchema = z.object({
+  factorId: z.string().uuid("Autenticador inválido."),
+  code: z.string().trim().regex(/^\d{6}$/, "Informe o código de 6 dígitos."),
+});
+
+export const adminBackupCompleteSchema = z.object({
+  runId: z.string().uuid("Backup inválido."),
+  completionToken: z.string().min(40).max(2000),
+  status: z.enum(["verified", "failed"]),
+  fileSha256: z.string().regex(/^[a-f0-9]{64}$/).optional(),
+  sizeBytes: z.number().int().min(0).max(10_000_000_000).optional(),
+  errorMessage: z.string().trim().max(300).optional(),
+}).superRefine((value, context) => {
+  if (value.status === "verified" && (!value.fileSha256 || !value.sizeBytes)) {
+    context.addIssue({ code: "custom", message: "Informe o arquivo verificado." });
+  }
+});
+
 export type CheckoutFormInput = z.input<typeof checkoutSchema>;
 export type CheckoutInput = z.output<typeof checkoutSchema>;
 export type ManualOrderInput = z.infer<typeof manualOrderSchema>;
@@ -507,3 +528,5 @@ export type AdminUserCreateInput = z.infer<typeof adminUserCreateSchema>;
 export type AdminUserUpdateInput = z.infer<typeof adminUserUpdateSchema>;
 export type AdminUserPasswordResetInput = z.infer<typeof adminUserPasswordResetSchema>;
 export type AdminMfaAuditInput = z.infer<typeof adminMfaAuditSchema>;
+export type AdminBackupPrepareInput = z.infer<typeof adminBackupPrepareSchema>;
+export type AdminBackupCompleteInput = z.infer<typeof adminBackupCompleteSchema>;

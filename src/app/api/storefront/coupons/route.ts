@@ -30,7 +30,7 @@ export async function POST(request: Request) {
       const fallback = cloneSeedData();
       const coupon = fallback.coupons.find((item) => item.code.toUpperCase() === parsed.data.code.toUpperCase()) ?? null;
       const lines = parsed.data.items.map((item) => ({ productId: item.productId, quantity: item.quantity }));
-      const result = calculateCart(lines, fallback.products, fallback.settings, coupon);
+      const result = calculateCart(lines, fallback.products, fallback.settings, coupon, undefined, fallback.cashbackCampaigns);
       if (!coupon || result.couponDiscount <= 0) {
         return Response.json({ valid: false, message: "Cupom inválido ou expirado." }, { headers: { "Cache-Control": "no-store" } });
       }

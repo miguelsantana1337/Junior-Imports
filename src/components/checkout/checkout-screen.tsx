@@ -3,20 +3,23 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AlertTriangle, ArrowLeft, CheckCircle2, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
-import { formatMoney, whatsappUrl } from "@/lib/format";
+import { formatMoney } from "@/lib/format";
 import { checkoutSchema, type CheckoutFormInput, type CheckoutInput } from "@/lib/validation";
-import { renderWhatsappOrderMessage } from "@/lib/whatsapp-order";
+import { checkoutWhatsappUrl } from "@/lib/whatsapp-order";
 import { CHECKOUT_TERMS_VERSION, checkoutTerms } from "@/lib/checkout-terms";
 import { withStorefrontPath } from "@/lib/storefront-path";
+import { normalizePostalCode, type PostalCodeAddress } from "@/lib/postal-code";
 import type { Order } from "@/types/store";
 
-const states = ["MG", "SP", "RJ", "ES", "BA", "PR", "SC", "RS", "GO", "DF", "Outro"];
+const states = [
+  "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
+  "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO",
+];
 
 type PersistedOrder = {
   id: string;
@@ -36,28 +39,62 @@ type PersistedOrder = {
 export function CheckoutScreen() {
   const { data, addOrder, demoMode } = useStore();
   const { lines, coupon, calculate, clearCart } = useCart();
-  const router = useRouter();
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [startedAt] = useState(() => Date.now());
+  const [postalCodeStatus, setPostalCodeStatus] = useState<"idle" | "loading" | "success" | "not-found" | "error">("idle");
   const handleTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<CheckoutFormInput, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: { payment: "Pix", complement: "", consent: false, termsAccepted: false, botField: "", startedAt },
   });
   const payment = useWatch({ control, name: "payment" });
+  const zip = useWatch({ control, name: "zip" });
   const calculation = calculate(payment);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const cartProducts = useMemo(
     () => lines.map((line) => ({ line, product: data.products.find((item) => item.id === line.productId) })).filter((entry) => entry.product),
     [data.products, lines],
   );
+
+  useEffect(() => {
+    const cep = normalizePostalCode(zip ?? "");
+    if (cep.length !== 8) {
+      setPostalCodeStatus("idle");
+      return;
+    }
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setPostalCodeStatus("loading");
+      try {
+        const response = await fetch(`/api/storefront/postal-code?cep=${cep}`, { signal: controller.signal });
+        const payload = await response.json().catch(() => null) as (PostalCodeAddress & { error?: string }) | null;
+        if (response.status === 404) {
+          setPostalCodeStatus("not-found");
+          return;
+        }
+        if (!response.ok || !payload) throw new Error(payload?.error || "Postal code lookup failed");
+        setValue("address", payload.address, { shouldDirty: true, shouldValidate: true });
+        setValue("city", payload.city, { shouldDirty: true, shouldValidate: true });
+        setValue("state", states.includes(payload.state) ? payload.state : "", { shouldDirty: true, shouldValidate: true });
+        setPostalCodeStatus("success");
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setPostalCodeStatus("error");
+      }
+    }, 300);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [setValue, zip]);
 
   async function submit(values: CheckoutInput) {
     setSubmitError("");
@@ -137,11 +174,7 @@ export function CheckoutScreen() {
     };
     addOrder(order);
     clearCart();
-    if (data.settings.checkoutMode === "whatsapp") {
-      window.location.assign(whatsappUrl(data.settings.whatsapp, renderWhatsappOrderMessage(order, data.settings)));
-      return;
-    }
-    router.push(storeHref(`/pedidos/${code}`));
+    window.location.assign(checkoutWhatsappUrl(order, data.settings));
   }
 
   if (!lines.length) {
@@ -151,21 +184,21 @@ export function CheckoutScreen() {
   return (
     <section className="checkout-page container">
       <Link className="back-link" href={storeHref("/")}><ArrowLeft /> Continuar comprando</Link>
-      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR PEDIDO</span><h1>Revise e conclua seu pedido.</h1><p>{data.settings.checkoutMode === "whatsapp" ? "Ao finalizar, abriremos o WhatsApp com todos os dados para a equipe confirmar pagamento e envio." : "Confira seus dados e as condições antes de concluir."}</p></div>
+      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR COMPRA</span><h1>Revise e envie seu pedido.</h1><p>Ao finalizar, o pedido será registrado e o WhatsApp configurado pela loja abrirá com todos os dados para a equipe confirmar pagamento e envio.</p></div>
       <div className="checkout-grid">
         <form className="checkout-form" onSubmit={handleSubmit(submit)} noValidate>
           <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field></div></fieldset>
-          <fieldset><legend>2. Entrega</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" placeholder="00000-000" {...register("zip")} /></Field><Field label="Cidade" error={errors.city?.message}><input {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Endereço" error={errors.address?.message} full><input {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input {...register("complement")} /></Field></div></fieldset>
-          <fieldset><legend>3. Pagamento</legend><div className="payment-options">{(["Pix", "Cartao", "Boleto"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto` : method === "Cartao" ? "Condição confirmada no atendimento" : "Instruções enviadas no atendimento"}</small></span></label>)}</div></fieldset>
+          <fieldset><legend>2. Entrega</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" {...register("zip")} />{postalCodeStatus !== "idle" && <small className={`postal-code-status ${postalCodeStatus}`} role="status">{postalCodeStatus === "loading" ? "Buscando endereço..." : postalCodeStatus === "success" ? "Dados do CEP preenchidos." : postalCodeStatus === "not-found" ? "CEP não encontrado. Preencha o endereço manualmente." : "Não foi possível consultar agora. Preencha manualmente."}</small>}</Field><Field label="Cidade" error={errors.city?.message}><input autoComplete="address-level2" {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select autoComplete="address-level1" {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Logradouro" error={errors.address?.message} full><input autoComplete="address-line1" {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input autoComplete="address-line2" {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input autoComplete="address-line3" {...register("complement")} /></Field></div></fieldset>
+          <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto` : method === "Cartao" ? "2x sem juros · confirmação no WhatsApp" : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
           <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />
           <label className="consent-line"><input type="checkbox" {...register("consent")} /><span>Autorizo o envio dos dados deste pedido para o atendimento da loja pelo WhatsApp.</span></label>{errors.consent && <small className="field-error">{errors.consent.message}</small>}
           <TurnstileWidget onToken={handleTurnstileToken} />
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
-          <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {data.settings.checkoutMode === "whatsapp" ? "Enviar pedido pelo WhatsApp" : "Criar pedido demonstrativo"}</button>
+          <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {isSubmitting ? "Registrando pedido..." : "Finalizar pedido no WhatsApp"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{product!.cashback > 0 ? ` · ${formatMoney(product!.cashback * line.quantity)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> {calculation.cashback > 0 ? "Cashback liberado após a confirmação do pedido pela equipe." : "Pagamento e envio serão confirmados pela equipe."}</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{product!.cashback > 0 ? ` · ${formatMoney(product!.cashback * line.quantity)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total do pedido</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Pedido protegido e atendimento continuado pelo WhatsApp oficial da loja.</p></aside>
       </div>
     </section>
   );

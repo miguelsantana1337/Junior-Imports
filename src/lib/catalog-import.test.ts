@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { seedData } from "@/data/seed";
-import { applyStockImport, parseCsv, parseProductImport, parseStockImport } from "./catalog-import";
+import { applyStockImport, buildProductImportTemplate, buildStockImportTemplate, parseCsv, parseProductImport, parseStockImport } from "./catalog-import";
 
 describe("importação de catálogo por planilha", () => {
   it("lê CSV separado por ponto e vírgula e valores com vírgula", () => {
@@ -43,5 +43,79 @@ describe("importação de catálogo por planilha", () => {
     expect(parsed.errors).toHaveLength(0);
     expect(applyStockImport(seedData.products, parsed.rows, "replace")[0].stock).toBe(5);
     expect(applyStockImport(seedData.products, parsed.rows, "increment")[0].stock).toBe(product.stock + 5);
+  });
+
+  it("gera o modelo de produtos preenchido com todos os dados atuais", () => {
+    const rows = parseCsv(buildProductImportTemplate(seedData.products));
+    const first = seedData.products[0];
+
+    expect(rows).toHaveLength(seedData.products.length);
+    expect(rows[0]).toMatchObject({
+      sku: first.sku,
+      nome: first.name,
+      categoria: first.category,
+      preco: first.price.toFixed(2).replace(".", ","),
+      cashback: first.cashback.toFixed(2).replace(".", ","),
+      estoque: String(first.stock),
+      etiqueta: first.badge,
+      imagem_url: first.imageUrl,
+      apresentacao: first.presentation,
+    });
+    expect(rows[0].imagens_urls).toBe(first.imageUrls.join(" | "));
+  });
+
+  it("gera o modelo de estoque com todos os produtos e o saldo atual", () => {
+    const rows = parseCsv(buildStockImportTemplate(seedData.products));
+    const first = seedData.products[0];
+
+    expect(rows).toHaveLength(seedData.products.length);
+    expect(rows[0]).toMatchObject({
+      sku: first.sku,
+      nome: first.name,
+      quantidade: String(first.stock),
+      estoque_minimo: String(first.minStock),
+      custo: first.costPrice.toFixed(2).replace(".", ","),
+      preco: first.price.toFixed(2).replace(".", ","),
+    });
+  });
+
+  it("reimporta o modelo preenchido preservando os campos completos", () => {
+    const current = seedData.products[0];
+    const result = parseProductImport(
+      buildProductImportTemplate([current]),
+      [],
+      seedData.categories,
+    );
+
+    expect(result.errors).toHaveLength(0);
+    expect(result.products[0]).toMatchObject({
+      name: current.name,
+      sku: current.sku,
+      categoryId: current.categoryId,
+      brand: current.brand,
+      price: current.price,
+      compareAt: current.compareAt,
+      cashback: current.cashback,
+      costPrice: current.costPrice,
+      stock: current.stock,
+      minStock: current.minStock,
+      badge: current.badge,
+      accent: current.accent,
+      description: current.description,
+      rating: current.rating,
+      reviews: current.reviews,
+      featured: current.featured,
+      active: current.active,
+      order: current.order,
+      imageUrl: current.imageUrl,
+      imageUrls: current.imageUrls,
+      productType: current.productType,
+      regulatoryStatus: current.regulatoryStatus,
+      activeIngredient: current.activeIngredient,
+      anvisaRegistration: current.anvisaRegistration,
+      presentation: current.presentation,
+      regulatoryWarning: current.regulatoryWarning,
+      pharmacistReviewed: current.pharmacistReviewed,
+    });
   });
 });

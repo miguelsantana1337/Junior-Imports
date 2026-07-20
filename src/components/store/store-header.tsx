@@ -50,7 +50,7 @@ export function StoreHeader() {
             <Link href={storeHref("/#destaques")}>Destaques</Link>
             <Link href={storeHref("/#catalogo")}>Produtos</Link>
             <Link href={storeHref("/#beneficios")}>Beneficios</Link>
-            <Link href={storeHref("/#duvidas")}>Dúvidas</Link>
+            <Link href={storeHref("/#duvidas")}>Como comprar</Link>
             {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
           </nav>
           <div className="header-actions">
@@ -105,7 +105,7 @@ export function StoreHeader() {
             <Link href={storeHref("/#destaques")} onClick={() => setMenuOpen(false)}>Destaques</Link>
             <Link href={storeHref("/#catalogo")} onClick={() => setMenuOpen(false)}>Produtos</Link>
             <Link href={storeHref("/#beneficios")} onClick={() => setMenuOpen(false)}>Beneficios</Link>
-            <Link href={storeHref("/#duvidas")} onClick={() => setMenuOpen(false)}>Dúvidas</Link>
+            <Link href={storeHref("/#duvidas")} onClick={() => setMenuOpen(false)}>Como comprar</Link>
             {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id} onClick={() => setMenuOpen(false)}>{page.name}</Link>)}
           </nav>
         )}

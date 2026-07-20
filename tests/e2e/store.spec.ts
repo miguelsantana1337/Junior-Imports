@@ -22,7 +22,7 @@ test("mantém o catálogo fora dos buscadores e compartilhável", async ({ page,
 
 test("abre uma pagina individual de produto", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByText("PEDIDOS FINALIZADOS PELO WHATSAPP").first()).toBeVisible();
+  await expect(page.getByText("LOJA ABERTA PARA PEDIDOS").first()).toBeVisible();
   await page.getByTestId("product-organizador-semanal-premium").first().getByRole("link", { name: "Organizador semanal premium", exact: true }).click();
   await expect(page).toHaveURL(/\/produtos\/organizador-semanal-premium$/);
   await expect(page.getByRole("heading", { name: "Organizador semanal premium" })).toBeVisible();
@@ -43,7 +43,7 @@ test("organiza o catálogo em carrosséis por categoria", async ({ page }) => {
 
 test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsApp", async ({ page }) => {
   await page.goto("/produtos/t-g-15");
-  await expect(page.getByText("Solicitação sujeita a confirmação")).toBeVisible();
+  await expect(page.getByText("Compra com confirmação no WhatsApp")).toBeVisible();
   await page.getByRole("button", { name: "Adicionar ao carrinho", exact: true }).click();
   const cart = page.getByRole("dialog", { name: "Carrinho" });
   await expect(cart).toBeVisible();
@@ -60,31 +60,41 @@ test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsAp
   expect(browserStorage.sessionCart.some((value) => value?.includes("productId"))).toBe(true);
 });
 
-test("conclui carrinho, cupom e envia o pedido para o WhatsApp", async ({ page }) => {
+test("conclui o carrinho e envia o pedido para o WhatsApp oficial", async ({ page }) => {
+  await page.route("**/api/storefront/postal-code?cep=35160000", (route) => route.fulfill({
+    contentType: "application/json",
+    body: JSON.stringify({ address: "Rua Exemplo", city: "Ipatinga", state: "MG", district: "Centro" }),
+  }));
   await page.goto("/");
+  const officialWhatsappHref = await page.locator(".whatsapp-float").getAttribute("href");
+  expect(officialWhatsappHref).toMatch(/^https:\/\/wa\.me\/\d+/);
+  const officialWhatsappPath = new URL(officialWhatsappHref!).pathname;
   await page.getByRole("button", { name: "Adicionar Organizador semanal premium ao carrinho" }).first().click();
   const cart = page.getByRole("dialog", { name: "Carrinho" });
   await expect(cart).toBeVisible();
-  const couponInput = cart.getByLabel("Cupom de desconto");
-  const couponCode = (await couponInput.getAttribute("placeholder"))?.replace("Ex.: ", "") ?? "JI10";
-  await couponInput.fill(couponCode);
-  await cart.getByRole("button", { name: "Aplicar" }).click();
-  await expect(cart.getByText(`Cupom ${couponCode} aplicado.`)).toBeVisible();
   await cart.getByRole("link", { name: "Ir para o checkout" }).click();
 
   await page.getByLabel("Nome completo").fill("Cliente Demonstracao");
   await page.getByRole("textbox", { name: "WhatsApp", exact: true }).fill("(31) 99999-9999");
   await page.getByLabel("E-mail").fill("cliente@exemplo.com");
   await page.getByLabel("CEP").fill("35160-000");
-  await page.getByLabel("Cidade").fill("Ipatinga");
-  await page.getByLabel("Estado").selectOption("MG");
-  await page.getByLabel("Endereço").fill("Rua Exemplo");
+  await expect(page.getByLabel("Logradouro")).toHaveValue("Rua Exemplo");
+  await expect(page.getByLabel("Cidade")).toHaveValue("Ipatinga");
+  await expect(page.getByLabel("Estado")).toHaveValue("MG");
+  await expect(page.getByLabel("Número")).toHaveValue("");
+  await expect(page.getByLabel("Complemento")).toHaveValue("");
+  await expect(page.getByText("Dados do CEP preenchidos.")).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Cartão 2x sem juros/ })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Dinheiro Pagamento combinado/ })).toBeVisible();
+  await expect(page.getByText("Boleto", { exact: true })).toHaveCount(0);
   await page.getByLabel("Número").fill("100");
-  await page.getByRole("checkbox").check();
+  await page.getByRole("checkbox", { name: "Declaração: Declaro que li e concordo com os termos acima." }).check();
+  await page.getByRole("checkbox", { name: "Autorizo o envio dos dados deste pedido para o atendimento da loja pelo WhatsApp." }).check();
   await page.route("https://wa.me/**", (route) => route.abort());
   const whatsappRequest = page.waitForRequest((request) => request.url().startsWith("https://wa.me/"));
-  await page.getByRole("button", { name: "Enviar pedido pelo WhatsApp" }).click();
+  await page.getByRole("button", { name: "Finalizar pedido no WhatsApp" }).click();
   const request = await whatsappRequest;
+  expect(new URL(request.url()).pathname).toBe(officialWhatsappPath);
   const message = new URL(request.url()).searchParams.get("text") ?? "";
   expect(message).toContain("Cliente Demonstracao");
   expect(message).toContain("Organizador semanal premium");
@@ -92,4 +102,16 @@ test("conclui carrinho, cupom e envia o pedido para o WhatsApp", async ({ page }
   expect(message).toContain("Forma de pagamento");
   expect(message).toContain("Cupom utilizado");
   expect(message).not.toContain("\\n");
+});
+
+test("exibe como comprar e o WhatsApp oficial no rodapé", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator(".desktop-nav").getByRole("link", { name: "Como comprar" })).toHaveAttribute("href", "/#duvidas");
+  await expect(page.locator("#duvidas").getByRole("heading")).toBeVisible();
+  await expect(page.locator("#duvidas").getByText("Como faço uma compra?")).toBeVisible();
+  const footer = page.locator(".store-footer");
+  const footerWhatsappHref = await footer.getByRole("link", { name: "Comprar pelo WhatsApp" }).getAttribute("href");
+  const floatingWhatsappHref = await page.locator(".whatsapp-float").getAttribute("href");
+  expect(footerWhatsappHref).toMatch(/^https:\/\/wa\.me\/\d+/);
+  expect(new URL(footerWhatsappHref!).pathname).toBe(new URL(floatingWhatsappHref!).pathname);
 });

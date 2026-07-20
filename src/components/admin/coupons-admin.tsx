@@ -23,6 +23,8 @@ const emptyCoupon = (): Coupon => ({
   perCustomerLimit: 1,
   firstOrderOnly: false,
   usageCount: 0,
+  applicableCategoryIds: [],
+  applicableProductIds: [],
 });
 
 export function CouponsAdmin() {
@@ -49,7 +51,7 @@ export function CouponsAdmin() {
 }
 
 function CouponEditor({ coupon, onClose }: { coupon: Coupon | null; onClose: () => void }) {
-  const { saveCoupon } = useAdminData();
+  const { saveCoupon, data } = useAdminData();
   const [form, setForm] = useState<Coupon>(coupon ?? emptyCoupon());
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -61,6 +63,11 @@ function CouponEditor({ coupon, onClose }: { coupon: Coupon | null; onClose: () 
     <label>Tipo<select value={form.type} onChange={(event) => field("type", event.target.value as Coupon["type"])}><option value="percent">Percentual</option><option value="fixed">Valor fixo</option></select></label>
     <label>Valor<input type="number" min="0" step="0.01" value={form.value} onChange={(event) => field("value", Number(event.target.value))} /></label>
     <label>Pedido mínimo<input type="number" min="0" step="0.01" value={form.minimum} onChange={(event) => field("minimum", Number(event.target.value))} /></label>
+    
+    <div className="admin-form-section full"><TicketCheck /><div><strong>Restrições de produtos</strong><span>Limitar desconto a categorias ou produtos específicos.</span></div></div>
+    <label>Categorias aplicáveis<select multiple size={4} value={form.applicableCategoryIds} onChange={(event) => field("applicableCategoryIds", Array.from(event.target.selectedOptions, option => option.value).filter(Boolean))}><option value="" disabled>Todas as categorias (se não selecionar nada)</option>{data.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select><small>Deixe vazio para aplicar a toda a loja. Ctrl/Cmd+Clique para selecionar vários.</small></label>
+    <label>Produtos aplicáveis<select multiple size={6} value={form.applicableProductIds} onChange={(event) => field("applicableProductIds", Array.from(event.target.selectedOptions, option => option.value).filter(Boolean))}><option value="" disabled>Todos os produtos (se não selecionar nada)</option>{data.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select><small>Deixe vazio para aplicar a toda a loja. Ctrl/Cmd+Clique para selecionar vários.</small></label>
+
     <div className="admin-form-section full"><Clock3 /><div><strong>Período e limites</strong><span>Controle a campanha e evite utilizações repetidas.</span></div></div>
     <label>Início<input type="date" value={form.startsAt} onChange={(event) => field("startsAt", event.target.value)} /></label>
     <label>Validade<input type="date" value={form.expiresAt} onChange={(event) => field("expiresAt", event.target.value)} /></label>

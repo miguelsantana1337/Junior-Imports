@@ -1,0 +1,656 @@
+{
+  "applied_at": "2026-07-19T19:45:46.790Z",
+  "tenant_id": "00000000-0000-4000-8000-000000000100",
+  "products_updated": 42,
+  "unique_images_uploaded": 44,
+  "unmatched_images": 6,
+  "products": [
+    {
+      "id": "tg15",
+      "sku": "JI-001",
+      "name": "TG 15mg (4 ampolas) – Indufar",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0020.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0020.jpg"
+      ]
+    },
+    {
+      "id": "lipoland15",
+      "sku": "JI-002",
+      "name": "Lipoland 15mg (4 ampolas) – Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0015.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0015.jpg"
+      ]
+    },
+    {
+      "id": "lipoless15",
+      "sku": "JI-003",
+      "name": "Lipoless MD 15mg (Ampola única 60 mg) – Laboratório Éticos",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0021.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0021.jpg"
+      ]
+    },
+    {
+      "id": "retagen",
+      "sku": "JI-006",
+      "name": "Retagen 40mg (Retatrutida diluída) – Oxygen ",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0045.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0045.jpg",
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0087.jpg"
+      ]
+    },
+    {
+      "id": "peplab-retatrutide",
+      "sku": "JI-008",
+      "name": "Retatrutide 50mg Liofilizada – PepLabs",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0069.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0069.jpg"
+      ]
+    },
+    {
+      "id": "xl-klow",
+      "sku": "JI-009",
+      "name": "KLOW 80mg – Blend de Peptídeos",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0073.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0073.jpg"
+      ]
+    },
+    {
+      "id": "xl-glow",
+      "sku": "JI-010",
+      "name": "GLOW – Blend de Peptídeos (70mg)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0074.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0074.jpg"
+      ]
+    },
+    {
+      "id": "ghk-cu",
+      "sku": "JI-011",
+      "name": "GHK-Cu 50 mg – Peptídeo de Cobre",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0075.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0075.jpg"
+      ]
+    },
+    {
+      "id": "mots-c",
+      "sku": "JI-012",
+      "name": "MOTS-c – Peptídeo Mitocondrial",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0070.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0070.jpg"
+      ]
+    },
+    {
+      "id": "pt141",
+      "sku": "JI-013",
+      "name": "PT-141 (Bremelanotida)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0071.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0071.jpg",
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0072.jpg"
+      ]
+    },
+    {
+      "id": "dysport500",
+      "sku": "JI-014",
+      "name": "Dysport® 500 UI – Toxina Botulínica Tipo A",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0030.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0030.jpg"
+      ]
+    },
+    {
+      "id": "israderm",
+      "sku": "JI-015",
+      "name": "Israderm® Toxina Botulínica Tipo A 100 UI",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0068.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0068.jpg"
+      ]
+    },
+    {
+      "id": "49982ffd-45c2-49f9-a9e2-5aee0a71154c",
+      "sku": "JI-017",
+      "name": "Tirzedral 15mg (1 ampola) – Laboratório Catedral",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0083.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0083.jpg"
+      ]
+    },
+    {
+      "id": "25ef2370-51d5-4dfc-abbf-3e147766d206",
+      "sku": "JI-018",
+      "name": "Tirzepatida Thera 15mg (1 ampola liofilizada) – Thera Genetics",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0085.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0085.jpg"
+      ]
+    },
+    {
+      "id": "dee2ffee-96c9-4f18-ab1c-f4efd9158486",
+      "sku": "JI-020",
+      "name": "Boldenona Landergold (Undecilenato de Boldenona 250 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0056.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0056.jpg"
+      ]
+    },
+    {
+      "id": "b4c0b30c-397c-4d24-b180-d239c4e20c18",
+      "sku": "JI-021",
+      "name": "Durateston Landergold (Blend de Testosteronas)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0055.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0055.jpg"
+      ]
+    },
+    {
+      "id": "763e9c46-b01f-40ff-9091-2988e6ed9d8c",
+      "sku": "JI-022",
+      "name": "Enantato de Testosterona Landergold (250 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0054.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0054.jpg"
+      ]
+    },
+    {
+      "id": "c9ea6646-4f3c-49dc-8d0a-0b5cedee2d3c",
+      "sku": "JI-023",
+      "name": "Trembolona Enantato Landergold (200 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0057.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0057.jpg"
+      ]
+    },
+    {
+      "id": "fca4ce14-ddaa-4e86-9b60-028973fb47bc",
+      "sku": "JI-024",
+      "name": "GHK-Cu 50mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0037.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0037.jpg"
+      ]
+    },
+    {
+      "id": "2ddc0baf-f4e4-4be4-9e95-25b0d4f17b8b",
+      "sku": "JI-025",
+      "name": "GHK-Cu 100mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0028.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0028.jpg"
+      ]
+    },
+    {
+      "id": "c3275b8a-c113-4f47-ac78-b33f32bd879a",
+      "sku": "JI-026",
+      "name": "CBL-514 20mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0029.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0029.jpg"
+      ]
+    },
+    {
+      "id": "19a73550-cbf1-46b2-bbe7-e7235dcbc47f",
+      "sku": "JI-027",
+      "name": "Tirzedral MD 15mg (Ampola única 60 mg) – Laboratório Catedral",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0023.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0023.jpg"
+      ]
+    },
+    {
+      "id": "263319a2-e426-422a-a7ba-bf0ad7526524",
+      "sku": "JI-028",
+      "name": "Veltrane Pure 40mg (Liofilizado)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0035.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0035.jpg"
+      ]
+    },
+    {
+      "id": "4e1c82b4-bf8e-4000-b991-b2c5c376ca55",
+      "sku": "JI-029",
+      "name": "Veltrane Diamond 120mg – Retatrutida",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0027.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0027.jpg"
+      ]
+    },
+    {
+      "id": "84ecdc71-46a9-4a4b-9628-b23bb79e2d77",
+      "sku": "JI-030",
+      "name": "Veltrane Gold 90mg – Retatrutida",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0026.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0026.jpg"
+      ]
+    },
+    {
+      "id": "a4aecdf9-96d3-4135-afa3-04400ee64119",
+      "sku": "JI-031",
+      "name": "PT-141 10mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0036.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0036.jpg"
+      ]
+    },
+    {
+      "id": "5e66d650-ee97-49f6-8048-bfc4ae194f18",
+      "sku": "JI-032",
+      "name": "Lipoland MD (Ampola única 60mg) – Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0018.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0018.jpg"
+      ]
+    },
+    {
+      "id": "d648092b-7474-4529-abff-3f3525622765",
+      "sku": "JI-036",
+      "name": "Retatrutide Synedica 40mg – Caneta Injetora",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0041.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0041.jpg"
+      ]
+    },
+    {
+      "id": "a6048906-71f7-45e7-b180-6cba6f9499d2",
+      "sku": "JI-043",
+      "name": "GHK-Cu 2000mcg (60 cápsulas) – Dragon Elite",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0064.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0064.jpg"
+      ]
+    },
+    {
+      "id": "cb3e9f23-ab20-4fec-8f4a-3c1eefc818ac",
+      "sku": "JI-049",
+      "name": "Oxandrolona 5mg (100 comprimidos) – LanderGold",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0049.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0049.jpg"
+      ]
+    },
+    {
+      "id": "d69576af-d88e-470f-bb22-d4a9f6d0df50",
+      "sku": "JI-051",
+      "name": "Hemogenin Landergold 50mg (20 comprimidos)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0048.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0048.jpg"
+      ]
+    },
+    {
+      "id": "8af5bb54-7fe8-45cb-a85b-f83e0bbb9eb8",
+      "sku": "JI-052",
+      "name": "Clembuterol Landergold 40mcg",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0050.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0050.jpg"
+      ]
+    },
+    {
+      "id": "40397524-6e3c-46ed-8425-5a5e5e701f55",
+      "sku": "JI-053",
+      "name": "Clembuterol gel 30 mL",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0067.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0067.jpg"
+      ]
+    },
+    {
+      "id": "478841bd-09d9-477f-9c08-22cfe6894742",
+      "sku": "JI-060",
+      "name": "Sibutramina 15mg",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0086.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0086.jpg"
+      ]
+    },
+    {
+      "id": "64234892-ad2d-449a-a47f-9a0e3b53abb7",
+      "sku": "JI-062",
+      "name": "Tirzec 15mg (1 ampola) – Quimfa",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0047.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0047.jpg",
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0076.jpg"
+      ]
+    },
+    {
+      "id": "eebcf814-8b8a-4dfc-9485-7345b3e4d4dc",
+      "sku": "JI-065",
+      "name": "TG 15mg (1 ampola) – Indufar",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0080.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0080.jpg"
+      ]
+    },
+    {
+      "id": "2423f749-ee82-47c6-a1de-d28c5fefaa6e",
+      "sku": "JI-066",
+      "name": "Lipoland 15mg (1 ampola) – Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0084.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0084.jpg"
+      ]
+    },
+    {
+      "id": "ca6470d1-62f9-4693-806e-4772726d196c",
+      "sku": "JI-068",
+      "name": "Gluconex 15mg (1 ampola) – Laboratórios Lasca",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0079.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0079.jpg"
+      ]
+    },
+    {
+      "id": "582a0969-2c9a-498f-b7bf-6453e784ea18",
+      "sku": "JI-069",
+      "name": "Slimex 15mg (1 ampola) – Slimex Labs",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0081.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0081.jpg"
+      ]
+    },
+    {
+      "id": "56aac786-29ca-46dc-a0ec-15000b1561c9",
+      "sku": "JI-070",
+      "name": "Lipoland 15mg (1 ampola) - Laboratorio Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0084.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0084.jpg"
+      ]
+    },
+    {
+      "id": "38ff0d61-d881-4610-bd18-5f3e99292a97",
+      "sku": "JI-165",
+      "name": "SLU-PP-332 1000mcg (60 cápsulas) – Dragon Elite",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0065.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0065.jpg"
+      ]
+    },
+    {
+      "id": "80fa07fe-f9bf-4663-a967-bb77a767dbeb",
+      "sku": "JI-172",
+      "name": "Lipoless 15mg (1 ampola) – Laboratório Éticos",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0082.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0082.jpg"
+      ]
+    }
+  ],
+  "availability_checks": [
+    {
+      "file": "IMG_0015.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0015.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0018.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0018.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0020.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0020.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0021.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0021.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0023.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0023.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0026.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0026.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0027.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0027.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0028.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0028.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0029.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0029.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0030.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0030.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0035.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0035.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0036.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0036.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0037.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0037.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0041.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0041.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0045.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0045.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0087.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0087.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0047.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0047.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0076.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0076.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0048.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0048.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0049.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0049.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0050.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0050.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0054.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0054.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0055.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0055.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0056.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0056.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0057.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0057.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0064.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0064.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0065.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0065.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0067.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0067.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0068.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0068.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0069.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0069.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0070.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0070.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0071.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0071.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0072.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0072.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0073.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0073.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0074.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0074.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0075.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0075.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0079.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0079.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0080.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0080.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0081.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0081.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0082.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0082.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0083.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0083.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0084.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0084.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0085.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0085.jpg",
+      "status": 200,
+      "ok": true
+    },
+    {
+      "file": "IMG_0086.jpg",
+      "url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/drive-2026-07-19/img_0086.jpg",
+      "status": 200,
+      "ok": true
+    }
+  ]
+}

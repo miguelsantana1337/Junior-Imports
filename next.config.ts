@@ -1,12 +1,16 @@
 import type { NextConfig } from "next";
 
+const scriptSecurityPolicy = process.env.NODE_ENV === "production"
+  ? "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com";
+
 const contentSecurityPolicy = [
   "default-src 'self'",
   "base-uri 'self'",
   "frame-ancestors 'none'",
   "form-action 'self'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com",
+  scriptSecurityPolicy,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",

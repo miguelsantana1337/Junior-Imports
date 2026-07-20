@@ -30,11 +30,117 @@ const regulatoryAliases: Record<string, RegulatoryStatus> = {
   blocked: "blocked",
 };
 
-export const productImportTemplate = `sku;nome;categoria;marca;preco;preco_comparacao;cashback;custo;estoque;estoque_minimo;descricao;ativo;destaque;imagem_url;tipo_produto;status_regulatorio;principio_ativo;registro_anvisa;apresentacao;advertencia;revisado_farmaceutico
-JI-A05;Produto exemplo;Acessórios de cuidado;Junior Imports;49,90;59,90;5,00;25,00;20;5;Descrição completa do produto;nao;nao;;nao_medicamento;pendente;;;;;nao`;
+const productTemplateHeaders = [
+  "sku", "nome", "categoria", "marca", "preco", "preco_comparacao", "cashback", "custo",
+  "estoque", "estoque_minimo", "etiqueta", "cor", "descricao", "avaliacao", "numero_avaliacoes",
+  "ativo", "destaque", "ordem", "imagem_url", "imagens_urls", "tipo_produto", "status_regulatorio",
+  "principio_ativo", "registro_anvisa", "apresentacao", "advertencia", "revisado_farmaceutico",
+];
 
-export const stockImportTemplate = `sku;quantidade
-JI-A04;25`;
+const stockTemplateHeaders = [
+  "sku", "nome", "categoria", "marca", "quantidade", "estoque_minimo", "preco", "preco_comparacao",
+  "cashback", "custo", "etiqueta", "cor", "descricao", "avaliacao", "numero_avaliacoes", "ativo",
+  "destaque", "ordem", "imagem_url", "imagens_urls", "tipo_produto", "status_regulatorio",
+  "principio_ativo", "registro_anvisa", "apresentacao", "advertencia", "revisado_farmaceutico",
+];
+
+const exportedProductTypes: Record<ProductType, string> = {
+  unclassified: "sem_classificacao",
+  non_medicine: "nao_medicamento",
+  otc: "mip",
+  prescription: "prescricao",
+  controlled: "controlado",
+};
+
+const exportedRegulatoryStatuses: Record<RegulatoryStatus, string> = {
+  pending: "pendente",
+  approved: "aprovado",
+  blocked: "bloqueado",
+};
+
+function csvCell(value: string | number) {
+  const text = String(value);
+  return /[;"\r\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
+}
+
+function decimalValue(value: number, digits = 2) {
+  return new Intl.NumberFormat("pt-BR", {
+    useGrouping: false,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+function booleanValue(value: boolean) {
+  return value ? "sim" : "nao";
+}
+
+function productTemplateRow(product: Product, stockTemplate = false) {
+  const common = [
+    product.sku,
+    product.name,
+    product.category,
+    product.brand,
+    stockTemplate ? product.stock : decimalValue(product.price),
+    stockTemplate ? product.minStock : decimalValue(product.compareAt),
+  ];
+
+  if (stockTemplate) {
+    common.push(decimalValue(product.price), decimalValue(product.compareAt));
+  }
+
+  common.push(
+    decimalValue(product.cashback),
+    decimalValue(product.costPrice),
+  );
+
+  if (!stockTemplate) {
+    common.push(product.stock, product.minStock);
+  }
+
+  common.push(
+    product.badge,
+    product.accent,
+    product.description,
+    decimalValue(product.rating, 1),
+    product.reviews,
+    booleanValue(product.active),
+    booleanValue(product.featured),
+    product.order,
+    product.imageUrl,
+    product.imageUrls.join(" | "),
+    exportedProductTypes[product.productType],
+    exportedRegulatoryStatuses[product.regulatoryStatus],
+    product.activeIngredient,
+    product.anvisaRegistration,
+    product.presentation,
+    product.regulatoryWarning,
+    booleanValue(product.pharmacistReviewed),
+  );
+
+  return common;
+}
+
+function serializeTemplate(headers: string[], rows: Array<Array<string | number>>) {
+  return [headers, ...rows].map((row) => row.map(csvCell).join(";")).join("\n");
+}
+
+export function buildProductImportTemplate(products: Product[]) {
+  const rows = products.length
+    ? products.map((product) => productTemplateRow(product))
+    : [["JI-A05", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", "49,90", "59,90", "5,00", "25,00", 20, 5, "", "#1677ff", "Descrição completa do produto", "5,0", 0, "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
+  return serializeTemplate(productTemplateHeaders, rows);
+}
+
+export function buildStockImportTemplate(products: Product[]) {
+  const rows = products.length
+    ? products.map((product) => productTemplateRow(product, true))
+    : [["JI-A04", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", 25, 5, "49,90", "59,90", "5,00", "25,00", "", "#1677ff", "Descrição completa do produto", "5,0", 0, "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
+  return serializeTemplate(stockTemplateHeaders, rows);
+}
+
+export const productImportTemplate = buildProductImportTemplate([]);
+export const stockImportTemplate = buildStockImportTemplate([]);
 
 function normalizeHeader(value: string) {
   return slugify(value).replaceAll("-", "_");
@@ -114,7 +220,10 @@ export function parseProductImport(text: string, existing: Product[], categories
     if (!productType) { errors.push({ row, message: "Tipo de produto inválido." }); return; }
     if (!regulatoryStatus) { errors.push({ row, message: "Status regulatório inválido." }); return; }
     const name = record.nome?.trim() || current?.name || "";
-    const imageUrl = record.imagem_url?.trim() || current?.imageUrl || "";
+    const importedImages = (record.imagens_urls ?? "").split("|").map((item) => item.trim()).filter(Boolean);
+    const imageUrl = record.imagem_url?.trim() || current?.imageUrl || importedImages[0] || "";
+    const imageUrls = importedImages.length ? importedImages : current?.imageUrls ?? [];
+    const gallery = imageUrl && !imageUrls.includes(imageUrl) ? [imageUrl, ...imageUrls] : imageUrls;
     const product: Product = {
       id: current?.id ?? `import-${slugify(sku)}`,
       slug: current?.slug ?? createUniqueProductSlug(name || sku, [...existing, ...products]),
@@ -128,17 +237,17 @@ export function parseProductImport(text: string, existing: Product[], categories
       costPrice,
       stock,
       minStock,
-      badge: current?.badge ?? "",
-      accent: current?.accent ?? "#1677ff",
+      badge: record.etiqueta?.trim() || record.badge?.trim() || current?.badge || "",
+      accent: record.cor?.trim() || record.accent?.trim() || current?.accent || "#1677ff",
       description: record.descricao?.trim() || current?.description || "Produto importado por planilha para o catálogo.",
       sku,
-      rating: current?.rating ?? 0,
-      reviews: current?.reviews ?? 0,
+      rating: record.avaliacao ? numberValue(record.avaliacao) : current?.rating ?? 0,
+      reviews: record.numero_avaliacoes ? numberValue(record.numero_avaliacoes) : current?.reviews ?? 0,
       featured: boolValue(record.destaque ?? "", current?.featured ?? false),
       active: boolValue(record.ativo ?? "", current?.active ?? false),
-      order: current?.order ?? existing.length + products.length + 1,
+      order: record.ordem ? numberValue(record.ordem) : current?.order ?? existing.length + products.length + 1,
       imageUrl,
-      imageUrls: imageUrl ? [imageUrl, ...(current?.imageUrls ?? []).filter((item) => item !== imageUrl)] : current?.imageUrls ?? [],
+      imageUrls: gallery,
       productType: record.tipo_produto ? productType : current?.productType ?? productType,
       regulatoryStatus: record.status_regulatorio ? regulatoryStatus : current?.regulatoryStatus ?? regulatoryStatus,
       activeIngredient: record.principio_ativo?.trim() || current?.activeIngredient || "",

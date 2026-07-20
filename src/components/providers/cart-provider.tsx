@@ -142,8 +142,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const calculate = useCallback(
     (payment?: PaymentMethod) =>
-      calculateCart(lines, data.products, data.settings, coupon, payment),
-    [lines, data.products, data.settings, coupon],
+      calculateCart(lines, data.products, data.settings, coupon, payment, data.cashbackCampaigns),
+    [lines, data.products, data.settings, coupon, data.cashbackCampaigns],
   );
 
   const applyCoupon = useCallback(

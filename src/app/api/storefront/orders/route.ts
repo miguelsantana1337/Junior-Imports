@@ -20,7 +20,7 @@ const requestSchema = z.object({
     productId: z.string().min(1).max(160),
     quantity: z.coerce.number().int().min(1).max(100),
   })).min(1).max(50),
-  payment: z.enum(["Pix", "Cartao", "Boleto"]),
+  payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
   termsAccepted: z.literal(true),
   couponCode: z.string().trim().max(30),
   idempotencyKey: z.string().uuid(),

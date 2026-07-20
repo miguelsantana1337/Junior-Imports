@@ -11,8 +11,8 @@ const focusableSelector = [
   "[tabindex]:not([tabindex='-1'])",
 ].join(",");
 
-export function useAdminDialog(onClose: () => void) {
-  const panelRef = useRef<HTMLDivElement>(null);
+export function useAdminDialog<T extends HTMLElement = HTMLDivElement>(onClose: () => void, active = true) {
+  const panelRef = useRef<T>(null);
   const closeRef = useRef(onClose);
 
   useEffect(() => {
@@ -20,11 +20,14 @@ export function useAdminDialog(onClose: () => void) {
   }, [onClose]);
 
   useEffect(() => {
+    if (!active) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const panel = panelRef.current;
-    const firstField = panel?.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled])");
+    const firstField = panel?.querySelector<HTMLElement>("[autofocus]")
+      ?? panel?.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")
+      ?? panel?.querySelector<HTMLElement>(focusableSelector);
     firstField?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -53,7 +56,7 @@ export function useAdminDialog(onClose: () => void) {
       document.body.style.overflow = previousOverflow;
       previousFocus?.focus();
     };
-  }, []);
+  }, [active]);
 
   return panelRef;
 }

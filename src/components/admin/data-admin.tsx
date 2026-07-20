@@ -9,6 +9,7 @@ import { formatDateTime } from "@/lib/format";
 import { auditChanges } from "@/lib/audit-log";
 import type { StoreData } from "@/types/store";
 import { AdminHealthCenter } from "./admin-health-center";
+import { BackupAdminAction } from "./backup-admin-action";
 
 function isStoreDataBackup(value: unknown): value is StoreData {
   if (!value || typeof value !== "object") return false;
@@ -68,9 +69,10 @@ export function DataAdmin() {
           ? "No modo local, os dados ficam neste navegador. Exporte um backup antes de limpar o armazenamento."
           : "O Supabase é a fonte principal. A importação e restauração local ficam desativadas para proteger dados remotos."}
       </div>
-      <AdminPanel title="Backup e manutenção" description="Exporte, importe ou restaure o projeto demonstrativo.">
+      <AdminPanel title="Backup e manutenção" description="Proteja a base remota e mantenha exportações auxiliares do painel.">
         <div className="data-actions">
-          <article><Download /><h3>Exportar dados</h3><p>Baixe produtos, páginas, containers, banners, automações, configurações e pedidos em JSON.</p><button className="admin-button primary" onClick={exportData}>Exportar JSON</button></article>
+          <BackupAdminAction demoMode={demoMode} currentUser={currentUser} />
+          <article><Download /><h3>Exportar resumo JSON</h3><p>Baixe uma cópia auxiliar dos dados carregados no painel. Não substitui o backup completo.</p><button className="admin-button" onClick={exportData}>Exportar JSON</button></article>
           <article><Upload /><h3>Importar dados</h3><p>Restaure um arquivo exportado anteriormente no modo local.</p><button className="admin-button" disabled={!demoMode} onClick={() => fileRef.current?.click()}>Selecionar arquivo</button><input ref={fileRef} type="file" accept="application/json" hidden onChange={(event) => { const file = event.target.files?.[0]; if (file) importBackup(file); event.target.value = ""; }} /></article>
           <article><Trash2 /><h3>Limpar pedidos</h3><p>Apaga somente os pedidos demonstrativos registrados.</p><button className="admin-button danger" onClick={async () => { const accepted = await confirm({ title: "Limpar pedidos?", description: "Todos os pedidos e registros de mensagens demonstrativos serão removidos.", confirmLabel: "Limpar pedidos", danger: true }); if (accepted) await clearOrders(); }}>Limpar pedidos</button></article>
           <article><RotateCcw /><h3>Restaurar dados</h3><p>Volta o modo local ao estado inicial desta migração.</p><button className="admin-button danger" disabled={!demoMode} onClick={async () => { const accepted = await confirm({ title: "Restaurar dados iniciais?", description: "Todas as personalizações locais serão substituídas pela base original.", confirmLabel: "Restaurar padrão", danger: true }); if (accepted) { resetData(); setMessage("Dados restaurados."); } }}>Restaurar padrão</button></article>

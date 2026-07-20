@@ -25,3 +25,11 @@ export function whatsappUrl(phone: string, message = "") {
   const digits = phone.replace(/\D/g, "");
   return `https://wa.me/${digits}${message ? `?text=${encodeURIComponent(message)}` : ""}`;
 }
+
+export function formatWhatsappDisplay(phone: string) {
+  const digits = phone.replace(/\D/g, "");
+  const national = digits.startsWith("55") ? digits.slice(2) : digits;
+  if (national.length === 11) return `(${national.slice(0, 2)}) ${national.slice(2, 7)}-${national.slice(7)}`;
+  if (national.length === 10) return `(${national.slice(0, 2)}) ${national.slice(2, 6)}-${national.slice(6)}`;
+  return phone.trim();
+}

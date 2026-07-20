@@ -30,7 +30,12 @@ export function AdminHealthCenter() {
   useEffect(() => {
     void refresh();
     const interval = window.setInterval(() => void refresh(), 60_000);
-    return () => window.clearInterval(interval);
+    const backupComplete = () => void refresh();
+    window.addEventListener("admin:backup-complete", backupComplete);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("admin:backup-complete", backupComplete);
+    };
   }, [refresh]);
 
   return (

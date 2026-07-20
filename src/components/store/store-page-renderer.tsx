@@ -6,6 +6,7 @@ import { useStore } from "@/components/providers/store-provider";
 import type { HomeSection, PageBlock } from "@/types/store";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { formatMoney } from "@/lib/format";
+import { ensurePurchaseFaqBlock, resolvePurchaseFaqs } from "@/lib/storefront-commerce";
 import { CatalogSection } from "./catalog-section";
 import { HeroCarousel } from "./hero-carousel";
 import { ProductCard } from "./product-card";
@@ -17,7 +18,8 @@ const passthroughLoader = ({ src }: ImageLoaderProps) => src;
 export function StorePageRenderer({ pageId }: { pageId: string }) {
   const { data } = useStore();
   const page = data.pages.find((item) => item.id === pageId);
-  const blocks = data.pageBlocks.filter((block) => block.pageId === pageId && block.active).sort((a, b) => a.order - b.order);
+  const sourceBlocks = data.pageBlocks.filter((block) => block.pageId === pageId && block.active).sort((a, b) => a.order - b.order);
+  const blocks = ensurePurchaseFaqBlock(sourceBlocks, Boolean(page?.isHome));
 
   if (!page || !page.active) return null;
   if (!blocks.length) return <section className="page-state container"><span className="section-kicker">{page.name}</span><h1>{page.title}</h1><p>{page.description}</p></section>;
@@ -67,7 +69,7 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
   }
 
   if (block.kind === "faq") {
-    return <BlockShell block={block} id="duvidas"><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow}</span><h2>{section.title}</h2></div><div className="faq-list">{[...data.faqs].sort((a, b) => a.order - b.order).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
+    return <BlockShell block={block} id="duvidas"><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow || "PERGUNTAS FREQUENTES"}</span><h2>{section.title || "Como comprar na Junior Imports."}</h2><p className="faq-intro">Veja como escolher os produtos, finalizar o pedido e continuar o atendimento pelo WhatsApp.</p></div><div className="faq-list">{resolvePurchaseFaqs(data.faqs).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
   }
 
   if (block.kind === "spacer") return <div className={`page-spacer padding-${block.padding}`} aria-hidden="true" />;

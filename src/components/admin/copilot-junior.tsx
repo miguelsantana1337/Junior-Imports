@@ -72,18 +72,18 @@ export function CopilotJunior() {
       {open ? <PanelRightClose /> : <Sparkles />}<span><strong>Copiloto Junior</strong><small>Somente leitura</small></span><kbd>⌘ J</kbd>
     </button>
     {open && <button className="copilot-backdrop" onClick={() => setOpen(false)} aria-label="Fechar Copiloto" />}
-    <aside className={`copilot-panel ${open ? "open" : ""}`} aria-hidden={!open} aria-label="Copiloto Junior">
+    <aside className={`copilot-panel ${open ? "open" : ""}`} aria-hidden={!open} inert={!open} role="dialog" aria-modal="true" aria-label="Copiloto Junior">
       <header><div className="copilot-avatar"><Bot /><i /></div><div><span><Sparkles /> COPILOTO JUNIOR</span><strong>Como posso ajudar?</strong><small><ShieldCheck /> Modo local seguro · somente leitura</small></div><button onClick={() => setOpen(false)} aria-label="Fechar"><X /></button></header>
 
       <div className="copilot-mode-banner"><LockKeyhole /><div><strong>Seus dados não saem do painel</strong><p>A IA generativa externa aguarda uma chave segura. Enquanto isso, consultas e orientações usam regras locais auditáveis.</p></div></div>
 
-      <div className="copilot-conversation">
+      <div className="copilot-conversation" aria-live="polite" aria-relevant="additions text">
         {!messages.length && <section className="copilot-welcome"><span><Zap /></span><h3>Pronto para encontrar respostas no seu painel.</h3><p>Consulte operação e aprenda a usar o software sem risco de alterar registros.</p><div>{suggestions.map((item) => <button key={item} onClick={() => void ask(item)}>{item}<ArrowUpRight /></button>)}</div></section>}
         {messages.map((message) => message.role === "user" ? <article className="copilot-message user" key={message.id}><p>{message.content}</p></article> : <article className="copilot-message assistant" key={message.id}><div className="copilot-mini-avatar"><Bot /></div><div><strong>{message.answer?.title || "Copiloto Junior"}</strong><p>{message.content}</p>{message.answer?.cards && message.answer.cards.length > 0 && <div className="copilot-cards">{message.answer.cards.map((card, index) => <Link className={card.tone || "default"} href={card.href} key={`${card.href}-${index}`} onClick={() => setOpen(false)}><span><strong>{card.title}</strong><small>{card.detail}</small></span><ArrowUpRight /></Link>)}</div>}{message.answer?.sources && <div className="copilot-source-wrap"><button onClick={() => setShowSources((current) => current === message.id ? null : message.id)}><Database /> Fontes usadas <ChevronDown /></button>{showSources === message.id && <ul>{message.answer.sources.map((source) => <li key={source}>{source}</li>)}<li>Nenhum dado enviado a serviços externos.</li></ul>}</div>}</div></article>)}
         <div ref={endRef} />
       </div>
 
-      <footer><form onSubmit={(event) => { event.preventDefault(); void ask(question); }}><textarea value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void ask(question); } }} placeholder="Pergunte sobre estoque, pedidos, cashback ou esta tela…" rows={2} maxLength={500} /><button disabled={!question.trim()} aria-label="Enviar pergunta"><Send /></button></form><div><span><LockKeyhole /> Não executa alterações</span>{messages.length > 0 && <button onClick={() => setMessages([])}><Trash2 /> Limpar sessão</button>}</div></footer>
+      <footer><form onSubmit={(event) => { event.preventDefault(); void ask(question); }}><textarea aria-label="Pergunta para o Copiloto Junior" value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); void ask(question); } }} placeholder="Pergunte sobre estoque, pedidos, cashback ou esta tela…" rows={2} maxLength={500} /><button disabled={!question.trim()} aria-label="Enviar pergunta"><Send /></button></form><div><span><LockKeyhole /> Não executa alterações</span>{messages.length > 0 && <button onClick={() => setMessages([])}><Trash2 /> Limpar sessão</button>}</div></footer>
     </aside>
   </>;
 }

@@ -26,6 +26,7 @@ import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { useAdminData } from "./admin-data-provider";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { buildCustomerInsights, customerRecurrenceRate } from "@/lib/crm";
+import { confirmedOrderRevenue } from "@/lib/order-revenue";
 
 function getDayKey(date: Date) {
   const year = date.getFullYear();
@@ -76,9 +77,7 @@ export function DashboardAdmin() {
   const sevenDaysAgo = new Date(now);
   sevenDaysAgo.setDate(now.getDate() - 6);
   sevenDaysAgo.setHours(0, 0, 0, 0);
-  const weeklyRevenue = data.orders
-    .filter((order) => new Date(order.createdAt) >= sevenDaysAgo)
-    .reduce((sum, order) => sum + order.total, 0);
+  const weeklyRevenue = confirmedOrderRevenue(data.orders, sevenDaysAgo);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(now);
@@ -92,7 +91,7 @@ export function DashboardAdmin() {
     };
   });
   const maxOrders = Math.max(...days.map((day) => day.value), 1);
-  const completedSteps = [activeProducts.length > 0, activeSections.length > 0, false, data.orders.length > 0].filter(Boolean).length;
+  const completedSteps = [activeProducts.length > 0, activeSections.length > 0, Boolean(data.settings.whatsapp), data.orders.length > 0].filter(Boolean).length;
 
   const dateLabel = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
@@ -120,7 +119,7 @@ export function DashboardAdmin() {
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
         <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
-        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita simulada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Últimos 7 dias</p></div></article>
+        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Pedidos pagos · últimos 7 dias</p></div></article>
         <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
         <article className="stat-coupons"><span><IconTicket /></span><div><small>Cupons ativos</small><strong>{activeCoupons.length}</strong><p>{activeCoupons.length === 1 ? "1 disponível" : `${activeCoupons.length} disponíveis`}</p></div></article>
         <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
@@ -201,7 +200,7 @@ export function DashboardAdmin() {
             <div className="admin-step-list">
               <span className="done"><IconCircleCheck /> Adicionar produtos ao catálogo</span>
               <span className="done"><IconCircleCheck /> Configurar página inicial</span>
-              <span className="current"><b>3</b> Configurar formas de entrega</span>
+              <span className={data.settings.whatsapp ? "done" : "current"}>{data.settings.whatsapp ? <IconCircleCheck /> : <b>3</b>} Confirmar atendimento no WhatsApp</span>
               <span><b>4</b> Realizar pedido de teste completo</span>
             </div>
           </section>

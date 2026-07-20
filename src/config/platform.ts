@@ -35,8 +35,7 @@ export const platformConfig = {
   orderPrefix: normalizeOrderPrefix(
     process.env.NEXT_PUBLIC_ORDER_PREFIX ?? "JI",
   ),
-  defaultCheckoutMode:
-    process.env.NEXT_PUBLIC_DEFAULT_CHECKOUT_MODE === "demo" ? "demo" : "whatsapp",
+  defaultCheckoutMode: "whatsapp",
   defaultLogoUrl,
   defaultFaviconUrl:
     process.env.NEXT_PUBLIC_DEFAULT_FAVICON_URL?.trim() || "/favicon.svg",

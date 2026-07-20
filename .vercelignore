@@ -1,0 +1,6 @@
+output
+tmp
+test-results
+playwright-report
+coverage
+*.jibackup

@@ -437,8 +437,9 @@ function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
   return {
     storeName: str(row.store_name),
     logoUrl: str(row.logo_url),
+    mobileLogoUrl: str(row.mobile_logo_url),
     faviconUrl: str(row.favicon_url),
-    whatsapp: str(row.whatsapp),
+    whatsapp: str(row.whatsapp) || fallback.whatsapp,
     orderPrefix: str(row.order_prefix) || fallback.orderPrefix,
     email: str(row.email),
     hours: str(row.hours),
@@ -463,7 +464,7 @@ function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
     freeShippingBannerButtonLink: str(row.free_shipping_banner_button_link) || fallback.freeShippingBannerButtonLink,
     pixDiscount: num(row.pix_discount),
     autoBannerSeconds: num(row.auto_banner_seconds),
-    checkoutMode: (str(row.checkout_mode) || fallback.checkoutMode) as StoreSettings["checkoutMode"],
+    checkoutMode: "whatsapp",
     whatsappMessage: str(row.whatsapp_message) || fallback.whatsappMessage,
   };
 }
@@ -590,6 +591,19 @@ function mapAuditLog(row: Row): AuditLog {
   };
 }
 
+function mapProductReview(row: Row): ProductReview {
+  return {
+    id: str(row.id),
+    productId: str(row.product_id),
+    customerName: str(row.customer_name),
+    rating: num(row.rating),
+    comment: str(row.comment),
+    status: (str(row.status) as ProductReview["status"]) || "pending",
+    reviewToken: str(row.review_token),
+    createdAt: str(row.created_at),
+  };
+}
+
 function mapSimpleOrdered<T extends TrustItem | Benefit | Faq>(row: Row) {
   return { ...row, id: str(row.id), order: num(row.order_index) } as unknown as T;
 }
@@ -676,8 +690,15 @@ export async function getTenantBySlug(slug: string): Promise<StoreTenant | null>
 }
 
 type StoreDataOptions = { tenantSlug?: string; storefrontPath?: string };
-type AdminStoreDataOptions = StoreDataOptions & { admin: true; includeAudit?: boolean };
+type AdminStoreDataOptions = StoreDataOptions & {
+  admin: true;
+  includeAudit?: boolean;
+  role?: AdminRole;
+  permissions?: AdminPermission[];
+};
 type PublicStoreDataOptions = StoreDataOptions & { admin?: false };
+
+const emptyQuery = () => Promise.resolve({ data: [], error: null });
 
 export function getStoreData(options: AdminStoreDataOptions): Promise<StoreData>;
 export function getStoreData(options?: PublicStoreDataOptions): Promise<StorefrontData>;
@@ -704,6 +725,8 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
         benefits: fallback.benefits,
         faqs: fallback.faqs,
         orders: [],
+        cashbackCampaigns: fallback.cashbackCampaigns.filter((c) => c.status === "active"),
+        productReviews: [],
       };
     }
     return {
@@ -717,94 +740,105 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
 
   const resolution = await resolveTenant(supabase, fallback, options.tenantSlug, options.storefrontPath);
   const tenantId = resolution.persisted ? resolution.tenant.id : null;
+  const canRead = (permission: AdminPermission) => (
+    !options.admin
+    || options.role === "owner"
+    || options.permissions === undefined
+    || options.permissions.includes(permission)
+  );
+  const canReadAny = (...permissions: AdminPermission[]) => permissions.some(canRead);
 
   if (!options.admin && tenantId) {
     await supabase.rpc("process_public_marketing_schedule", { p_tenant_id: tenantId });
   }
 
   const queries = await Promise.all([
-    // @ts-expect-error Supabase's chained generic exceeds TypeScript's instantiation depth after tenant scoping.
     scopeTenant(supabase.from("store_settings").select("*"), tenantId).eq("id", "default").maybeSingle(),
     scopeTenant(supabase.from("categories").select("*"), tenantId).order("order_index"),
-    options.admin
+    options.admin && canRead("catalog")
       ? scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index")
-      : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
+      : options.admin
+        ? emptyQuery()
+        : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
     scopeTenant(supabase.from("banners").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("home_sections").select("*"), tenantId).order("order_index"),
-    options.admin
+    options.admin && canRead("marketing")
       ? scopeTenant(supabase.from("coupons").select("*"), tenantId).order("code")
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
     scopeTenant(supabase.from("trust_items").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("benefits").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("faqs").select("*"), tenantId).order("order_index"),
-    options.admin
+    options.admin && canRead("orders")
       ? scopeTenant(supabase.from("orders").select("*, order_items(*)"), tenantId).order("created_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
     scopeTenant(supabase.from("store_pages").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("page_blocks").select("*"), tenantId).order("order_index"),
-    options.admin
+    options.admin && canRead("marketing")
       ? scopeTenant(supabase.from("message_automations").select("*"), tenantId).order("order_index")
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canReadAny("marketing", "orders")
       ? scopeTenant(supabase.from("message_logs").select("*"), tenantId).order("created_at", { ascending: false }).limit(100)
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
     options.admin && !tenantId
       ? supabase.from("profiles").select("id, full_name, email, role, permissions, active, created_at").order("created_at")
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
     options.admin && options.includeAudit
       ? scopeTenant(supabase.from("audit_logs").select("*"), tenantId).order("created_at", { ascending: false }).limit(100)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canReadAny("customers", "crm")
       ? scopeTenant(supabase.from("customers").select("*"), tenantId).order("updated_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canReadAny("marketing", "customers", "orders")
       ? scopeTenant(supabase.from("coupon_redemptions").select("*"), tenantId).order("used_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("catalog")
       ? scopeTenant(supabase.from("catalog_imports").select("*"), tenantId).order("created_at", { ascending: false }).limit(50)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canReadAny("customers", "crm")
       ? scopeTenant(supabase.from("customer_tasks").select("*"), tenantId).order("due_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canReadAny("customers", "crm")
       ? scopeTenant(supabase.from("customer_contacts").select("*"), tenantId).order("created_at", { ascending: false }).limit(300)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("finance")
       ? scopeTenant(supabase.from("financial_transactions").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("inventory")
       ? scopeTenant(supabase.from("inventory_movements").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("inventory")
       ? scopeTenant(supabase.from("product_lots").select("*"), tenantId).order("expiry_date", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("purchasing")
       ? scopeTenant(supabase.from("suppliers").select("*"), tenantId).order("name")
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("purchasing")
       ? scopeTenant(supabase.from("purchase_orders").select("*, purchase_order_items(*)"), tenantId).order("created_at", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
     options.admin
-      ? scopeTenant(supabase.from("cashback_campaigns").select("*"), tenantId).order("priority", { ascending: false })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      ? (canReadAny("customers", "crm", "marketing") ? scopeTenant(supabase.from("cashback_campaigns").select("*"), tenantId).order("priority", { ascending: false }) : emptyQuery())
+      : scopeTenant(supabase.from("cashback_campaigns").select("*"), tenantId).eq("status", "active").order("priority", { ascending: false }),
+    options.admin && canReadAny("customers", "crm", "marketing")
       ? scopeTenant(supabase.from("cashback_wallet_entries_view").select("*"), tenantId).order("created_at", { ascending: false }).limit(1000)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("marketing")
       ? scopeTenant(supabase.from("marketing_publications").select("*"), tenantId).order("starts_at", { ascending: true })
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("marketing")
       ? scopeTenant(supabase.from("marketing_publication_versions").select("*"), tenantId).order("created_at", { ascending: false }).limit(500)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("marketing")
       ? scopeTenant(supabase.from("automation_runs").select("*"), tenantId).order("created_at", { ascending: false }).limit(300)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("reports")
       ? scopeTenant(supabase.from("saved_reports").select("*"), tenantId).order("updated_at", { ascending: false }).limit(100)
-      : Promise.resolve({ data: [], error: null }),
-    options.admin
+      : emptyQuery(),
+    options.admin && canRead("reports")
       ? scopeTenant(supabase.from("export_runs").select("*"), tenantId).order("created_at", { ascending: false }).limit(200)
-      : Promise.resolve({ data: [], error: null }),
+      : emptyQuery(),
+    options.admin
+      ? scopeTenant(supabase.from("product_reviews").select("*"), tenantId).order("created_at", { ascending: false })
+      : scopeTenant(supabase.from("product_reviews").select("*"), tenantId).eq("status", "approved").order("created_at", { ascending: false }),
   ]);
 
   if (resolution.persisted) {
@@ -875,6 +909,8 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       orders: [],
       pages: queries[10].error || (!resolution.persisted && !queries[10].data?.length) ? fallback.pages : ((queries[10].data ?? []) as Row[]).map(mapPage),
       pageBlocks: queries[11].error || (!resolution.persisted && !queries[11].data?.length) ? fallback.pageBlocks : ((queries[11].data ?? []) as Row[]).map(mapPageBlock),
+      cashbackCampaigns: !queries[26].error ? ((queries[26].data ?? []) as Row[]).map(mapCashbackCampaign) : fallback.cashbackCampaigns.filter((c) => c.status === "active"),
+      productReviews: !queries[33].error ? ((queries[33].data ?? []) as Row[]).map(mapProductReview) : [],
     };
   }
 
@@ -889,7 +925,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     customers: options.admin && !queries[16].error ? ((queries[16].data ?? []) as Row[]).map(mapCustomer) : [],
     customerTasks: options.admin && !queries[19].error ? ((queries[19].data ?? []) as Row[]).map(mapCustomerTask) : fallback.customerTasks,
     customerContacts: options.admin && !queries[20].error ? ((queries[20].data ?? []) as Row[]).map(mapCustomerContact) : fallback.customerContacts,
-    cashbackCampaigns: options.admin && !queries[26].error ? ((queries[26].data ?? []) as Row[]).map(mapCashbackCampaign) : fallback.cashbackCampaigns,
+    cashbackCampaigns: !queries[26].error ? ((queries[26].data ?? []) as Row[]).map(mapCashbackCampaign) : fallback.cashbackCampaigns,
     cashbackEntries: options.admin && !queries[27].error ? ((queries[27].data ?? []) as Row[]).map(mapCashbackEntry) : fallback.cashbackEntries,
     couponRedemptions,
     catalogImports: options.admin && !queries[18].error ? ((queries[18].data ?? []) as Row[]).map(mapCatalogImport) : [],
@@ -915,6 +951,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     automationRuns: options.admin && !queries[30].error ? ((queries[30].data ?? []) as Row[]).map(mapAutomationRun) : fallback.automationRuns,
     teamMembers: options.admin && !queries[14].error ? ((queries[14].data ?? []) as Row[]).map(mapAdminUser) : [],
     auditLogs: options.includeAudit && !queries[15].error ? ((queries[15].data ?? []) as Row[]).map(mapAuditLog) : [],
+    productReviews: !queries[33].error ? ((queries[33].data ?? []) as Row[]).map(mapProductReview) : [],
   };
 }
 

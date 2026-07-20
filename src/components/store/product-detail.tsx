@@ -12,6 +12,7 @@ import { stockLabel } from "@/lib/commerce";
 import { formatMoney, whatsappUrl } from "@/lib/format";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { normalizeProductImages } from "@/lib/product-images";
+import { getProductImageFramingStyle } from "@/lib/product-image-framing";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { ProductCard } from "./product-card";
 
@@ -50,8 +51,8 @@ export function ProductDetail({ slug }: { slug: string }) {
         <Link className="back-link" href={storeHref("/#catalogo")}><ChevronLeft /> Voltar ao catálogo</Link>
         <div className="product-detail-grid">
           <div className="product-detail-gallery" style={{ "--product-accent": product.accent } as React.CSSProperties}>
-            {gallery.length > 1 && <div className="product-detail-thumbnails" aria-label="Fotos do produto">{gallery.map((image, index) => <button className={image === visibleImage ? "active" : ""} type="button" onClick={() => setSelectedImage(image)} key={image} aria-label={`Ver foto ${index + 1}`} aria-pressed={image === visibleImage}><img src={image} alt="" /></button>)}</div>}
-            <div className="product-detail-visual">{visibleImage ? <img className="product-detail-main-image" src={visibleImage} alt={product.name} /> : <ProductArt product={product} large />}</div>
+            {gallery.length > 1 && <div className="product-detail-thumbnails" aria-label="Fotos do produto">{gallery.map((image, index) => { const framingStyle = getProductImageFramingStyle(image); return <button className={image === visibleImage ? "active" : ""} type="button" onClick={() => setSelectedImage(image)} key={image} aria-label={`Ver foto ${index + 1}`} aria-pressed={image === visibleImage}><img className="product-image-framed" style={framingStyle} src={image} alt="" /></button>; })}</div>}
+            <div className="product-detail-visual">{visibleImage ? <img className="product-detail-main-image product-image-framed" style={getProductImageFramingStyle(visibleImage)} src={visibleImage} alt={product.name} /> : <ProductArt product={product} large />}</div>
           </div>
           <div className="product-detail-copy">
             <span className="section-kicker">{product.category} · {product.brand}</span>
@@ -60,15 +61,15 @@ export function ProductDetail({ slug }: { slug: string }) {
             <p className="product-long-description">{product.description}</p>
             <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong><small>{data.settings.pixDiscount}% OFF no Pix</small></div>
             {product.cashback > 0 && <div className="product-detail-cashback"><strong>Ganhe {formatMoney(product.cashback * quantity)} de cashback</strong><span>{formatMoney(product.cashback)} por unidade · liberado após a confirmação do pedido</span></div>}
-            <dl className="product-facts"><div><dt>Marca</dt><dd>{product.brand || data.settings.storeName}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{orderable ? "Disponível" : cartEligible ? "Confirmação no WhatsApp" : product.stock <= 0 ? "Indisponível" : "Aguardando validação"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
+            <dl className="product-facts"><div><dt>Marca</dt><dd>{product.brand || data.settings.storeName}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{cartEligible ? "Disponível para pedido" : product.stock <= 0 ? "Indisponível" : "Fale com a equipe"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
             {cartEligible ? <div className="product-order-stack">
-              {!orderable && <div className="catalog-validation-notice compact"><ShieldCheck /><div><strong>Solicitação sujeita a confirmação</strong><p>Adicione ao carrinho normalmente. A loja confirma disponibilidade, condições e entrega no WhatsApp.</p></div></div>}
+              {!orderable && <div className="catalog-validation-notice compact"><ShieldCheck /><div><strong>Compra com confirmação no WhatsApp</strong><p>Adicione ao carrinho normalmente. A equipe confirma as condições e acompanha o pedido pelo atendimento.</p></div></div>}
               <div className="quantity-buy">
                 <div className="quantity-picker"><button onClick={() => setQuantity((value) => Math.max(1, value - 1))} aria-label="Diminuir quantidade"><Minus /></button><span>{quantity}</span><button onClick={() => setQuantity((value) => Math.min(product.stock, value + 1))} aria-label="Aumentar quantidade"><Plus /></button></div>
                 <button className="button button-primary button-large" disabled={!cartReady} onClick={addToCart}><ShoppingCart /> {cartReady ? "Adicionar ao carrinho" : "Preparando carrinho..."}</button>
               </div></div>
               : <div className="catalog-validation-notice"><div><strong>{product.stock <= 0 ? "Produto esgotado" : "Produto visível para consulta"}</strong><p>{product.stock <= 0 ? "Consulte a loja para saber quando haverá reposição." : "A liberação para pedido depende da validação das informações no painel."}</p></div><a className="button button-primary" href={whatsappUrl(data.settings.whatsapp, `Olá! Gostaria de consultar a disponibilidade de ${product.name}.`)} target="_blank" rel="noreferrer"><MessageCircle /> Consultar no WhatsApp</a></div>}
-            <div className="detail-assurances"><span><ShieldCheck /> {data.settings.checkoutMode === "whatsapp" ? "Pedido enviado direto para a loja" : "Pedido 100% demonstrativo"}</span><span><Truck /> Frete confirmado no atendimento</span></div>
+            <div className="detail-assurances"><span><ShieldCheck /> Pedido registrado direto com a loja</span><span><Truck /> Envio acompanhado no atendimento</span></div>
           </div>
         </div>
       </section>

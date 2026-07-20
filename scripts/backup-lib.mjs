@@ -6,6 +6,8 @@ import { gunzipSync, gzipSync } from "node:zlib";
 
 export const backupFormat = "junior-imports-encrypted-backup";
 export const backupVersion = 1;
+export const browserBackupVersion = 2;
+const browserBackupMagic = Buffer.from("JIBACKUP2\n");
 export const tenantTables = [
   "store_settings",
   "categories",
@@ -43,6 +45,12 @@ export const tenantTables = [
   "message_logs",
   "order_stock_reservations",
   "storefront_order_requests",
+  "collaboration_threads",
+  "collaboration_comments",
+  "collaboration_reads",
+  "approval_requests",
+  "admin_notification_states",
+  "copilot_usage",
   "audit_logs",
   "backup_runs",
 ];
@@ -88,6 +96,12 @@ export const restoreOrder = [
   "message_logs",
   "order_stock_reservations",
   "storefront_order_requests",
+  "collaboration_threads",
+  "collaboration_comments",
+  "collaboration_reads",
+  "approval_requests",
+  "admin_notification_states",
+  "copilot_usage",
   "audit_logs",
   "backup_runs",
 ];
@@ -167,7 +181,41 @@ export function encryptBackup(payload, key) {
 }
 
 export function decryptBackupFile(filePath, key) {
-  const envelope = JSON.parse(readFileSync(filePath, "utf8"));
+  const file = readFileSync(filePath);
+  if (file.subarray(0, browserBackupMagic.length).equals(browserBackupMagic)) {
+    const headerLengthOffset = browserBackupMagic.length;
+    if (file.length < headerLengthOffset + 4) throw new Error("Cabeçalho do backup incompleto.");
+    const headerLength = file.readUInt32BE(headerLengthOffset);
+    const headerStart = headerLengthOffset + 4;
+    const ciphertextStart = headerStart + headerLength;
+    if (headerLength < 2 || ciphertextStart >= file.length) throw new Error("Cabeçalho do backup inválido.");
+    const envelope = JSON.parse(file.subarray(headerStart, ciphertextStart).toString("utf8"));
+    if (envelope.format !== backupFormat || envelope.version !== browserBackupVersion) throw new Error("Formato de backup incompatível.");
+    if (!envelope.keyWrap || envelope.keyFingerprint !== keyFingerprint(key)) throw new Error("A chave não corresponde a este backup.");
+
+    const unwrap = createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.keyWrap.iv, "base64"));
+    unwrap.setAuthTag(Buffer.from(envelope.keyWrap.authTag, "base64"));
+    const dataKey = Buffer.concat([unwrap.update(Buffer.from(envelope.keyWrap.ciphertext, "base64")), unwrap.final()]);
+    if (dataKey.length !== 32) throw new Error("A chave interna do backup é inválida.");
+
+    const encrypted = file.subarray(ciphertextStart);
+    if (encrypted.length < 17 || encrypted.length !== envelope.ciphertextLength) throw new Error("Conteúdo criptografado incompleto.");
+    const authTag = encrypted.subarray(encrypted.length - 16);
+    const ciphertext = encrypted.subarray(0, encrypted.length - 16);
+    const decipher = createDecipheriv("aes-256-gcm", dataKey, Buffer.from(envelope.iv, "base64"));
+    decipher.setAuthTag(authTag);
+    const compressed = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    const compressedChecksum = createHash("sha256").update(compressed).digest("hex");
+    if (compressedChecksum !== envelope.compressedChecksum) throw new Error("Checksum comprimido inválido: o arquivo foi alterado ou corrompido.");
+    const plain = gunzipSync(compressed);
+    const checksum = createHash("sha256").update(plain).digest("hex");
+    if (checksum !== envelope.checksum) throw new Error("Checksum inválido: o arquivo foi alterado ou corrompido.");
+    const payload = JSON.parse(plain.toString("utf8"));
+    dataKey.fill(0);
+    return { envelope, payload };
+  }
+
+  const envelope = JSON.parse(file.toString("utf8"));
   if (envelope.format !== backupFormat || envelope.version !== backupVersion) throw new Error("Formato de backup incompatível.");
   if (envelope.keyFingerprint !== keyFingerprint(key)) throw new Error("A chave não corresponde a este backup.");
   const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(envelope.iv, "base64"));

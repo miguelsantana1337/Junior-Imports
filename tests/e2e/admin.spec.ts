@@ -21,6 +21,39 @@ async function openSection(page: Page, name: string) {
   await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name, exact: true }).click();
 }
 
+test("carrega o painel sem falhas críticas de hidratação", async ({ page }) => {
+  const runtimeIssues: string[] = [];
+  page.on("pageerror", (error) => runtimeIssues.push(error.message));
+  page.on("console", (message) => {
+    if (message.type() === "error") runtimeIssues.push(message.text());
+  });
+
+  await login(page);
+  await page.goto("/admin/collaboration");
+  await expect(page.getByRole("heading", { name: "Colaboração e aprovações" })).toBeVisible();
+
+  const criticalIssues = runtimeIssues.filter((issue) =>
+    /hydration|uncaught|typeerror|referenceerror|script tag/i.test(issue),
+  );
+  expect(criticalIssues).toEqual([]);
+});
+
+test("centraliza alertas e preferências de notificações", async ({ page }) => {
+  await login(page);
+  await page.getByRole("button", { name: /Notificações/ }).click();
+
+  const center = page.getByRole("dialog", { name: "Central de notificações" });
+  await expect(center).toBeVisible();
+  await expect(center.getByText("Central de alertas", { exact: true })).toBeVisible();
+  await expect(center.getByRole("button", { name: /Importantes/ })).toBeVisible();
+  await expect(center.getByRole("button", { name: /Todas/ })).toBeVisible();
+
+  await center.getByRole("button", { name: "Configurar notificações" }).click();
+  await expect(center.getByText("Preferências individuais", { exact: true })).toBeVisible();
+  await expect(center.getByRole("checkbox", { name: /Estoque/ })).toBeChecked();
+  await expect(center.getByRole("checkbox", { name: /Segurança/ })).toBeChecked();
+});
+
 test("instala o painel como PWA sem armazenar páginas administrativas", async ({ page, request }) => {
   await login(page);
 
@@ -65,6 +98,17 @@ test("abre o gerenciamento de MFA com troca segura de dispositivo", async ({ pag
   await expect(page.getByText("Confirme e teste o acesso", { exact: true })).toBeVisible();
   await expect(page.getByText("Remova o celular antigo", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Adicionar autenticador" })).toBeDisabled();
+});
+
+test("exibe o backup completo protegido por MFA na central de dados", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/data");
+
+  await expect(page.getByRole("heading", { name: "Backup e manutenção" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Backup completo" })).toBeVisible();
+  await expect(page.getByText("Gera um pacote criptografado com dados e mídias do Supabase")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Criar backup agora" })).toBeDisabled();
+  await expect(page.getByRole("heading", { name: "Exportar resumo JSON" })).toBeVisible();
 });
 
 test("alterna e mantém o modo escuro do painel", async ({ page }) => {

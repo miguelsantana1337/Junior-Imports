@@ -1,0 +1,397 @@
+{
+  "saved_at": "2026-07-19T19:45:33.725Z",
+  "products": [
+    {
+      "id": "tg15",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-001",
+      "name": "TG 15mg (4 ampolas) – Indufar",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0bd894b6-f9a9-4e94-b9c4-628c1bfb2d5d-IMG_3012.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0bd894b6-f9a9-4e94-b9c4-628c1bfb2d5d-IMG_3012.jpg"
+      ]
+    },
+    {
+      "id": "lipoland15",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-002",
+      "name": "Lipoland 15mg (4 ampolas) – Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8b3e1c64-6dac-4ce6-bd5c-d1d05893ddf6-IMG_3015.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8b3e1c64-6dac-4ce6-bd5c-d1d05893ddf6-IMG_3015.jpg"
+      ]
+    },
+    {
+      "id": "lipoless15",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-003",
+      "name": "Lipoless MD 15mg (Ampola única 60 mg) – Laboratório Éticos",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/ae39bd52-bf33-4e4a-a043-f30b60d4d79c-IMG_3017.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/ae39bd52-bf33-4e4a-a043-f30b60d4d79c-IMG_3017.jpg"
+      ]
+    },
+    {
+      "id": "retagen",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-006",
+      "name": "Retagen 40mg (Retatrutida diluída) – Oxygen ",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/04b2680d-aa8f-413f-b3b7-48473873fb1f-IMG_3037.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/04b2680d-aa8f-413f-b3b7-48473873fb1f-IMG_3037.jpg"
+      ]
+    },
+    {
+      "id": "peplab-retatrutide",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-008",
+      "name": "Retatrutide 50mg Liofilizada – PepLabs",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/493a30b8-78c1-4ea0-aa54-536ff63dc593-IMG_3025.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/493a30b8-78c1-4ea0-aa54-536ff63dc593-IMG_3025.jpg"
+      ]
+    },
+    {
+      "id": "xl-klow",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-009",
+      "name": "KLOW 80mg – Blend de Peptídeos",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/c6d3c0f3-6547-4d9c-b094-856bea1e0a09-IMG_3024.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/c6d3c0f3-6547-4d9c-b094-856bea1e0a09-IMG_3024.jpg"
+      ]
+    },
+    {
+      "id": "xl-glow",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-010",
+      "name": "GLOW – Blend de Peptídeos (70mg)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/bff483fb-1553-4f33-8f73-958e9a9cd5d7-IMG_3028.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/bff483fb-1553-4f33-8f73-958e9a9cd5d7-IMG_3028.jpg"
+      ]
+    },
+    {
+      "id": "ghk-cu",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-011",
+      "name": "GHK-Cu 50 mg – Peptídeo de Cobre",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/4cdeae9d-e7de-4fa5-ae0b-c1c02be97bd7-IMG_3027.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/4cdeae9d-e7de-4fa5-ae0b-c1c02be97bd7-IMG_3027.jpg"
+      ]
+    },
+    {
+      "id": "mots-c",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-012",
+      "name": "MOTS-c – Peptídeo Mitocondrial",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/44068ca3-acd6-4e4a-8f9f-3c7bce39b52b-IMG_3026.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/44068ca3-acd6-4e4a-8f9f-3c7bce39b52b-IMG_3026.jpg"
+      ]
+    },
+    {
+      "id": "pt141",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-013",
+      "name": "PT-141 (Bremelanotida)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/530113b3-debd-4adc-8937-fba87701bd51-IMG_3029.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/530113b3-debd-4adc-8937-fba87701bd51-IMG_3029.jpg"
+      ]
+    },
+    {
+      "id": "dysport500",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-014",
+      "name": "Dysport® 500 UI – Toxina Botulínica Tipo A",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0f0e65a8-0fa5-4897-bf7c-329cfaa3a1d6-IMG_3023.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0f0e65a8-0fa5-4897-bf7c-329cfaa3a1d6-IMG_3023.jpg"
+      ]
+    },
+    {
+      "id": "israderm",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-015",
+      "name": "Israderm® Toxina Botulínica Tipo A 100 UI",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/4525d64c-a4f0-4a51-b267-1615c8cfb4ff-IMG_3030.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/4525d64c-a4f0-4a51-b267-1615c8cfb4ff-IMG_3030.jpg"
+      ]
+    },
+    {
+      "id": "49982ffd-45c2-49f9-a9e2-5aee0a71154c",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-017",
+      "name": "Tirzedral 15mg (1 ampola) – Laboratório Catedral",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/1fd7c997-035a-48f0-b097-a627f97bcfd8-IMG_3033.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/1fd7c997-035a-48f0-b097-a627f97bcfd8-IMG_3033.jpg"
+      ]
+    },
+    {
+      "id": "25ef2370-51d5-4dfc-abbf-3e147766d206",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-018",
+      "name": "Tirzepatida Thera 15mg (1 ampola liofilizada) – Thera Genetics",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/2da57a44-3d4d-4dd1-af4a-bd817496d02c-IMG_3034.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/2da57a44-3d4d-4dd1-af4a-bd817496d02c-IMG_3034.jpg"
+      ]
+    },
+    {
+      "id": "dee2ffee-96c9-4f18-ab1c-f4efd9158486",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-020",
+      "name": "Boldenona Landergold (Undecilenato de Boldenona 250 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/5219dbc4-c391-4a18-bc0c-62b85c21a12a-IMG_3059.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/5219dbc4-c391-4a18-bc0c-62b85c21a12a-IMG_3059.jpg"
+      ]
+    },
+    {
+      "id": "b4c0b30c-397c-4d24-b180-d239c4e20c18",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-021",
+      "name": "Durateston Landergold (Blend de Testosteronas)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/a52824e3-4ae8-4b5c-a194-b5e4d60dc246-IMG_3060.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/a52824e3-4ae8-4b5c-a194-b5e4d60dc246-IMG_3060.jpg"
+      ]
+    },
+    {
+      "id": "763e9c46-b01f-40ff-9091-2988e6ed9d8c",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-022",
+      "name": "Enantato de Testosterona Landergold (250 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/304543ea-c04b-44c0-9705-a4dbeda35589-IMG_3061.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/304543ea-c04b-44c0-9705-a4dbeda35589-IMG_3061.jpg"
+      ]
+    },
+    {
+      "id": "c9ea6646-4f3c-49dc-8d0a-0b5cedee2d3c",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-023",
+      "name": "Trembolona Enantato Landergold (200 mg/mL)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/d825c930-3e73-4988-9a7e-9220c3ec6d43-IMG_3062.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/d825c930-3e73-4988-9a7e-9220c3ec6d43-IMG_3062.jpg"
+      ]
+    },
+    {
+      "id": "fca4ce14-ddaa-4e86-9b60-028973fb47bc",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-024",
+      "name": "GHK-Cu 50mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8a25cc6f-72eb-4c9d-932c-955f89146dbc-IMG_4652.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8a25cc6f-72eb-4c9d-932c-955f89146dbc-IMG_4652.jpg"
+      ]
+    },
+    {
+      "id": "2ddc0baf-f4e4-4be4-9e95-25b0d4f17b8b",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-025",
+      "name": "GHK-Cu 100mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/f9a6aae0-55fd-4d8c-98f6-4aabbaeb4748-IMG_4653.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/f9a6aae0-55fd-4d8c-98f6-4aabbaeb4748-IMG_4653.jpg"
+      ]
+    },
+    {
+      "id": "c3275b8a-c113-4f47-ac78-b33f32bd879a",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-026",
+      "name": "CBL-514 20mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8e7625c9-31de-4fb7-84f7-10a182f46a00-IMG_4654.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/8e7625c9-31de-4fb7-84f7-10a182f46a00-IMG_4654.jpg"
+      ]
+    },
+    {
+      "id": "19a73550-cbf1-46b2-bbe7-e7235dcbc47f",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-027",
+      "name": "Tirzedral MD 15mg (Ampola única 60 mg) – Laboratório Catedral",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/dea0afb9-82d2-440f-9bb6-b8ade8e733cd-IMG_4655.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/dea0afb9-82d2-440f-9bb6-b8ade8e733cd-IMG_4655.jpg"
+      ]
+    },
+    {
+      "id": "263319a2-e426-422a-a7ba-bf0ad7526524",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-028",
+      "name": "Veltrane Pure 40mg (Liofilizado)",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/87d52367-9240-46af-9083-b7420fc72c74-IMG_4656.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/87d52367-9240-46af-9083-b7420fc72c74-IMG_4656.jpg"
+      ]
+    },
+    {
+      "id": "4e1c82b4-bf8e-4000-b991-b2c5c376ca55",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-029",
+      "name": "Veltrane Diamond 120mg – Retatrutida",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0cb056f7-5503-4a48-9d83-30b55560b761-IMG_4657.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/0cb056f7-5503-4a48-9d83-30b55560b761-IMG_4657.jpg"
+      ]
+    },
+    {
+      "id": "84ecdc71-46a9-4a4b-9628-b23bb79e2d77",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-030",
+      "name": "Veltrane Gold 90mg – Retatrutida",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/9b9cb3ce-b9b5-416a-83da-77e456956677-IMG_4658.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/9b9cb3ce-b9b5-416a-83da-77e456956677-IMG_4658.jpg"
+      ]
+    },
+    {
+      "id": "a4aecdf9-96d3-4135-afa3-04400ee64119",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-031",
+      "name": "PT-141 10mg – Renew Peptides",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/d9ead5a4-3787-4791-b56f-8869f841998a-IMG_4659.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/d9ead5a4-3787-4791-b56f-8869f841998a-IMG_4659.jpg"
+      ]
+    },
+    {
+      "id": "5e66d650-ee97-49f6-8048-bfc4ae194f18",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-032",
+      "name": "Lipoland MD (Ampola única 60mg) – Landerlan",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/bb91da4a-7e94-42b3-b40b-1fa2d09e5531-IMG_4660.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/bb91da4a-7e94-42b3-b40b-1fa2d09e5531-IMG_4660.jpg"
+      ]
+    },
+    {
+      "id": "d648092b-7474-4529-abff-3f3525622765",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-036",
+      "name": "Retatrutide Synedica 40mg – Caneta Injetora",
+      "image_url": "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/57fc9344-cd3c-496e-9d83-4eb3744cd432-IMG_4666.jpg",
+      "image_urls": [
+        "https://kxvaifkqrlkfrqphfpaf.supabase.co/storage/v1/object/public/product-media/00000000-0000-4000-8000-000000000100/57fc9344-cd3c-496e-9d83-4eb3744cd432-IMG_4666.jpg"
+      ]
+    },
+    {
+      "id": "a6048906-71f7-45e7-b180-6cba6f9499d2",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-043",
+      "name": "GHK-Cu 2000mcg (60 cápsulas) – Dragon Elite",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "cb3e9f23-ab20-4fec-8f4a-3c1eefc818ac",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-049",
+      "name": "Oxandrolona 5mg (100 comprimidos) – LanderGold",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "d69576af-d88e-470f-bb22-d4a9f6d0df50",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-051",
+      "name": "Hemogenin Landergold 50mg (20 comprimidos)",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "8af5bb54-7fe8-45cb-a85b-f83e0bbb9eb8",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-052",
+      "name": "Clembuterol Landergold 40mcg",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "40397524-6e3c-46ed-8425-5a5e5e701f55",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-053",
+      "name": "Clembuterol gel 30 mL",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "478841bd-09d9-477f-9c08-22cfe6894742",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-060",
+      "name": "Sibutramina 15mg",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "64234892-ad2d-449a-a47f-9a0e3b53abb7",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-062",
+      "name": "Tirzec 15mg (1 ampola) – Quimfa",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "eebcf814-8b8a-4dfc-9485-7345b3e4d4dc",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-065",
+      "name": "TG 15mg (1 ampola) – Indufar",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "2423f749-ee82-47c6-a1de-d28c5fefaa6e",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-066",
+      "name": "Lipoland 15mg (1 ampola) – Landerlan",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "ca6470d1-62f9-4693-806e-4772726d196c",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-068",
+      "name": "Gluconex 15mg (1 ampola) – Laboratórios Lasca",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "582a0969-2c9a-498f-b7bf-6453e784ea18",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-069",
+      "name": "Slimex 15mg (1 ampola) – Slimex Labs",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "56aac786-29ca-46dc-a0ec-15000b1561c9",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-070",
+      "name": "Lipoland 15mg (1 ampola) - Laboratorio Landerlan",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "38ff0d61-d881-4610-bd18-5f3e99292a97",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-165",
+      "name": "SLU-PP-332 1000mcg (60 cápsulas) – Dragon Elite",
+      "image_url": "",
+      "image_urls": []
+    },
+    {
+      "id": "80fa07fe-f9bf-4663-a967-bb77a767dbeb",
+      "tenant_id": "00000000-0000-4000-8000-000000000100",
+      "sku": "JI-172",
+      "name": "Lipoless 15mg (1 ampola) – Laboratório Éticos",
+      "image_url": "",
+      "image_urls": []
+    }
+  ]
+}

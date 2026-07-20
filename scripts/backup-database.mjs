@@ -31,17 +31,28 @@ async function fetchAll(table, column, value) {
 
 async function fetchMedia(tenantId) {
   const media = [];
-  for (const bucket of ["product-media", "banner-media", "site-media"]) {
-    const { data: objects, error } = await supabase.storage.from(bucket).list(tenantId, { limit: 1000, sortBy: { column: "name", order: "asc" } });
-    if (error) throw new Error(`${bucket}: ${error.message}`);
-    for (const object of objects ?? []) {
-      if (!object.id) continue;
-      const path = `${tenantId}/${object.name}`;
-      const { data, error: downloadError } = await supabase.storage.from(bucket).download(path);
-      if (downloadError || !data) throw new Error(`${bucket}/${object.name}: ${downloadError?.message ?? "download indisponível"}`);
-      media.push({ bucket, path, contentType: data.type || "application/octet-stream", data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+  async function fetchFolder(bucket, folder) {
+    for (let offset = 0; ; offset += 1000) {
+      const { data: objects, error } = await supabase.storage.from(bucket).list(folder, {
+        limit: 1000,
+        offset,
+        sortBy: { column: "name", order: "asc" },
+      });
+      if (error) throw new Error(`${bucket}/${folder}: ${error.message}`);
+      for (const object of objects ?? []) {
+        const path = `${folder}/${object.name}`;
+        if (!object.id) {
+          await fetchFolder(bucket, path);
+          continue;
+        }
+        const { data, error: downloadError } = await supabase.storage.from(bucket).download(path);
+        if (downloadError || !data) throw new Error(`${bucket}/${path}: ${downloadError?.message ?? "download indisponível"}`);
+        media.push({ bucket, path, contentType: data.type || "application/octet-stream", data: Buffer.from(await data.arrayBuffer()).toString("base64") });
+      }
+      if (!objects || objects.length < 1000) break;
     }
   }
+  for (const bucket of ["product-media", "banner-media", "site-media"]) await fetchFolder(bucket, tenantId);
   return media;
 }
 
@@ -68,7 +79,10 @@ const payload = {
   tenant,
   tables,
   media,
-  limitations: ["Auth passwords and MFA secrets are managed by Supabase Auth and are not included."],
+  limitations: [
+    "Auth passwords and MFA secrets are managed by Supabase Auth and are not included.",
+    "Transient presence and edit-lock leases are intentionally excluded.",
+  ],
 };
 const envelope = encryptBackup(payload, key);
 const filename = `junior-imports-${createdAt.replace(/[:.]/g, "-")}.jibackup`;

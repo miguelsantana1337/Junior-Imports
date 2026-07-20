@@ -1,4 +1,5 @@
 export type AdminTableDensity = "comfortable" | "compact";
+export type AdminNotificationCategory = "inventory" | "orders" | "crm" | "purchasing" | "collaboration" | "cashback" | "marketing" | "security" | "system";
 
 export interface SavedProductView {
   id: string;
@@ -13,6 +14,8 @@ export interface AdminPreferences {
   favoriteHrefs: string[];
   tableDensity: AdminTableDensity;
   productViews: SavedProductView[];
+  mutedNotificationCategories: AdminNotificationCategory[];
+  includeInformativeNotifications: boolean;
 }
 
 const storagePrefix = "junior-imports:admin-preferences:v1";
@@ -21,7 +24,21 @@ export const defaultAdminPreferences: AdminPreferences = {
   favoriteHrefs: [],
   tableDensity: "comfortable",
   productViews: [],
+  mutedNotificationCategories: [],
+  includeInformativeNotifications: false,
 };
+
+export const adminNotificationCategories: AdminNotificationCategory[] = [
+  "inventory",
+  "orders",
+  "crm",
+  "purchasing",
+  "collaboration",
+  "cashback",
+  "marketing",
+  "security",
+  "system",
+];
 
 export function adminPreferencesStorageKey(userId: string) {
   return `${storagePrefix}:${userId || "anonymous"}`;
@@ -54,11 +71,16 @@ export function normalizeAdminPreferences(value: unknown): AdminPreferences {
   const productViews = Array.isArray(candidate.productViews)
     ? candidate.productViews.map(normalizeSavedProductView).filter((view): view is SavedProductView => Boolean(view)).slice(0, 12)
     : [];
+  const mutedNotificationCategories = Array.isArray(candidate.mutedNotificationCategories)
+    ? [...new Set(candidate.mutedNotificationCategories.filter((category): category is AdminNotificationCategory => adminNotificationCategories.includes(category as AdminNotificationCategory)))]
+    : [];
 
   return {
     favoriteHrefs,
     tableDensity: candidate.tableDensity === "compact" ? "compact" : "comfortable",
     productViews,
+    mutedNotificationCategories,
+    includeInformativeNotifications: candidate.includeInformativeNotifications === true,
   };
 }
 

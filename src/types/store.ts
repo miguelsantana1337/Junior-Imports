@@ -1,4 +1,4 @@
-export type PaymentMethod = "Pix" | "Cartao" | "Boleto";
+export type PaymentMethod = "Pix" | "Cartao" | "Dinheiro" | "Boleto";
 
 export type CheckoutMode = "whatsapp" | "demo";
 
@@ -39,6 +39,7 @@ export type OrderStatus =
 export interface StoreSettings {
   storeName: string;
   logoUrl: string;
+  mobileLogoUrl: string;
   faviconUrl: string;
   whatsapp: string;
   orderPrefix: string;
@@ -209,6 +210,8 @@ export interface Coupon {
   perCustomerLimit: number;
   firstOrderOnly: boolean;
   usageCount: number;
+  applicableCategoryIds: string[];
+  applicableProductIds: string[];
 }
 
 export type CustomerSource = "whatsapp" | "instagram" | "referral" | "other";
@@ -679,6 +682,19 @@ export interface AuditLog {
   createdAt: string;
 }
 
+export type ProductReviewStatus = "pending" | "approved" | "rejected";
+
+export interface ProductReview {
+  id: string;
+  productId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  status: ProductReviewStatus;
+  reviewToken: string;
+  createdAt: string;
+}
+
 export interface StoreData {
   tenant: StoreTenant;
   settings: StoreSettings;
@@ -714,6 +730,7 @@ export interface StoreData {
   automationRuns: AutomationRun[];
   teamMembers: AdminUser[];
   auditLogs: AuditLog[];
+  productReviews: ProductReview[];
 }
 
 export interface StorefrontData {
@@ -729,6 +746,7 @@ export interface StorefrontData {
   benefits: Benefit[];
   faqs: Faq[];
   orders: Order[];
+  cashbackCampaigns: CashbackCampaign[];
 }
 
 export interface CartLine {

@@ -2,7 +2,7 @@
 
 import { AlertCircle, CheckCircle2, Download, FileSpreadsheet, History, PackagePlus, Upload } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { productImportTemplate, stockImportTemplate, parseProductImport, parseStockImport, type ImportError, type StockImportRow } from "@/lib/catalog-import";
+import { buildProductImportTemplate, buildStockImportTemplate, parseProductImport, parseStockImport, type ImportError, type StockImportRow } from "@/lib/catalog-import";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import type { Product, StockImportMode } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
@@ -16,8 +16,8 @@ type Preview = {
   totalRows: number;
 };
 
-function downloadTemplate(kind: "products" | "stock") {
-  const content = kind === "products" ? productImportTemplate : stockImportTemplate;
+function downloadTemplate(kind: "products" | "stock", products: Product[]) {
+  const content = kind === "products" ? buildProductImportTemplate(products) : buildStockImportTemplate(products);
   const blob = new Blob([`\uFEFF${content}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -64,7 +64,7 @@ export function CatalogImportAdmin() {
 
     <AdminPanel title={kind === "products" ? "Cadastrar e atualizar produtos por planilha" : "Movimentar estoque por planilha"} description="Use um arquivo CSV compatível com Excel. O SKU identifica produtos existentes e evita duplicações.">
       <div className="import-workflow-grid">
-        <article className="import-step-card"><span>1</span><Download /><h3>Baixe o modelo</h3><p>{kind === "products" ? "O arquivo contém todas as colunas aceitas no cadastro." : "Preencha somente o SKU e a quantidade."}</p><button className="admin-button" onClick={() => downloadTemplate(kind)}><Download /> Baixar modelo CSV</button></article>
+        <article className="import-step-card"><span>1</span><Download /><h3>Baixe o modelo preenchido</h3><p>{kind === "products" ? `O arquivo traz todos os dados dos ${data.products.length} produtos cadastrados.` : `Todos os ${data.products.length} produtos já vêm listados. Altere somente a coluna quantidade.`}</p><button className="admin-button" onClick={() => downloadTemplate(kind, data.products)}><Download /> Baixar modelo CSV</button></article>
         <article className="import-step-card"><span>2</span><FileSpreadsheet /><h3>Preencha no Excel</h3><p>{kind === "products" ? `Use uma categoria existente: ${categoryNames || "cadastre uma categoria primeiro"}.` : "Não altere o SKU do produto."}</p>{kind === "stock" && <label>Como aplicar a quantidade<select value={stockMode} onChange={(event) => setStockMode(event.target.value as StockImportMode)}><option value="replace">Substituir estoque atual</option><option value="increment">Somar ao estoque</option><option value="decrement">Retirar do estoque</option></select></label>}</article>
         <article className="import-step-card upload"><span>3</span><Upload /><h3>Envie e revise</h3><p>Nada será salvo antes da confirmação da prévia.</p><button className="admin-button primary" onClick={() => fileRef.current?.click()}><Upload /> Selecionar planilha</button><input ref={fileRef} hidden type="file" accept=".csv,text/csv,text/plain" onChange={(event) => { const file = event.target.files?.[0]; if (file) readFile(file); event.target.value = ""; }} /></article>
       </div>

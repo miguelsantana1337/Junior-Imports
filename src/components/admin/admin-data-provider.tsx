@@ -183,6 +183,7 @@ interface AdminDataContextValue {
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
+  createProductReview: (productId: string, customerName: string) => Promise<string>;
   saveSettings: (settings: StoreSettings) => Promise<void>;
   uploadMedia: (file: File, bucket: "product-media" | "banner-media" | "site-media") => Promise<string>;
   clearOrders: () => Promise<void>;
@@ -942,17 +943,33 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     await commitMutation(
       (current) => ({ ...current, purchaseOrders: current.purchaseOrders.some((item) => item.id === order.id) ? current.purchaseOrders.map((item) => item.id === order.id ? order : item) : [order, ...current.purchaseOrders] }),
       async () => {
-        await persist("purchase_orders", { id: order.id, code: order.code, supplier_id: order.supplierId, status: order.status, expected_at: order.expectedAt || null, received_at: order.receivedAt || null, total: order.total, notes: order.notes, created_at: order.createdAt });
         if (!supabase) return;
-        const { error: deleteError } = await supabase.from("purchase_order_items").delete().eq("tenant_id", dataRef.current.tenant.id).eq("purchase_order_id", order.id);
-        if (deleteError) throw new Error(deleteError.message);
-        if (!order.items.length) return;
-        const { error } = await supabase.from("purchase_order_items").insert(order.items.map((item) => ({ tenant_id: dataRef.current.tenant.id, id: item.id, purchase_order_id: order.id, product_id: item.productId, product_name: item.name, quantity: item.quantity, unit_cost: item.unitCost, lot_code: item.lotCode, expiry_date: item.expiryDate || null })));
+        const { error } = await supabase.rpc("save_purchase_order", {
+          p_tenant_id: dataRef.current.tenant.id,
+          p_order: {
+            id: order.id,
+            code: order.code,
+            supplierId: order.supplierId,
+            status: order.status,
+            expectedAt: order.expectedAt,
+            receivedAt: order.receivedAt,
+            notes: order.notes,
+            createdAt: order.createdAt,
+          },
+          p_items: order.items.map((item) => ({
+            id: item.id,
+            productId: item.productId,
+            quantity: item.quantity,
+            unitCost: item.unitCost,
+            lotCode: item.lotCode,
+            expiryDate: item.expiryDate,
+          })),
+        });
         if (error) throw new Error(error.message);
       },
       "Ordem de compra salva.",
     );
-  }, [commitMutation, persist, supabase]);
+  }, [commitMutation, supabase]);
 
   const receivePurchaseOrder = useCallback(async (id: string) => {
     await commitMutation(
@@ -1105,7 +1122,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       number: input.number,
       complement: input.complement,
     };
-    const baseCalculation = calculateCart(lines, current.products, current.settings, null, input.payment);
+    const baseCalculation = calculateCart(lines, current.products, current.settings, null, input.payment, current.cashbackCampaigns);
     const couponCode = input.couponCode.trim().toUpperCase();
     const coupon = couponCode
       ? current.coupons.find((candidate) => candidate.code.toUpperCase() === couponCode)
@@ -1120,7 +1137,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       }
     }
 
-    const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment);
+    const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment, current.cashbackCampaigns);
     const items = selectedProducts.map(({ product, quantity }) => ({
       productId: product.id,
       name: product.name,
@@ -1300,16 +1317,47 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
 
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
-      (current) => ({ ...current, orders: current.orders.map((order) => order.id === id ? { ...order, ...details } : order) }),
-      () => update("orders", id, { internal_notes: details.internalNotes, tracking_code: details.trackingCode }),
-      "Detalhes do pedido salvos.",
+      (current) => ({ ...current, orders: current.orders.map((order) => order.id === id ? { ...order, internalNotes: details.internalNotes, trackingCode: details.trackingCode } : order) }),
+      () => persist("orders", { id, internal_notes: details.internalNotes, tracking_code: details.trackingCode }),
+      "Pedido atualizado.",
     );
-  }, [commitMutation, update]);
+  }, [commitMutation, persist]);
+
+  const createProductReview = useCallback(async (productId: string, customerName: string) => {
+    const id = crypto.randomUUID();
+    const token = crypto.randomUUID().replace(/-/g, "");
+    const review: import("@/types/store").ProductReview = {
+      id,
+      productId,
+      customerName,
+      rating: 5,
+      comment: "",
+      status: "pending",
+      reviewToken: token,
+      createdAt: new Date().toISOString(),
+    };
+    
+    await commitMutation(
+      (current) => ({ ...current, productReviews: [review, ...current.productReviews] }),
+      () => persist("product_reviews", {
+        id,
+        product_id: productId,
+        customer_name: customerName,
+        rating: 5,
+        comment: "",
+        status: "pending",
+        review_token: token,
+        created_at: review.createdAt,
+      }),
+      "Link de avaliação gerado.",
+    );
+    return token;
+  }, [commitMutation, persist]);
 
   const saveSettings = useCallback(async (settings: StoreSettings) => {
     await commitMutation(
       (current) => ({ ...current, settings }),
-      () => persist("store_settings", { id: "default", store_name: settings.storeName, logo_url: settings.logoUrl, favicon_url: settings.faviconUrl, whatsapp: settings.whatsapp, order_prefix: settings.orderPrefix, email: settings.email, hours: settings.hours, announcement: settings.announcement, footer_description: settings.footerDescription, primary_color: settings.primaryColor, secondary_color: settings.secondaryColor, background_color: settings.backgroundColor, text_color: settings.textColor, font_family: settings.fontFamily, header_layout: settings.headerLayout, content_width: settings.contentWidth, border_radius: settings.borderRadius, free_shipping_threshold: settings.freeShippingThreshold, shipping_flat: settings.shippingFlat, free_shipping_enabled: settings.freeShippingEnabled, free_shipping_banner_enabled: settings.freeShippingBannerEnabled, free_shipping_banner_eyebrow: settings.freeShippingBannerEyebrow, free_shipping_banner_title: settings.freeShippingBannerTitle, free_shipping_banner_subtitle: settings.freeShippingBannerSubtitle, free_shipping_banner_button_text: settings.freeShippingBannerButtonText, free_shipping_banner_button_link: settings.freeShippingBannerButtonLink, pix_discount: settings.pixDiscount, auto_banner_seconds: settings.autoBannerSeconds, checkout_mode: settings.checkoutMode, whatsapp_message: settings.whatsappMessage }),
+      () => persist("store_settings", { id: "default", store_name: settings.storeName, logo_url: settings.logoUrl, mobile_logo_url: settings.mobileLogoUrl, favicon_url: settings.faviconUrl, whatsapp: settings.whatsapp, order_prefix: settings.orderPrefix, email: settings.email, hours: settings.hours, announcement: settings.announcement, footer_description: settings.footerDescription, primary_color: settings.primaryColor, secondary_color: settings.secondaryColor, background_color: settings.backgroundColor, text_color: settings.textColor, font_family: settings.fontFamily, header_layout: settings.headerLayout, content_width: settings.contentWidth, border_radius: settings.borderRadius, free_shipping_threshold: settings.freeShippingThreshold, shipping_flat: settings.shippingFlat, free_shipping_enabled: settings.freeShippingEnabled, free_shipping_banner_enabled: settings.freeShippingBannerEnabled, free_shipping_banner_eyebrow: settings.freeShippingBannerEyebrow, free_shipping_banner_title: settings.freeShippingBannerTitle, free_shipping_banner_subtitle: settings.freeShippingBannerSubtitle, free_shipping_banner_button_text: settings.freeShippingBannerButtonText, free_shipping_banner_button_link: settings.freeShippingBannerButtonLink, pix_discount: settings.pixDiscount, auto_banner_seconds: settings.autoBannerSeconds, checkout_mode: settings.checkoutMode, whatsapp_message: settings.whatsappMessage }),
       "Configurações salvas.",
     );
   }, [commitMutation, persist]);
@@ -1445,6 +1493,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     toggleItem,
     updateOrderStatus,
     saveOrderDetails,
+    createProductReview,
     saveSettings,
     uploadMedia,
     clearOrders,
@@ -1454,7 +1503,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData, createProductReview]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

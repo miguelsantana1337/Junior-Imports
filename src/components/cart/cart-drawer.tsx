@@ -127,7 +127,7 @@ export function CartDrawer() {
           </form>
           <div className="total-line"><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>
           {calculation.discount > 0 && <div className="total-line"><span>Desconto</span><strong>- {formatMoney(calculation.discount)}</strong></div>}
-          <div className="total-line"><span>{data.settings.checkoutMode === "whatsapp" ? "Frete estimado" : "Frete demonstrativo"}</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
+          <div className="total-line"><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
           <div className="total-line grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>
           {calculation.cashback > 0 && <div className="total-line cart-cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}
           <Link className={`button button-primary button-full button-large ${lines.length ? "" : "disabled"}`} href={lines.length ? withStorefrontPath(data.tenant.storefrontPath, "/checkout") : "#"} onClick={() => lines.length && setDrawerOpen(false)}>Ir para o checkout</Link>

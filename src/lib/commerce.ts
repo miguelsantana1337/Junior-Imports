@@ -1,6 +1,7 @@
 import type {
   CartCalculation,
   CartLine,
+  CashbackCampaign,
   Coupon,
   PaymentMethod,
   StorefrontProduct,
@@ -22,6 +23,7 @@ export function calculateCart(
   settings: StoreSettings,
   coupon: Coupon | null = null,
   payment?: PaymentMethod,
+  activeCashbackCampaigns: CashbackCampaign[] = [],
 ): CartCalculation {
   const productMap = new Map(products.map((product) => [product.id, product]));
   const validLines = lines.filter((line) => {
@@ -38,16 +40,46 @@ export function calculateCart(
   const cashback = validLines.reduce((sum, line) => {
     const product = productMap.get(line.productId)!;
     const safeQuantity = Math.min(line.quantity, Math.max(product.stock, 0));
-    return sum + product.cashback * safeQuantity;
+    
+    let productCashback = product.cashback;
+    
+    if (activeCashbackCampaigns.length > 0) {
+      const campaign = activeCashbackCampaigns[0];
+      if (campaign && campaign.multiplier > 0) {
+         productCashback += (product.price * (campaign.multiplier / 100));
+      }
+    }
+
+    return sum + productCashback * safeQuantity;
   }, 0);
 
   let couponDiscount = 0;
   if (coupon && isCouponValid(coupon, subtotal)) {
-    couponDiscount =
-      coupon.type === "percent"
-        ? subtotal * (coupon.value / 100)
-        : coupon.value;
-    couponDiscount = Math.min(couponDiscount, subtotal);
+    let applicableSubtotal = subtotal;
+    
+    const hasCategoryRestriction = coupon.applicableCategoryIds && coupon.applicableCategoryIds.length > 0;
+    const hasProductRestriction = coupon.applicableProductIds && coupon.applicableProductIds.length > 0;
+    
+    if (hasCategoryRestriction || hasProductRestriction) {
+      applicableSubtotal = validLines.reduce((sum, line) => {
+        const product = productMap.get(line.productId)!;
+        const matchesCategory = hasCategoryRestriction ? coupon.applicableCategoryIds.includes(product.categoryId) : false;
+        const matchesProduct = hasProductRestriction ? coupon.applicableProductIds.includes(product.id) : false;
+        
+        if (matchesCategory || matchesProduct) {
+          const safeQuantity = Math.min(line.quantity, Math.max(product.stock, 0));
+          return sum + product.price * safeQuantity;
+        }
+        return sum;
+      }, 0);
+    }
+
+    if (applicableSubtotal >= coupon.minimum) {
+      couponDiscount =
+        coupon.type === "percent"
+          ? applicableSubtotal * (coupon.value / 100)
+          : Math.min(coupon.value, applicableSubtotal);
+    }
   }
 
   const afterCoupon = Math.max(0, subtotal - couponDiscount);

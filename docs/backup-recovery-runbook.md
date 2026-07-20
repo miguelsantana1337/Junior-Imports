@@ -13,13 +13,26 @@ O Supabase informa WAL habilitado no projeto, mas o PITR não está ativo. Por i
 ## O que o pacote contém
 
 - Dados do tenant, catálogo, loja, CRM, pedidos, estoque, compras, mensagens e auditoria.
+- Discussões, comentários, confirmações de leitura, aprovações, estado das notificações e telemetria do Copiloto.
 - Perfis e vínculos da equipe que já existam no Supabase Auth.
 - Arquivos dos buckets `product-media`, `banner-media` e `site-media`.
 - Manifesto, quantidade de registros, checksum e impressão digital da chave.
 
 Senhas, segredos MFA e sessões não são exportados. Esses itens pertencem ao Supabase Auth e precisam ser recuperados pelos procedimentos próprios da plataforma.
 
+Presença online e travas temporárias de edição são dados efêmeros. Elas não entram no pacote e são recriadas automaticamente quando a equipe volta ao painel.
+
 ## Criação
+
+### Pelo painel administrativo
+
+O proprietário pode abrir **Sistema → Dados → Criar backup agora**. Para cada geração, o painel exige um novo código TOTP do aplicativo autenticador. Depois da confirmação, o servidor libera um manifesto temporário, o navegador baixa as mídias diretamente do Supabase, monta o pacote, criptografa, verifica a integridade e inicia o download do arquivo `.jibackup`.
+
+O pacote criado pelo painel usa o formato binário v2 e uma chave de dados exclusiva. Essa chave é protegida pela chave mestra `JUNIOR_BACKUP_KEY`, que nunca é enviada ao navegador. A operação concluída fica registrada em `backup_runs` e na auditoria administrativa.
+
+Não feche a aba enquanto o progresso estiver em andamento. Ao final, mova o arquivo baixado para a guarda externa definida na política de retenção.
+
+### Pelo terminal
 
 Em um terminal autenticado e com as variáveis do Supabase disponíveis:
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { AppProviders } from "@/components/providers/app-providers";
 import { getStoreData } from "@/lib/store-data";
 import { platformConfig } from "@/config/platform";
@@ -37,12 +38,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
-        <script
-          id="admin-theme-bootstrap"
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("junior-imports:admin-theme");if(t!=="dark"&&t!=="light"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.adminTheme=t}catch(e){}})();`,
-          }}
-        />
+        <Script id="admin-theme-bootstrap" strategy="beforeInteractive">
+          {`(function(){try{var t=localStorage.getItem("junior-imports:admin-theme");if(t!=="dark"&&t!=="light"){t=matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"}document.documentElement.dataset.adminTheme=t}catch(e){}})();`}
+        </Script>
       </head>
       <body>
         <AppProviders initialData={data}>{children}</AppProviders>

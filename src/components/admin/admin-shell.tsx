@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  IconBell,
   IconBox,
   IconChevronDown,
   IconChevronLeft,
@@ -46,6 +45,7 @@ import { AdminCommandPalette, type AdminCommandSource } from "@/components/admin
 import { useAdminPreferences } from "@/components/admin/use-admin-preferences";
 import { CopilotJunior } from "@/components/admin/copilot-junior";
 import { TeamPresencePulse } from "@/components/admin/use-team-presence";
+import { AdminNotificationCenter } from "@/components/admin/admin-notification-center";
 
 const navigationGroups = [
   {
@@ -163,9 +163,6 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const can = (permission: string) => hasAdminPermission(user.role, user.permissions, permission as AdminPermission);
   const visibleNavigation = navigation.filter((item) => item.permission === null || can(item.permission));
   const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
-  const lowStockCount = data.products.filter((product) => product.active && product.stock <= product.minStock).length;
-  const pendingOrderCount = data.orders.filter((order) => ["Novo", "Aguardando pagamento", "Pago", "Preparando"].includes(order.status)).length;
-  const notificationCount = Number(lowStockCount > 0) + Number(pendingOrderCount > 0);
   const commandSources: AdminCommandSource[] = [
     ...visibleNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
     ...visibleCreateLinks.map((item) => ({ ...item, group: "Criar" as const })),
@@ -353,19 +350,19 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
               {theme === "dark" ? <IconSun /> : <IconMoon />}
             </button>
             <div className="admin-popover-wrap" ref={notificationsPopoverRef}>
-              <button
-                className="admin-notification-button"
-                onClick={() => {
+              <AdminNotificationCenter
+                open={notificationsOpen}
+                onToggle={() => {
                   setNotificationsOpen((current) => !current);
                   setCreateOpen(false);
                 }}
-                aria-label="Notificações"
-                aria-expanded={notificationsOpen}
-                aria-controls="admin-notifications"
-              >
-                <IconBell />{notificationCount > 0 && <span>{notificationCount}</span>}
-              </button>
-              {notificationsOpen && <div className="admin-popover admin-notifications" id="admin-notifications" role="region" aria-label="Notificações do painel"><strong>Notificações</strong>{lowStockCount > 0 && <p>{lowStockCount} produto{lowStockCount === 1 ? "" : "s"} com estoque baixo.</p>}{pendingOrderCount > 0 && <p>{pendingOrderCount} pedido{pendingOrderCount === 1 ? "" : "s"} aguardando acompanhamento.</p>}{notificationCount === 0 && <p>Nenhuma pendência no momento.</p>}<Link href={pendingOrderCount ? "/admin/orders" : "/admin/products"}>Revisar painel</Link></div>}
+                onClose={() => setNotificationsOpen(false)}
+                data={data}
+                user={user}
+                demoMode={demoMode}
+                preferences={preferences}
+                updatePreferences={updatePreferences}
+              />
             </div>
             <Link className="admin-view-store" href={data.tenant.storefrontPath || "/"} target="_blank">Ver loja <IconExternalLink /></Link>
             <div className="admin-account">
