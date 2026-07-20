@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
-import { platformConfig } from "@/config/platform";
 
 const reviewSchema = z.object({
   token: z.string().min(1),
@@ -17,7 +16,7 @@ export async function POST(request: Request) {
       return Response.json({ success: false, error: "Dados inválidos" }, { status: 400 });
     }
 
-    const supabase = createClient(platformConfig.supabaseUrl, platformConfig.supabaseServiceRole);
+    const supabase = await createClient();
 
     // Get the review by token
     const { data: review, error: findError } = await supabase
