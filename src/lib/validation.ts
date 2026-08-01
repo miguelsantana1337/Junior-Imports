@@ -2,31 +2,57 @@ import { z } from "zod";
 
 const money = z.coerce.number().min(0, "Informe um valor válido.");
 
-export const checkoutCustomerSchema = z.object({
+const checkoutCustomerObject = z.object({
   name: z.string().trim().min(3, "Informe o nome completo."),
   phone: z.string().trim().regex(/^\D*(?:\d\D*){10,11}$/, "Informe um WhatsApp válido."),
   email: z.string().trim().email("Informe um e-mail válido."),
-  zip: z.string().trim().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido."),
-  city: z.string().trim().min(2, "Informe a cidade."),
-  state: z.string().trim().min(2, "Selecione o estado."),
-  address: z.string().trim().min(3, "Informe o endereço."),
-  number: z.string().trim().min(1, "Informe o número."),
+  deliveryMethod: z.enum(["delivery", "pickup"]).default("delivery"),
+  zip: z.string().trim().max(9),
+  city: z.string().trim().max(100),
+  state: z.string().trim().max(2),
+  address: z.string().trim().max(160),
+  number: z.string().trim().max(30),
   complement: z.string().trim().max(120),
 });
 
-export const checkoutSchema = checkoutCustomerSchema.extend({
+function validateDeliveryAddress(
+  customer: z.infer<typeof checkoutCustomerObject>,
+  context: z.RefinementCtx,
+) {
+  if (customer.deliveryMethod === "pickup") return;
+  if (!/^\d{5}-?\d{3}$/.test(customer.zip)) {
+    context.addIssue({ code: "custom", path: ["zip"], message: "Informe um CEP válido." });
+  }
+  if (customer.city.length < 2) {
+    context.addIssue({ code: "custom", path: ["city"], message: "Informe a cidade." });
+  }
+  if (customer.state.length !== 2) {
+    context.addIssue({ code: "custom", path: ["state"], message: "Selecione o estado." });
+  }
+  if (customer.address.length < 3) {
+    context.addIssue({ code: "custom", path: ["address"], message: "Informe o endereço." });
+  }
+  if (!customer.number) {
+    context.addIssue({ code: "custom", path: ["number"], message: "Informe o número." });
+  }
+}
+
+export const checkoutCustomerSchema = checkoutCustomerObject.superRefine(validateDeliveryAddress);
+
+export const checkoutSchema = checkoutCustomerObject.extend({
   payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
   consent: z.boolean().refine(Boolean, "Confirme que autoriza o envio dos dados para atendimento."),
   termsAccepted: z.boolean().refine(Boolean, "Leia e aceite os termos para concluir o pedido."),
   botField: z.string().max(0, "Solicitação inválida."),
   startedAt: z.coerce.number().int().positive(),
-});
+}).superRefine(validateDeliveryAddress);
 
 export const manualOrderSchema = z.object({
   customerId: z.string(),
   name: z.string().trim().min(3, "Informe o nome completo do cliente."),
   phone: z.string().trim().regex(/^\D*(?:\d\D*){10,13}$/, "Informe um WhatsApp válido."),
   email: z.string().trim().email("Informe um e-mail válido."),
+  deliveryMethod: z.enum(["delivery", "pickup"]).default("delivery"),
   zip: z.union([z.literal(""), z.string().trim().regex(/^\d{5}-?\d{3}$/, "Informe um CEP válido.")]),
   city: z.string().trim().max(100),
   state: z.string().trim().max(2),
@@ -56,6 +82,7 @@ export const productSchema = z.object({
   price: money,
   compareAt: money,
   cashback: money,
+  cashbackType: z.enum(["fixed", "percent"]),
   costPrice: money,
   stock: z.coerce.number().int().min(0),
   minStock: z.coerce.number().int().min(0),
@@ -84,8 +111,11 @@ export const productSchema = z.object({
   if (product.imageUrl && !product.imageUrls.includes(product.imageUrl)) {
     context.addIssue({ code: "custom", path: ["imageUrl"], message: "A capa precisa fazer parte da galeria." });
   }
-  if (product.cashback > product.price) {
+  if (product.cashbackType === "fixed" && product.cashback > product.price) {
     context.addIssue({ code: "custom", path: ["cashback"], message: "O cashback não pode ser maior que o preço de venda." });
+  }
+  if (product.cashbackType === "percent" && product.cashback > 100) {
+    context.addIssue({ code: "custom", path: ["cashback"], message: "O cashback percentual não pode ser maior que 100%." });
   }
   if (product.regulatoryStatus === "approved" && product.productType === "unclassified") {
     context.addIssue({ code: "custom", path: ["productType"], message: "Classifique o produto antes de liberá-lo." });
@@ -296,6 +326,14 @@ export const settingsSchema = z.object({
   borderRadius: z.coerce.number().int().min(0).max(40),
   freeShippingThreshold: money,
   shippingFlat: money,
+  shippingCityRates: z.array(z.object({
+    city: z.string().trim().min(2, "Informe a cidade da tarifa.").max(100),
+    state: z.string().trim().length(2, "Informe a UF com duas letras.").transform((value) => value.toUpperCase()),
+    amount: money,
+  })).max(50, "Cadastre no máximo 50 tarifas por cidade."),
+  quoteShippingOutsideCities: z.boolean(),
+  localPickupEnabled: z.boolean(),
+  localPickupInstructions: z.string().trim().min(3, "Informe como a retirada será combinada.").max(300),
   freeShippingEnabled: z.boolean(),
   freeShippingBannerEnabled: z.boolean(),
   freeShippingBannerEyebrow: z.string().trim().max(80),
@@ -347,7 +385,7 @@ export const messageAutomationSchema = z.object({
   name: z.string().trim().min(2, "Informe o nome da automação."),
   triggerType: z.enum(["order_status", "customer_segment", "cashback_expiring", "schedule"]),
   triggerValue: z.string().trim().min(1, "Configure o evento que inicia a automação."),
-  triggerStatus: z.enum(["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"]),
+  triggerStatus: z.enum(["Novo", "Pago", "Entregue", "Cancelado"]),
   channel: z.enum(["whatsapp", "email"]),
   subject: z.string().trim().max(140),
   message: z.string().trim().min(10, "Escreva uma mensagem com pelo menos 10 caracteres.").max(1200),

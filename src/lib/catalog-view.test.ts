@@ -19,6 +19,7 @@ function product(id: string, categoryId: string, category: string, price: number
     price,
     compareAt: price,
     cashback: 0,
+    cashbackType: "fixed",
     stock: 5,
     badge: "",
     accent: "#1677ff",
@@ -51,13 +52,19 @@ describe("catálogo agrupado por categoria", () => {
   it("respeita a ordem das categorias e dos produtos", () => {
     const groups = buildCatalogProductGroups(products, categories, "", "order");
 
-    expect(groups.map((group) => group.name)).toEqual(["Categoria A", "Categoria B", "Categoria antiga"]);
+    expect(groups.map((group) => group.name)).toEqual(["Categoria A", "Categoria B"]);
     expect(groups[0]?.products.map((item) => item.id)).toEqual(["a1", "a2"]);
   });
 
-  it("não remove produtos ligados a categorias ocultas ou antigas", () => {
+  it("remove da vitrine produtos ligados a categorias ocultas", () => {
     const groups = buildCatalogProductGroups(products, categories, "", "order");
-    expect(groups.flatMap((group) => group.products).map((item) => item.id)).toContain("legado");
+    expect(groups.flatMap((group) => group.products).map((item) => item.id)).not.toContain("legado");
+  });
+
+  it("mantém produtos antigos cuja categoria ainda não existe no cadastro", () => {
+    const legacy = product("sem-categoria", "cat-removida", "Categoria removida", 50, 1);
+    const groups = buildCatalogProductGroups([...products, legacy], categories, "", "order");
+    expect(groups.flatMap((group) => group.products).map((item) => item.id)).toContain("sem-categoria");
   });
 
   it("aplica busca e ordenação dentro de cada carrossel", () => {

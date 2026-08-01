@@ -16,8 +16,11 @@ test("captura o painel atual em desktop", async ({ page }) => {
   await page.getByRole("button", { name: "Entrar" }).click();
   await expect(page).toHaveURL(/\/admin$/);
   await page.screenshot({ path: path.join(auditDir, "02-admin-desktop.png"), fullPage: false });
-  await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name: "Banners", exact: true }).click();
-  await expect(page.getByRole("heading", { name: "Banners rotativos", level: 1 })).toBeVisible();
+  const navigation = page.getByRole("navigation", { name: "Navegação administrativa" });
+  await navigation.getByRole("button", { name: "Loja", exact: true }).click();
+  await navigation.getByRole("link", { name: "Editor da loja", exact: true }).click();
+  await page.getByRole("link", { name: "Biblioteca de banners", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Biblioteca de banners", level: 1 })).toBeVisible();
   await page.screenshot({ path: path.join(auditDir, "03-banners-desktop.png"), fullPage: false });
 });
 

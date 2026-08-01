@@ -47,21 +47,26 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
   const { data } = useStore();
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   if (block.kind === "hero") return <HeroCarousel />;
-  if (block.kind === "trust") return <TrustStrip />;
+  if (block.kind === "trust") return <TrustStrip block={block} />;
 
   const section = getSection(block, data.sections);
-  if (block.kind === "catalog") return <CatalogSection section={section} />;
+  if (block.kind === "catalog") return <CatalogSection section={section} block={block} />;
 
   if (block.kind === "featured") {
-    const products = data.products.filter((product) => product.active && product.featured).sort((a, b) => a.order - b.order).slice(0, Math.max(4, block.columns * 2));
-    return <BlockShell block={block} id="destaques"><SectionHeading eyebrow={section.eyebrow} title={section.title} action={<Link className="text-link" href={storeHref("/#catalogo")}>Ver catálogo completo →</Link>} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
+    const products = data.products.filter((product) => product.active && product.featured).sort((a, b) => a.order - b.order);
+    const actionText = block.buttonText || "Ver catálogo completo →";
+    const actionLink = block.buttonLink || "/#catalogo";
+    return <BlockShell block={block} id="destaques"><SectionHeading eyebrow={section.eyebrow} title={section.title} subtitle={section.subtitle} action={actionText ? <Link className="text-link" href={storeHref(actionLink)}>{actionText}</Link> : undefined} /><div className="product-grid page-block-grid" style={{ "--block-columns": block.columns } as React.CSSProperties}>{products.map((product) => <ProductCard product={product} key={product.id} />)}</div></BlockShell>;
   }
 
   if (block.kind === "promo") {
-    if (!data.settings.freeShippingBannerEnabled) return null;
     const shippingValue = formatMoney(data.settings.freeShippingThreshold);
-    const campaignTitle = data.settings.freeShippingBannerTitle.replaceAll("{{valor}}", shippingValue);
-    return <BlockShell block={block}><div className="promo-card"><div><span className="section-kicker">{data.settings.freeShippingBannerEyebrow}</span><h2>{campaignTitle}</h2><p>{data.settings.freeShippingBannerSubtitle}</p></div><Link className="button button-light button-large" href={storeHref(data.settings.freeShippingBannerButtonLink || "/#catalogo")}>{data.settings.freeShippingBannerButtonText || "Ver produtos"}</Link></div></BlockShell>;
+    const eyebrow = block.eyebrow || data.settings.freeShippingBannerEyebrow;
+    const campaignTitle = (block.title || data.settings.freeShippingBannerTitle).replaceAll("{{valor}}", shippingValue);
+    const subtitle = block.body || data.settings.freeShippingBannerSubtitle;
+    const buttonText = block.buttonText || data.settings.freeShippingBannerButtonText || "Ver produtos";
+    const buttonLink = block.buttonLink || data.settings.freeShippingBannerButtonLink || "/#catalogo";
+    return <BlockShell block={block}><div className="promo-card"><div><span className="section-kicker">{eyebrow}</span><h2>{campaignTitle}</h2><p>{subtitle}</p></div>{buttonText && <Link className="button button-light button-large" href={storeHref(buttonLink)}>{buttonText}</Link>}</div></BlockShell>;
   }
 
   if (block.kind === "benefits") {
@@ -69,7 +74,7 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
   }
 
   if (block.kind === "faq") {
-    return <BlockShell block={block} id="duvidas"><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow || "PERGUNTAS FREQUENTES"}</span><h2>{section.title || "Como comprar na Junior Imports."}</h2><p className="faq-intro">Veja como escolher os produtos, finalizar o pedido e continuar o atendimento pelo WhatsApp.</p></div><div className="faq-list">{resolvePurchaseFaqs(data.faqs).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
+    return <BlockShell block={block} id="duvidas"><div className="faq-grid"><div><span className="section-kicker">{section.eyebrow || "PERGUNTAS FREQUENTES"}</span><h2>{section.title || "Como comprar na Junior Imports."}</h2><p className="faq-intro">{section.subtitle || "Veja como escolher os produtos, finalizar o pedido e continuar o atendimento pelo WhatsApp."}</p></div><div className="faq-list">{resolvePurchaseFaqs(data.faqs).map((faq, index) => <details key={faq.id} open={index === 0 ? true : undefined}><summary>{faq.question}</summary><p>{faq.answer}</p></details>)}</div></div></BlockShell>;
   }
 
   if (block.kind === "spacer") return <div className={`page-spacer padding-${block.padding}`} aria-hidden="true" />;

@@ -8,12 +8,14 @@ import { useForm, useWatch } from "react-hook-form";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
+import { ProductArt } from "@/components/ui/product-art";
 import { formatMoney } from "@/lib/format";
 import { checkoutSchema, type CheckoutFormInput, type CheckoutInput } from "@/lib/validation";
 import { checkoutWhatsappUrl } from "@/lib/whatsapp-order";
 import { CHECKOUT_TERMS_VERSION, checkoutTerms } from "@/lib/checkout-terms";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { normalizePostalCode, type PostalCodeAddress } from "@/lib/postal-code";
+import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import type { Order } from "@/types/store";
 
 const states = [
@@ -34,6 +36,7 @@ type PersistedOrder = {
   status: Order["status"];
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
+  shipping_status?: Order["shippingStatus"];
 };
 
 export function CheckoutScreen() {
@@ -53,11 +56,30 @@ export function CheckoutScreen() {
     formState: { errors, isSubmitting },
   } = useForm<CheckoutFormInput, unknown, CheckoutInput>({
     resolver: zodResolver(checkoutSchema),
-    defaultValues: { payment: "Pix", complement: "", consent: false, termsAccepted: false, botField: "", startedAt },
+    defaultValues: {
+      name: "",
+      phone: "",
+      email: "",
+      deliveryMethod: "delivery",
+      zip: "",
+      city: "",
+      state: "",
+      address: "",
+      number: "",
+      complement: "",
+      payment: "Pix",
+      consent: false,
+      termsAccepted: false,
+      botField: "",
+      startedAt,
+    },
   });
   const payment = useWatch({ control, name: "payment" });
+  const deliveryMethod = useWatch({ control, name: "deliveryMethod" });
   const zip = useWatch({ control, name: "zip" });
-  const calculation = calculate(payment);
+  const city = useWatch({ control, name: "city" });
+  const state = useWatch({ control, name: "state" });
+  const calculation = calculate(payment, { city, state, deliveryMethod });
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const cartProducts = useMemo(
     () => lines.map((line) => ({ line, product: data.products.find((item) => item.id === line.productId) })).filter((entry) => entry.product),
@@ -65,6 +87,10 @@ export function CheckoutScreen() {
   );
 
   useEffect(() => {
+    if (deliveryMethod === "pickup") {
+      setPostalCodeStatus("idle");
+      return;
+    }
     const cep = normalizePostalCode(zip ?? "");
     if (cep.length !== 8) {
       setPostalCodeStatus("idle");
@@ -94,7 +120,7 @@ export function CheckoutScreen() {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [setValue, zip]);
+  }, [deliveryMethod, setValue, zip]);
 
   async function submit(values: CheckoutInput) {
     setSubmitError("");
@@ -103,6 +129,7 @@ export function CheckoutScreen() {
       name: values.name,
       phone: values.phone,
       email: values.email,
+      deliveryMethod: values.deliveryMethod,
       zip: values.zip,
       city: values.city,
       state: values.state,
@@ -118,7 +145,7 @@ export function CheckoutScreen() {
       quantity: line.quantity,
       unitPrice: product!.price,
       unitCost: 0,
-      unitCashback: product!.cashback,
+      unitCashback: (calculation.cashbackByProduct[product!.id] ?? 0) / line.quantity,
     }));
     const nextNumber = data.orders.reduce((max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000), 1000) + 1;
     let persisted: PersistedOrder | null = null;
@@ -171,6 +198,7 @@ export function CheckoutScreen() {
       trackingCode: "",
       orderSource: persisted?.order_source ?? "storefront",
       reservationExpiresAt: persisted?.reservation_expires_at ?? "",
+      shippingStatus: persisted?.shipping_status ?? calculation.shippingStatus,
     };
     addOrder(order);
     clearCart();
@@ -184,12 +212,23 @@ export function CheckoutScreen() {
   return (
     <section className="checkout-page container">
       <Link className="back-link" href={storeHref("/")}><ArrowLeft /> Continuar comprando</Link>
-      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR COMPRA</span><h1>Revise e envie seu pedido.</h1><p>Ao finalizar, o pedido será registrado e o WhatsApp configurado pela loja abrirá com todos os dados para a equipe confirmar pagamento e envio.</p></div>
+      <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR COMPRA</span><h1>Revise e envie seu pedido.</h1><p>Ao finalizar, o pedido será registrado e o WhatsApp configurado pela loja abrirá com todos os dados para a equipe confirmar pagamento e entrega ou retirada.</p></div>
       <div className="checkout-grid">
         <form className="checkout-form" onSubmit={handleSubmit(submit)} noValidate>
           <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field></div></fieldset>
-          <fieldset><legend>2. Entrega</legend><div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" {...register("zip")} />{postalCodeStatus !== "idle" && <small className={`postal-code-status ${postalCodeStatus}`} role="status">{postalCodeStatus === "loading" ? "Buscando endereço..." : postalCodeStatus === "success" ? "Dados do CEP preenchidos." : postalCodeStatus === "not-found" ? "CEP não encontrado. Preencha o endereço manualmente." : "Não foi possível consultar agora. Preencha manualmente."}</small>}</Field><Field label="Cidade" error={errors.city?.message}><input autoComplete="address-level2" {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select autoComplete="address-level1" {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Logradouro" error={errors.address?.message} full><input autoComplete="address-line1" {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input autoComplete="address-line2" {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input autoComplete="address-line3" {...register("complement")} /></Field></div></fieldset>
-          <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? `${data.settings.pixDiscount}% de desconto` : method === "Cartao" ? "2x sem juros · confirmação no WhatsApp" : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
+          <fieldset>
+            <legend>2. Entrega ou retirada</legend>
+            <div className="payment-options delivery-options">
+              <label><input type="radio" value="delivery" {...register("deliveryMethod")} /><span><strong>Receber no endereço</strong><small>O valor é calculado pela cidade informada no CEP</small></span></label>
+              {data.settings.localPickupEnabled && <label><input type="radio" value="pickup" {...register("deliveryMethod")} /><span><strong>Retirada no local</strong><small>Sem frete · endereço e horário confirmados no WhatsApp</small></span></label>}
+            </div>
+            {deliveryMethod === "pickup" ? (
+              <div className="checkout-pickup-notice" role="status"><strong>🏬 Retirada no local selecionada</strong><span>{data.settings.localPickupInstructions}</span></div>
+            ) : (
+              <div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" {...register("zip")} />{postalCodeStatus !== "idle" && <small className={`postal-code-status ${postalCodeStatus}`} role="status">{postalCodeStatus === "loading" ? "Buscando endereço..." : postalCodeStatus === "success" ? "Dados do CEP preenchidos." : postalCodeStatus === "not-found" ? "CEP não encontrado. Preencha o endereço manualmente." : "Não foi possível consultar agora. Preencha manualmente."}</small>}</Field><Field label="Cidade" error={errors.city?.message}><input autoComplete="address-level2" {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select autoComplete="address-level1" {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Logradouro" error={errors.address?.message} full><input autoComplete="address-line1" {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input autoComplete="address-line2" {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input autoComplete="address-line3" {...register("complement")} /></Field><div className="checkout-shipping-rates form-full"><strong>Valores de entrega</strong>{data.settings.shippingCityRates.map((rate) => <span key={`${rate.city}-${rate.state}`}>📍 {rate.city}: {formatMoney(rate.amount)}</span>)}{data.settings.quoteShippingOutsideCities && <span>📦 Demais cidades: informe o seu CEP para realizarmos a cotação do frete.</span>}{calculation.shippingStatus === "quote" && <em>Seu endereço requer cotação. O valor do frete será confirmado no WhatsApp antes do pagamento.</em>}</div></div>
+            )}
+          </fieldset>
+          <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% de desconto` : "Confirmação pelo WhatsApp" : method === "Cartao" ? "2x sem juros · confirmação no WhatsApp" : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
           <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />
@@ -198,7 +237,7 @@ export function CheckoutScreen() {
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {isSubmitting ? "Registrando pedido..." : "Finalizar pedido no WhatsApp"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => <div className="summary-item" key={line.productId}><i>{data.settings.orderPrefix}</i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{product!.cashback > 0 ? ` · ${formatMoney(product!.cashback * line.quantity)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>)}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div><div className="grand-total"><span>Total do pedido</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Pedido protegido e atendimento continuado pelo WhatsApp oficial da loja.</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => { const lineCashback = calculation.cashbackByProduct[product!.id] ?? 0; return <div className="summary-item" key={line.productId}><i><ProductArt product={product!} /></i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{lineCashback > 0 ? ` · ${formatMoney(lineCashback)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>; })}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div><div className="grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Calculado sobre o valor pago pelos produtos, após descontos e sem frete.</p></aside>
       </div>
     </section>
   );

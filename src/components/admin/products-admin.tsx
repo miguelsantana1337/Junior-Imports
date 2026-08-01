@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Check, ChevronLeft, ChevronRight, Columns3, Eye, EyeOff, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Bookmark, Check, ChevronLeft, ChevronRight, Columns3, Eye, EyeOff, FileSpreadsheet, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -78,7 +78,7 @@ export function ProductsAdmin() {
 
   return (
     <>
-      <AdminPanel title="Catálogo de produtos" description="Pesquise, filtre, edite, oculte e defina a ordem de exibição." action={<Link className="admin-button primary" href="/admin/products/new"><Plus /> Adicionar produto</Link>}>
+      <AdminPanel title="Catálogo de produtos" description="Pesquise, filtre, edite, oculte e defina a ordem de exibição." action={<div className="admin-panel-actions"><Link className="admin-button" href="/admin/import"><FileSpreadsheet /> Importar planilha</Link><Link className="admin-button primary" href="/admin/products/new"><Plus /> Adicionar produto</Link></div>}>
         <div className="admin-saved-views" aria-label="Visualizações salvas">
           <div><Bookmark /><strong>Visualizações</strong>{preferences.productViews.map((view) => <span className="admin-saved-view" key={view.id}><button onClick={() => { setQuery(view.query); setCategory(view.category); setVisibility(view.visibility); }}>{view.name}</button><button aria-label={`Excluir visualização ${view.name}`} onClick={() => updatePreferences((current) => ({ ...current, productViews: current.productViews.filter((item) => item.id !== view.id) }))}><X /></button></span>)}{!preferences.productViews.length && <small>Salve combinações de busca e filtros para reutilizar.</small>}</div>
           <div>

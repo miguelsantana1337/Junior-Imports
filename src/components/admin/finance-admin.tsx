@@ -2,7 +2,7 @@
 
 import { IconAlertTriangle, IconCash, IconCheck, IconPlus, IconReceipt2, IconTrendingUp, IconWallet } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatStoreDateKey } from "@/lib/format";
 import { financialSummary, productProfit } from "@/lib/operations";
 import { financialTransactionSchema } from "@/lib/validation";
 import type { FinancialTransaction } from "@/types/store";
@@ -12,11 +12,11 @@ import { AdminEmpty, AdminPanel } from "./admin-ui";
 const statusLabels: Record<FinancialTransaction["status"], string> = { pending: "Pendente", paid: "Pago", cancelled: "Cancelado" };
 
 export function FinanceAdmin() {
-  const { data, saveFinancialTransaction, deleteFinancialTransaction } = useAdminData();
+  const { data, referenceNow, saveFinancialTransaction, deleteFinancialTransaction } = useAdminData();
   const [formOpen, setFormOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | FinancialTransaction["type"]>("all");
   const [error, setError] = useState("");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatStoreDateKey(referenceNow);
   const [form, setForm] = useState<FinancialTransaction>(() => ({ id: crypto.randomUUID(), type: "expense", status: "pending", description: "", amount: 0, category: "Operacional", account: "Conta principal", costCenter: "Administração", dueDate: today, paidAt: "", orderId: "", purchaseOrderId: "", recurring: false, notes: "", createdAt: new Date().toISOString() }));
   const summary = useMemo(() => financialSummary(data.financialTransactions), [data.financialTransactions]);
   const transactions = data.financialTransactions.filter((item) => filter === "all" || item.type === filter);

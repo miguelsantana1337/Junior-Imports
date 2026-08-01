@@ -55,15 +55,27 @@ describe("validacao de produto", () => {
       brand: "Marca",
       price: "99.90",
       compareAt: "119.90",
+      cashback: "5",
+      cashbackType: "percent",
+      costPrice: "60",
       stock: "5",
+      minStock: "1",
       badge: "Novo",
       accent: "#1677ff",
       description: "Descricao suficientemente completa.",
       rating: "4.8",
       reviews: "10",
       imageUrl: "endereco-invalido",
+      imageUrls: [],
       featured: true,
       active: true,
+      productType: "non_medicine",
+      regulatoryStatus: "approved",
+      activeIngredient: "",
+      anvisaRegistration: "",
+      presentation: "",
+      regulatoryWarning: "",
+      pharmacistReviewed: true,
     });
     expect(result.success).toBe(false);
   });
@@ -81,7 +93,7 @@ describe("validacao do construtor da loja", () => {
   });
 
   it("valida uma automacao por status", () => {
-    expect(messageAutomationSchema.safeParse({ id: "automation-test", name: "Pedido enviado", triggerType: "order_status", triggerValue: "Enviado", triggerStatus: "Enviado", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi enviado.", conditions: { minOrderTotal: 0, orderSource: "any", customerSegment: "all" }, actions: { sendMessage: true, createTask: false, taskTitle: "", addTag: "" }, status: "active", maxRetries: 3, retryDelayMinutes: 15, lastTestedAt: "", runCount: 0, failureCount: 0, active: true, order: 1 }).success).toBe(true);
+    expect(messageAutomationSchema.safeParse({ id: "automation-test", name: "Pedido entregue", triggerType: "order_status", triggerValue: "Entregue", triggerStatus: "Entregue", channel: "whatsapp", subject: "", message: "Olá, {{cliente}}! Seu pedido {{pedido}} foi entregue.", conditions: { minOrderTotal: 0, orderSource: "any", customerSegment: "all" }, actions: { sendMessage: true, createTask: false, taskTitle: "", addTag: "" }, status: "active", maxRetries: 3, retryDelayMinutes: 15, lastTestedAt: "", runCount: 0, failureCount: 0, active: true, order: 1 }).success).toBe(true);
   });
 });
 

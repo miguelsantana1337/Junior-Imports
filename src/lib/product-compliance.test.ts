@@ -12,6 +12,7 @@ const base: Product = {
   price: 10,
   compareAt: 0,
   cashback: 0,
+  cashbackType: "fixed",
   costPrice: 6,
   stock: 1,
   minStock: 1,

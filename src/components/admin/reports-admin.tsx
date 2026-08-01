@@ -2,7 +2,7 @@
 
 import { BarChart3, CalendarRange, Check, Download, FileClock, FileSpreadsheet, FileText, History, LineChart, LockKeyhole, Plus, Save, Share2, Sparkles, Trash2, TrendingDown, TrendingUp, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney, formatStoreDateKey } from "@/lib/format";
 import { downloadReportFile } from "@/lib/report-export";
 import { buildReport, reportTypeLabels, type ReportQuery, type ReportValueFormat } from "@/lib/reporting";
 import { savedReportSchema } from "@/lib/validation";
@@ -14,7 +14,7 @@ import { AdminEmpty } from "./admin-ui";
 type ReportTab = "builder" | "saved" | "exports";
 
 const reportFilterOptions: Record<ReportType, Array<{ value: string; label: string }>> = {
-  sales: [{ value: "all", label: "Todos os pedidos" }, { value: "status:Novo", label: "Status: Novo" }, { value: "status:Pago", label: "Status: Pago" }, { value: "status:Enviado", label: "Status: Enviado" }, { value: "status:Cancelado", label: "Status: Cancelado" }, { value: "source:storefront", label: "Origem: Loja" }, { value: "source:admin", label: "Origem: Painel" }],
+  sales: [{ value: "all", label: "Todos os pedidos" }, { value: "status:Novo", label: "Status: Novo" }, { value: "status:Pago", label: "Status: Pago" }, { value: "status:Entregue", label: "Status: Entregue" }, { value: "status:Cancelado", label: "Status: Cancelado" }, { value: "source:storefront", label: "Origem: Loja" }, { value: "source:admin", label: "Origem: Painel" }],
   finance: [{ value: "all", label: "Todos os lançamentos" }, { value: "type:income", label: "Somente entradas" }, { value: "type:expense", label: "Somente saídas" }, { value: "status:paid", label: "Status: Pago" }, { value: "status:pending", label: "Status: Pendente" }],
   inventory: [{ value: "all", label: "Todo o estoque" }, { value: "severity:critical", label: "Ruptura prevista" }, { value: "severity:warning", label: "Ponto de reposição" }, { value: "reorder", label: "Compra sugerida" }, { value: "slow", label: "Sem giro" }],
   customers: [{ value: "all", label: "Todos os clientes" }, { value: "segment:new", label: "Novos" }, { value: "segment:active", label: "Ativos" }, { value: "segment:recurring", label: "Recorrentes" }, { value: "segment:vip", label: "VIP" }, { value: "segment:at_risk", label: "Em risco" }, { value: "segment:inactive", label: "Inativos" }],
@@ -26,10 +26,10 @@ function isoDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-function initialQuery(): ReportQuery {
-  const end = new Date();
+function initialQuery(referenceNow: number): ReportQuery {
+  const end = new Date(referenceNow);
   const start = new Date(end.getTime() - 29 * 86_400_000);
-  return { type: "sales", dateFrom: isoDate(start), dateTo: isoDate(end), comparePrevious: true, filters: {} };
+  return { type: "sales", dateFrom: formatStoreDateKey(start), dateTo: formatStoreDateKey(end), comparePrevious: true, filters: {} };
 }
 
 function metricValue(value: number, format: Exclude<ReportValueFormat, "text" | "date">) {
@@ -46,10 +46,10 @@ function tableValue(value: string | number, format: ReportValueFormat) {
 }
 
 export function ReportsAdmin() {
-  const { data, currentUser, saveReport, deleteReport, recordExportRun } = useAdminData();
+  const { data, currentUser, referenceNow, saveReport, deleteReport, recordExportRun } = useAdminData();
   const confirm = useConfirm();
   const [tab, setTab] = useState<ReportTab>("builder");
-  const [query, setQuery] = useState<ReportQuery>(initialQuery);
+  const [query, setQuery] = useState<ReportQuery>(() => initialQuery(referenceNow));
   const [selectedReportId, setSelectedReportId] = useState("");
   const [saveOpen, setSaveOpen] = useState(false);
   const [reportName, setReportName] = useState("");

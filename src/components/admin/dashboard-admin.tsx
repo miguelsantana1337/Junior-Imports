@@ -24,16 +24,9 @@ import {
 import Link from "next/link";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { useAdminData } from "./admin-data-provider";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
 import { buildCustomerInsights, customerRecurrenceRate } from "@/lib/crm";
 import { confirmedOrderRevenue } from "@/lib/order-revenue";
-
-function getDayKey(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 const auditEntityLabels: Record<string, string> = {
   products: "Produto",
@@ -57,14 +50,14 @@ function auditDescription(action: "insert" | "update" | "delete", entityType: st
 }
 
 export function DashboardAdmin() {
-  const { data, demoMode, currentUser } = useAdminData();
-  const now = new Date();
-  const hour = now.getHours();
+  const { data, demoMode, currentUser, referenceNow } = useAdminData();
+  const now = new Date(referenceNow);
+  const hour = formatStoreHour(now);
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const accountName = currentUser.fullName.split(/\s+/)[0] || "Administrador";
   const activityProduct = data.products[0];
   const activityCategory = data.categories[0];
-  const todayKey = getDayKey(now);
+  const todayKey = formatStoreDateKey(now);
   const activeProducts = data.products.filter((product) => product.active);
   const activeCoupons = data.coupons.filter((coupon) => coupon.active);
   const activeBanners = data.banners.filter((banner) => banner.active);
@@ -73,21 +66,19 @@ export function DashboardAdmin() {
   const recurrenceRate = customerRecurrenceRate(customerInsights);
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
-  const ordersToday = data.orders.filter((order) => order.createdAt.slice(0, 10) === todayKey);
-  const sevenDaysAgo = new Date(now);
-  sevenDaysAgo.setDate(now.getDate() - 6);
-  sevenDaysAgo.setHours(0, 0, 0, 0);
+  const ordersToday = data.orders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
+  const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
+  const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
   const weeklyRevenue = confirmedOrderRevenue(data.orders, sevenDaysAgo);
 
   const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(now);
-    date.setDate(now.getDate() - (6 - index));
-    const day = getDayKey(date);
+    const date = new Date(referenceNow - (6 - index) * 86_400_000);
+    const day = formatStoreDateKey(date);
     return {
       key: day,
-      label: date.toLocaleDateString("pt-BR", { weekday: "short" }).replace(".", ""),
-      date: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-      value: data.orders.filter((order) => order.createdAt.slice(0, 10) === day).length,
+      label: date.toLocaleDateString("pt-BR", { weekday: "short", timeZone: STORE_TIME_ZONE }).replace(".", ""),
+      date: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: STORE_TIME_ZONE }),
+      value: data.orders.filter((order) => formatStoreDateKey(order.createdAt) === day).length,
     };
   });
   const maxOrders = Math.max(...days.map((day) => day.value), 1);
@@ -98,6 +89,7 @@ export function DashboardAdmin() {
     day: "2-digit",
     month: "long",
     year: "numeric",
+    timeZone: STORE_TIME_ZONE,
   }).format(now);
 
   return (
@@ -107,8 +99,8 @@ export function DashboardAdmin() {
           <span className="admin-dashboard-kicker"><IconSparkles /> Centro de controle</span>
           <h1>{greeting}, {accountName}</h1>
           <div className="admin-dashboard-subtitle">
-            <span>Sua loja está pronta para testes</span>
-            <strong><IconFlask /> Demonstração — não realiza vendas reais</strong>
+            <span>{demoMode ? "Sua loja está pronta para testes" : "Sua loja está pronta para operar"}</span>
+            <strong>{demoMode ? <><IconFlask /> Demonstração — não realiza vendas reais</> : <><IconCloudCheck /> Operação conectada — pedidos reais</>}</strong>
           </div>
         </div>
         <div className="admin-dashboard-date">
@@ -162,10 +154,10 @@ export function DashboardAdmin() {
           </section>
 
           <section className="admin-command-panel admin-weekly-orders">
-            <header><div><h2>Pedidos dos últimos 7 dias</h2><p>Pedidos demonstrativos registrados no checkout</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
+            <header><div><h2>Pedidos dos últimos 7 dias</h2><p>{demoMode ? "Pedidos demonstrativos registrados no checkout" : "Pedidos registrados no checkout"}</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
             <div className="admin-weekly-chart" aria-label="Gráfico de pedidos dos últimos sete dias">
               {days.map((day) => <div className="admin-weekly-day" key={day.key}><div><span style={{ height: `${Math.max(2, (day.value / maxOrders) * 72)}px` }} /></div><small>{day.label} {day.date}</small></div>)}
-              {data.orders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href="/">Simular pedido</Link></div>}
+              {data.orders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href={data.tenant.storefrontPath || "/"}>{demoMode ? "Simular pedido" : "Abrir loja"}</Link></div>}
             </div>
           </section>
         </div>
@@ -177,7 +169,7 @@ export function DashboardAdmin() {
               <Link href="/admin/products/new"><span className="blue"><IconPackage /></span><div><strong>Novo produto</strong><small>Adicionar ao catálogo</small></div></Link>
               <Link href="/admin/coupons?novo=1"><span className="purple"><IconTicket /></span><div><strong>Novo cupom</strong><small>Criar promoção</small></div></Link>
               <Link href="/admin/banners?novo=1"><span className="green"><IconPhoto /></span><div><strong>Novo banner</strong><small>Destacar na vitrine</small></div></Link>
-              <Link href="/admin/sections"><span className="orange"><IconLayoutDashboard /></span><div><strong>Organizar início</strong><small>Editar página inicial</small></div></Link>
+              <Link href="/admin/layout"><span className="orange"><IconLayoutDashboard /></span><div><strong>Editar loja</strong><small>Páginas, seções e conteúdo</small></div></Link>
             </div>
           </section>
 
@@ -187,7 +179,7 @@ export function DashboardAdmin() {
               <article><IconPackage /><strong>Catálogo</strong><span>{activeProducts.length} produtos ativos</span><b>OK</b></article>
               <article><IconBuildingStore /><strong>Vitrine</strong><span>{activeSections.length} seções publicadas</span><b>OK</b></article>
               <article><IconDatabase /><strong>Supabase</strong><span>{demoMode ? "Modo local" : "Conexão ativa"}</span><b>OK</b></article>
-              <article><IconCloudCheck /><strong>Teste de checkout</strong><span>Simulação disponível</span><b>OK</b></article>
+              <article><IconCloudCheck /><strong>{demoMode ? "Teste de checkout" : "Checkout WhatsApp"}</strong><span>{demoMode ? "Simulação disponível" : "Fluxo operacional"}</span><b>OK</b></article>
             </div>
           </section>
 
@@ -201,7 +193,7 @@ export function DashboardAdmin() {
               <span className="done"><IconCircleCheck /> Adicionar produtos ao catálogo</span>
               <span className="done"><IconCircleCheck /> Configurar página inicial</span>
               <span className={data.settings.whatsapp ? "done" : "current"}>{data.settings.whatsapp ? <IconCircleCheck /> : <b>3</b>} Confirmar atendimento no WhatsApp</span>
-              <span><b>4</b> Realizar pedido de teste completo</span>
+              <span><b>4</b> {data.orders.length ? "Acompanhar pedidos recebidos" : "Realizar pedido de teste completo"}</span>
             </div>
           </section>
         </aside>

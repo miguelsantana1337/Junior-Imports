@@ -9,6 +9,7 @@ import { useStore } from "@/components/providers/store-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { stockLabel } from "@/lib/commerce";
+import { storefrontCashbackOffer } from "@/lib/cashback";
 import { formatMoney, whatsappUrl } from "@/lib/format";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { normalizeProductImages } from "@/lib/product-images";
@@ -38,6 +39,7 @@ export function ProductDetail({ slug }: { slug: string }) {
   const favorite = favorites.includes(product.id);
   const orderable = isProductPubliclySellable(product);
   const cartEligible = canAddProductToCart(product, data.settings.checkoutMode);
+  const cashbackOffer = storefrontCashbackOffer(product, data.cashbackCampaigns);
   const visibleImage = selectedImage && gallery.includes(selectedImage) ? selectedImage : product.imageUrl || gallery[0] || "";
   const addToCart = () => {
     addItem(product.id, quantity);
@@ -57,11 +59,10 @@ export function ProductDetail({ slug }: { slug: string }) {
           <div className="product-detail-copy">
             <span className="section-kicker">{product.category} · {product.brand}</span>
             <div className="product-title-row"><h1>{product.name}</h1><button className={`favorite-button detail-favorite ${favorite ? "active" : ""}`} onClick={() => toggleFavorite(product.id)} aria-label="Alternar favorito"><Heart fill={favorite ? "currentColor" : "none"} /></button></div>
-            <div className="rating">★★★★★ <span>{product.rating} · {product.reviews} avaliações</span></div>
             <p className="product-long-description">{product.description}</p>
-            <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong><small>{data.settings.pixDiscount}% OFF no Pix</small></div>
-            {product.cashback > 0 && <div className="product-detail-cashback"><strong>Ganhe {formatMoney(product.cashback * quantity)} de cashback</strong><span>{formatMoney(product.cashback)} por unidade · liberado após a confirmação do pedido</span></div>}
-            <dl className="product-facts"><div><dt>Marca</dt><dd>{product.brand || data.settings.storeName}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{cartEligible ? "Disponível para pedido" : product.stock <= 0 ? "Indisponível" : "Fale com a equipe"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
+            <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong>{data.settings.pixDiscount > 0 && <small>{data.settings.pixDiscount}% OFF no Pix</small>}</div>
+            {(cashbackOffer.value > 0 || cashbackOffer.fixedBonus > 0) && <div className="product-detail-cashback"><strong>{cashbackOffer.type === "percent" ? `Ganhe ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de cashback${cashbackOffer.fixedBonus > 0 ? ` + ${formatMoney(cashbackOffer.fixedBonus)}` : ""}` : `Ganhe até ${formatMoney(cashbackOffer.value * quantity)} de cashback`}</strong><span>Calculado sobre o valor pago pelos produtos, após descontos e sem frete · liberado após a confirmação</span></div>}
+            <dl className="product-facts"><div><dt>Marca</dt><dd>{product.brand || data.settings.storeName}</dd></div><div><dt>Disponibilidade</dt><dd className={`stock-${stock.tone}`}>{stock.label}</dd></div><div><dt>Pedido</dt><dd>{cartEligible ? "Disponível para pedido" : product.stock <= 0 ? "Indisponível" : "Fale com a equipe"}</dd></div><div><dt>Entrega</dt><dd>{data.settings.shippingCityRates.length ? "Frete calculado pela cidade do CEP" : data.settings.freeShippingEnabled ? `Frete grátis acima de ${formatMoney(data.settings.freeShippingThreshold)}` : `Frete fixo de ${formatMoney(data.settings.shippingFlat)}`}</dd></div></dl>
             {cartEligible ? <div className="product-order-stack">
               {!orderable && <div className="catalog-validation-notice compact"><ShieldCheck /><div><strong>Compra com confirmação no WhatsApp</strong><p>Adicione ao carrinho normalmente. A equipe confirma as condições e acompanha o pedido pelo atendimento.</p></div></div>}
               <div className="quantity-buy">
@@ -73,7 +74,7 @@ export function ProductDetail({ slug }: { slug: string }) {
           </div>
         </div>
       </section>
-      {cartEligible && <div className="product-mobile-purchase" aria-label="Compra rápida"><div><small>{quantity} {quantity === 1 ? "unidade" : "unidades"}{product.cashback > 0 ? ` · +${formatMoney(product.cashback * quantity)} cashback` : ""}</small><strong>{formatMoney(product.price * quantity)}</strong></div><button className="button button-primary" disabled={!cartReady} onClick={addToCart} aria-label={`Compra rápida: adicionar ${product.name}`}><ShoppingCart /> Adicionar</button></div>}
+      {cartEligible && <div className="product-mobile-purchase" aria-label="Compra rápida"><div><small>{quantity} {quantity === 1 ? "unidade" : "unidades"}{cashbackOffer.value > 0 ? cashbackOffer.type === "percent" ? ` · ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% cashback` : ` · até ${formatMoney(cashbackOffer.value * quantity)} cashback` : ""}</small><strong>{formatMoney(product.price * quantity)}</strong></div><button className="button button-primary" disabled={!cartReady} onClick={addToCart} aria-label={`Compra rápida: adicionar ${product.name}`}><ShoppingCart /> Adicionar</button></div>}
       {related.length > 0 && <section className="section related-section"><div className="container"><h2>Produtos relacionados.</h2><div className="product-grid">{related.map((item) => <ProductCard product={item} key={item.id} />)}</div></div></section>}
     </>
   );

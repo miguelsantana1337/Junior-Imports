@@ -11,7 +11,7 @@ import { messageAutomationSchema } from "@/lib/validation";
 import type { AutomationRun, AutomationTriggerType, CustomerSegment, MessageAutomation, OrderStatus } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 
-const orderStatuses: OrderStatus[] = ["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"];
+const orderStatuses: OrderStatus[] = ["Novo", "Pago", "Entregue", "Cancelado"];
 const segmentLabels: Record<CustomerSegment, string> = { new: "Novo", active: "Ativo", recurring: "Recorrente", vip: "VIP", at_risk: "Em risco", inactive: "Inativo" };
 const triggerLabels: Record<AutomationTriggerType, string> = { order_status: "Status do pedido", customer_segment: "Entrada em segmento", cashback_expiring: "Cashback vencendo", schedule: "Data programada" };
 const runStatusLabels: Record<AutomationRun["status"], string> = { testing: "Testando", simulated: "Simulada", queued: "Na fila", running: "Executando", succeeded: "Concluída", failed: "Falhou", retrying: "Novo envio", cancelled: "Cancelada" };

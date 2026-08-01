@@ -23,7 +23,7 @@ export function HeroCarousel() {
       Math.max(3, data.settings.autoBannerSeconds) * 1000,
     );
     return () => window.clearInterval(timer);
-  }, [banners.length, data.settings.autoBannerSeconds, paused]);
+  }, [active, banners.length, data.settings.autoBannerSeconds, paused]);
 
   if (!banners.length) return null;
 

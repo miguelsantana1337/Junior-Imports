@@ -7,6 +7,7 @@ import { useToast } from "@/components/providers/toast-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { discountPercent, stockLabel } from "@/lib/commerce";
+import { storefrontCashbackOffer } from "@/lib/cashback";
 import { formatMoney } from "@/lib/format";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
@@ -21,6 +22,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
   const favorite = favorites.includes(product.id);
   const orderable = isProductPubliclySellable(product);
   const cartEligible = canAddProductToCart(product, data.settings.checkoutMode);
+  const cashbackOffer = storefrontCashbackOffer(product, data.cashbackCampaigns);
   const detailHref = withStorefrontPath(data.tenant.storefrontPath, `/produtos/${product.slug}`);
 
   return (
@@ -39,13 +41,14 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
         <div className="product-meta"><span>{product.category}</span><small className={`stock-${stock.tone}`}>{stock.label}</small></div>
         <Link href={detailHref}><h3>{product.name}</h3></Link>
         <p>{product.description}</p>
-        {product.cashback > 0 && <div className="product-cashback-badge">Ganhe {formatMoney(product.cashback)} de cashback</div>}
-        <div className="rating" aria-label={`${product.rating} de 5 estrelas`}>★★★★★ <span>{product.rating} ({product.reviews})</span></div>
+        {(cashbackOffer.value > 0 || cashbackOffer.fixedBonus > 0) && <div className="product-cashback-badge">{cashbackOffer.type === "percent" ? `Ganhe ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de cashback${cashbackOffer.fixedBonus > 0 ? ` + ${formatMoney(cashbackOffer.fixedBonus)}` : ""}` : `Até ${formatMoney(cashbackOffer.value)} de cashback`}</div>}
         <div className="product-bottom">
           <div className="price-stack">
             {product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}
             <strong>{formatMoney(product.price)}</strong>
-            <small>{orderable ? `${data.settings.pixDiscount}% OFF no Pix` : cartEligible ? "Comprar pelo WhatsApp" : "Consulte a disponibilidade"}</small>
+            <small>{orderable
+              ? data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% OFF no Pix` : "Confirmação pelo WhatsApp"
+              : cartEligible ? "Comprar pelo WhatsApp" : "Consulte a disponibilidade"}</small>
           </div>
           {cartEligible ? <button
               className="add-button"

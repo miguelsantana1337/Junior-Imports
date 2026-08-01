@@ -32,14 +32,14 @@ const sourceLabels: Record<Customer["source"], string> = {
 };
 
 export function CustomersAdmin() {
-  const { data } = useAdminData();
+  const { data, referenceNow } = useAdminData();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [segment, setSegment] = useState<CustomerSegment | "all">("all");
   const [selected, setSelected] = useState<CustomerInsight | null>(null);
-  const [now] = useState(() => Date.now());
+  const now = referenceNow;
   useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) setQuery(externalQuery); }, [searchParams]);
-  const insights = useMemo(() => buildCustomerInsights(data.customers, data.orders), [data.customers, data.orders]);
+  const insights = useMemo(() => buildCustomerInsights(data.customers, data.orders, new Date(referenceNow)), [data.customers, data.orders, referenceNow]);
   const filtered = useMemo(() => insights.filter((customer) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matchesQuery = !normalized || `${customer.name} ${customer.email} ${customer.phone} ${customer.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(normalized);

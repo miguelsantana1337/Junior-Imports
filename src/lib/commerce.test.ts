@@ -13,8 +13,10 @@ describe("calculateCart", () => {
       paymentDiscount: 0,
       discount: 0,
       shipping: 0,
+      shippingStatus: "pending",
       total: 0,
       cashback: 0,
+      cashbackByProduct: {},
     });
   });
 
@@ -32,7 +34,7 @@ describe("calculateCart", () => {
     expect(result.paymentDiscount).toBeCloseTo(29.2455);
     expect(result.shipping).toBe(0);
     expect(result.total).toBeCloseTo(555.6645);
-    expect(result.cashback).toBe(50);
+    expect(result.cashback).toBe(42.75);
   });
 
   it("limita quantidade e contagem ao estoque disponivel", () => {
@@ -51,10 +53,127 @@ describe("calculateCart", () => {
     const result = calculateCart(
       [{ productId: product.id, quantity: 1 }],
       seedData.products,
-      { ...seedData.settings, freeShippingEnabled: false },
+      { ...seedData.settings, freeShippingEnabled: false, shippingCityRates: [], quoteShippingOutsideCities: false },
     );
 
     expect(result.shipping).toBe(seedData.settings.shippingFlat);
+    expect(result.shippingStatus).toBe("calculated");
+  });
+
+  it.each([
+    ["Ipatinga", 10],
+    ["coronel fabriciano", 20],
+    ["Timoteo", 30],
+  ])("aplica a tarifa configurada para %s", (city, expected) => {
+    const result = calculateCart(
+      [{ productId: product.id, quantity: 1 }],
+      seedData.products,
+      { ...seedData.settings, freeShippingEnabled: false },
+      null,
+      undefined,
+      [],
+      { city, state: "MG" },
+    );
+
+    expect(result.shipping).toBe(expected);
+    expect(result.shippingStatus).toBe("calculated");
+  });
+
+  it("deixa o frete para cotacao em cidades nao cadastradas", () => {
+    const result = calculateCart(
+      [{ productId: product.id, quantity: 1 }],
+      seedData.products,
+      { ...seedData.settings, freeShippingEnabled: false },
+      null,
+      undefined,
+      [],
+      { city: "Belo Horizonte", state: "MG" },
+    );
+
+    expect(result.shipping).toBe(0);
+    expect(result.shippingStatus).toBe("quote");
+    expect(result.total).toBe(result.subtotal);
+  });
+
+  it("zera o frete quando o cliente escolhe retirada no local", () => {
+    const result = calculateCart(
+      [{ productId: product.id, quantity: 1 }],
+      seedData.products,
+      { ...seedData.settings, freeShippingEnabled: false },
+      null,
+      undefined,
+      [],
+      { deliveryMethod: "pickup" },
+    );
+
+    expect(result.shipping).toBe(0);
+    expect(result.shippingStatus).toBe("pickup");
+    expect(result.total).toBe(result.subtotal);
+  });
+
+  it("aplica campanha de 1% sobre o valor dos produtos elegiveis", () => {
+    const campaign = {
+      ...seedData.cashbackCampaigns[0],
+      multiplier: 1,
+      fixedBonus: 0,
+      targetSegments: [],
+      productIds: [],
+    };
+    const result = calculateCart(
+      [{ productId: product.id, quantity: 1 }],
+      seedData.products,
+      seedData.settings,
+      null,
+      undefined,
+      [campaign],
+    );
+
+    expect(result.cashback).toBeCloseTo(product.price * 0.01);
+  });
+
+  it("calcula cashback sobre o total pago pelos produtos sem incluir o frete", () => {
+    const item = { ...product, price: 2200, compareAt: 2200, cashback: 50, cashbackType: "fixed" as const, stock: 1 };
+    const coupon = {
+      ...seedData.coupons[0],
+      type: "fixed" as const,
+      value: 1300,
+      minimum: 0,
+      applicableCategoryIds: [],
+      applicableProductIds: [],
+    };
+    const campaign = {
+      ...seedData.cashbackCampaigns[0],
+      multiplier: 1,
+      fixedBonus: 0,
+      targetSegments: [],
+      productIds: [],
+    };
+    const result = calculateCart(
+      [{ productId: item.id, quantity: 1 }],
+      [item],
+      { ...seedData.settings, pixDiscount: 0, freeShippingEnabled: false, shippingCityRates: [], quoteShippingOutsideCities: false, shippingFlat: 10 },
+      coupon,
+      "Pix",
+      [campaign],
+    );
+
+    expect(result.total).toBe(910);
+    expect(result.cashback).toBe(9);
+    expect(result.cashbackByProduct[item.id]).toBe(9);
+  });
+
+  it("aceita cashback percentual no produto quando nao existe campanha", () => {
+    const item = { ...product, price: 100, cashback: 5, cashbackType: "percent" as const, stock: 1 };
+    const coupon = { ...seedData.coupons[0], type: "percent" as const, value: 20, minimum: 0, applicableCategoryIds: [], applicableProductIds: [] };
+    const result = calculateCart(
+      [{ productId: item.id, quantity: 1 }],
+      [item],
+      { ...seedData.settings, pixDiscount: 0, freeShippingEnabled: false, shippingFlat: 0, shippingCityRates: [], quoteShippingOutsideCities: false },
+      coupon,
+    );
+
+    expect(result.total).toBe(80);
+    expect(result.cashback).toBe(4);
   });
 });
 

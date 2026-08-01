@@ -29,12 +29,25 @@ export interface SaasTenant extends Omit<StoreTenant, "storefrontPath"> {
 
 export type OrderStatus =
   | "Novo"
-  | "Aguardando pagamento"
   | "Pago"
-  | "Preparando"
-  | "Enviado"
   | "Entregue"
   | "Cancelado";
+
+export interface ShippingCityRate {
+  city: string;
+  state: string;
+  amount: number;
+}
+
+export interface ShippingDestination {
+  city?: string;
+  state?: string;
+  deliveryMethod?: DeliveryMethod;
+}
+
+export type DeliveryMethod = "delivery" | "pickup";
+
+export type ShippingStatus = "free" | "calculated" | "quote" | "pending" | "pickup";
 
 export interface StoreSettings {
   storeName: string;
@@ -57,6 +70,10 @@ export interface StoreSettings {
   borderRadius: number;
   freeShippingThreshold: number;
   shippingFlat: number;
+  shippingCityRates: ShippingCityRate[];
+  quoteShippingOutsideCities: boolean;
+  localPickupEnabled: boolean;
+  localPickupInstructions: string;
   freeShippingEnabled: boolean;
   freeShippingBannerEnabled: boolean;
   freeShippingBannerEyebrow: string;
@@ -80,6 +97,7 @@ export interface StorefrontProduct {
   price: number;
   compareAt: number;
   cashback: number;
+  cashbackType: "fixed" | "percent";
   stock: number;
   badge: string;
   accent: string;
@@ -383,6 +401,7 @@ export interface OrderCustomer {
   name: string;
   phone: string;
   email: string;
+  deliveryMethod?: DeliveryMethod;
   zip: string;
   city: string;
   state: string;
@@ -412,6 +431,7 @@ export interface Order {
   trackingCode: string;
   orderSource?: "legacy" | "storefront" | "admin";
   reservationExpiresAt?: string;
+  shippingStatus?: ShippingStatus;
 }
 
 export type FinancialTransactionType = "income" | "expense";
@@ -747,6 +767,7 @@ export interface StorefrontData {
   faqs: Faq[];
   orders: Order[];
   cashbackCampaigns: CashbackCampaign[];
+  productReviews: ProductReview[];
 }
 
 export interface CartLine {
@@ -761,6 +782,8 @@ export interface CartCalculation {
   paymentDiscount: number;
   discount: number;
   shipping: number;
+  shippingStatus: ShippingStatus;
   total: number;
   cashback: number;
+  cashbackByProduct: Record<string, number>;
 }

@@ -15,11 +15,11 @@ type InsightFilter = "all" | InventoryInsight["severity"] | "reorder" | "slow" |
 const filterLabels: Record<InsightFilter, string> = { all: "Todos", critical: "Ruptura", warning: "Ponto mínimo", attention: "Atenção", healthy: "Saudáveis", reorder: "Compra sugerida", slow: "Baixo giro", margin: "Margem" };
 
 export function InventoryIntelligence() {
-  const { data, savePurchaseOrder } = useAdminData();
+  const { data, referenceNow, savePurchaseOrder } = useAdminData();
   const confirm = useConfirm();
   const [filter, setFilter] = useState<InsightFilter>("all");
   const [lookback, setLookback] = useState(90);
-  const [referenceTime] = useState(() => new Date());
+  const referenceTime = useMemo(() => new Date(referenceNow), [referenceNow]);
   const insights = useMemo(() => inventoryInsights(data, lookback, referenceTime), [data, lookback, referenceTime]);
   const filtered = insights.filter((item) => filter === "all" || item.severity === filter || (filter === "reorder" && item.suggestedQuantity > 0) || (filter === "slow" && item.soldUnits === 0 && item.stock > 0) || (filter === "margin" && (item.marginPercent < 20 || item.flags.includes("Custo não informado"))));
   const critical = insights.filter((item) => item.severity === "critical").length;

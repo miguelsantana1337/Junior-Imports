@@ -25,6 +25,16 @@ describe("importação de catálogo por planilha", () => {
     expect(invalid.errors[0]?.message).toContain("Cashback");
   });
 
+  it("importa cashback percentual e valida o limite de 100%", () => {
+    const product = seedData.products.at(-1)!;
+    const valid = parseProductImport(`sku;nome;categoria;preco;cashback_tipo;cashback\n${product.sku};${product.name};${product.category};99,90;percentual;12,5`, seedData.products, seedData.categories);
+    const invalid = parseProductImport(`sku;nome;categoria;preco;cashback_tipo;cashback\n${product.sku};${product.name};${product.category};99,90;percentual;120`, seedData.products, seedData.categories);
+
+    expect(valid.errors).toHaveLength(0);
+    expect(valid.products[0]).toMatchObject({ cashbackType: "percent", cashback: 12.5 });
+    expect(invalid.errors[0]?.message).toContain("100%");
+  });
+
   it("gera endereços diferentes para produtos importados com o mesmo nome", () => {
     const category = seedData.categories[0];
     const result = parseProductImport(
@@ -55,6 +65,7 @@ describe("importação de catálogo por planilha", () => {
       nome: first.name,
       categoria: first.category,
       preco: first.price.toFixed(2).replace(".", ","),
+      cashback_tipo: "fixo",
       cashback: first.cashback.toFixed(2).replace(".", ","),
       estoque: String(first.stock),
       etiqueta: first.badge,
@@ -95,6 +106,7 @@ describe("importação de catálogo por planilha", () => {
       brand: current.brand,
       price: current.price,
       compareAt: current.compareAt,
+      cashbackType: current.cashbackType,
       cashback: current.cashback,
       costPrice: current.costPrice,
       stock: current.stock,
@@ -102,8 +114,6 @@ describe("importação de catálogo por planilha", () => {
       badge: current.badge,
       accent: current.accent,
       description: current.description,
-      rating: current.rating,
-      reviews: current.reviews,
       featured: current.featured,
       active: current.active,
       order: current.order,

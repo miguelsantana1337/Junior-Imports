@@ -29,6 +29,9 @@ export const viewport: Viewport = {
 
 export default async function AdminPanelLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAdmin();
+  // A single request-scoped value is serialized so time-sensitive client views hydrate deterministically.
+  // eslint-disable-next-line react-hooks/purity
+  const referenceNow = Date.now();
   const data = await getStoreData({
     admin: true,
     tenantSlug: user.tenantSlug,
@@ -36,5 +39,5 @@ export default async function AdminPanelLayout({ children }: { children: React.R
     permissions: user.permissions,
     includeAudit: hasAdminPermission(user.role, user.permissions, "audit"),
   });
-  return <AdminDataProvider initialData={data} currentUser={user}><AdminShell user={user} demoMode={!isSupabaseConfigured()}>{children}</AdminShell></AdminDataProvider>;
+  return <AdminDataProvider initialData={data} currentUser={user} referenceNow={referenceNow}><AdminShell user={user} demoMode={!isSupabaseConfigured()}>{children}</AdminShell></AdminDataProvider>;
 }

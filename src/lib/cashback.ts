@@ -1,4 +1,4 @@
-import type { CashbackCampaign, CashbackEntry, CashbackEntryKind, CustomerSegment } from "@/types/store";
+import type { CashbackCampaign, CashbackEntry, CashbackEntryKind, CustomerSegment, StorefrontProduct } from "@/types/store";
 
 const creditKinds = new Set<CashbackEntryKind>(["order_credit", "campaign_bonus", "adjustment_credit"]);
 
@@ -73,4 +73,16 @@ export function activeCashbackCampaigns(campaigns: CashbackCampaign[], now = new
 
 export function campaignAudienceLabel(segments: CustomerSegment[]) {
   return segments.length ? segments.length === 1 ? "1 segmento" : `${segments.length} segmentos` : "Todos os clientes";
+}
+
+export function storefrontCashbackOffer(product: StorefrontProduct, campaigns: CashbackCampaign[]) {
+  const campaign = [...campaigns]
+    .filter((item) => item.status === "active" && item.targetSegments.length === 0)
+    .filter((item) => item.productIds.length === 0 || item.productIds.includes(product.id))
+    .sort((left, right) => right.priority - left.priority)[0];
+
+  if (campaign) {
+    return { type: "percent" as const, value: campaign.multiplier, fixedBonus: campaign.fixedBonus, campaign: true };
+  }
+  return { type: product.cashbackType, value: product.cashback, fixedBonus: 0, campaign: false };
 }

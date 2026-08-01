@@ -32,15 +32,15 @@ function newCampaign(): CashbackCampaign {
 }
 
 export function CashbackCenter() {
-  const { data, saveCashbackCampaign } = useAdminData();
+  const { data, referenceNow, saveCashbackCampaign } = useAdminData();
   const [editing, setEditing] = useState<CashbackCampaign | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const summary = useMemo(() => cashbackWalletSummary(data.cashbackEntries), [data.cashbackEntries]);
-  const active = useMemo(() => activeCashbackCampaigns(data.cashbackCampaigns), [data.cashbackCampaigns]);
+  const active = useMemo(() => activeCashbackCampaigns(data.cashbackCampaigns, new Date(referenceNow)), [data.cashbackCampaigns, referenceNow]);
   const customersWithBalance = useMemo(() => data.customers.filter((customer) => cashbackWalletSummary(data.cashbackEntries, customer.id).available > 0).length, [data.cashbackEntries, data.customers]);
   const availableBalance = useMemo(() => data.customers.reduce((sum, customer) => sum + cashbackWalletSummary(data.cashbackEntries, customer.id).available, 0), [data.cashbackEntries, data.customers]);
-  const eligibleProducts = data.products.filter((product) => product.active && product.cashback > 0);
+  const eligibleProducts = data.products.filter((product) => product.active);
 
   function toggleSegment(segment: CustomerSegment) {
     setEditing((current) => current ? { ...current, targetSegments: current.targetSegments.includes(segment) ? current.targetSegments.filter((item) => item !== segment) : [...current.targetSegments, segment] } : current);
@@ -77,20 +77,20 @@ export function CashbackCenter() {
       <article><Sparkles /><div><span>Campanhas ativas</span><strong>{active.length}</strong><small>{data.cashbackCampaigns.length} {data.cashbackCampaigns.length === 1 ? "configurada" : "configuradas"}</small></div></article>
     </section>
 
-    <AdminPanel title="Campanhas de cashback" description="Combine período, produtos e segmentos. A campanha de maior prioridade é aplicada quando a venda for confirmada.">
-      <div className="cashback-campaign-toolbar"><div><strong>Motor promocional</strong><span>O cashback base do produto é preservado; a campanha adiciona um bônus separado no extrato.</span></div><button className="admin-button primary" onClick={() => { setEditing(newCampaign()); setError(""); }}><Plus /> Nova campanha</button></div>
+    <AdminPanel title="Campanhas de cashback" description="Combine período, produtos e segmentos. A campanha elegível de maior prioridade substitui o cashback dos produtos participantes.">
+      <div className="cashback-campaign-toolbar"><div><strong>Motor promocional</strong><span>O percentual da campanha é calculado após os descontos, sem frete, e substitui a regra individual do produto.</span></div><button className="admin-button primary" onClick={() => { setEditing(newCampaign()); setError(""); }}><Plus /> Nova campanha</button></div>
       <div className="cashback-campaign-list">
         {data.cashbackCampaigns.map((campaign) => <article key={campaign.id} className={campaign.status}>
           <header><div className="cashback-campaign-icon"><BadgeDollarSign /></div><div><span className={`cashback-campaign-status ${campaign.status}`}>{statusLabels[campaign.status]}</span><h3>{campaign.name}</h3><p>{campaign.description || "Sem descrição interna."}</p></div></header>
           <div className="cashback-campaign-rules"><span><Sparkles /> {campaign.multiplier.toFixed(2).replace(".00", "")}%{campaign.fixedBonus > 0 ? ` + ${formatMoney(campaign.fixedBonus)}` : ""}</span><span><CalendarDays /> {formatDateTime(campaign.startsAt)}{campaign.endsAt ? ` — ${formatDateTime(campaign.endsAt)}` : ""}</span><span><Clock3 /> Créditos por {campaign.creditValidDays} dias</span></div>
-          <footer><div><strong>{campaignAudienceLabel(campaign.targetSegments)}</strong><span>{campaign.productIds.length ? `${campaign.productIds.length} produto${campaign.productIds.length === 1 ? "" : "s"}` : "Todos os produtos com cashback"} · prioridade {campaign.priority}</span></div><div><button className="admin-button" aria-label={`Editar ${campaign.name}`} onClick={() => { setEditing(campaign); setError(""); }}><Pencil /> Editar</button>{["active", "paused"].includes(campaign.status) && <button className="admin-button" onClick={() => { void saveCashbackCampaign({ ...campaign, status: campaign.status === "active" ? "paused" : "active" }).catch(() => undefined); }}>{campaign.status === "active" ? <CirclePause /> : <CirclePlay />} {campaign.status === "active" ? "Pausar" : "Ativar"}</button>}</div></footer>
+          <footer><div><strong>{campaignAudienceLabel(campaign.targetSegments)}</strong><span>{campaign.productIds.length ? `${campaign.productIds.length} produto${campaign.productIds.length === 1 ? "" : "s"}` : "Todos os produtos"} · prioridade {campaign.priority}</span></div><div><button className="admin-button" aria-label={`Editar ${campaign.name}`} onClick={() => { setEditing(campaign); setError(""); }}><Pencil /> Editar</button>{["active", "paused"].includes(campaign.status) && <button className="admin-button" onClick={() => { void saveCashbackCampaign({ ...campaign, status: campaign.status === "active" ? "paused" : "active" }).catch(() => undefined); }}>{campaign.status === "active" ? <CirclePause /> : <CirclePlay />} {campaign.status === "active" ? "Pausar" : "Ativar"}</button>}</div></footer>
         </article>)}
         {!data.cashbackCampaigns.length && <AdminEmpty><Sparkles /><strong>Nenhuma campanha configurada.</strong><span>Crie a primeira regra para acelerar recompra e retenção.</span></AdminEmpty>}
       </div>
     </AdminPanel>
 
     {editing && createPortal(<div className="cashback-campaign-editor" role="dialog" aria-modal="true" aria-label="Editar campanha de cashback"><button className="admin-modal-overlay" aria-label="Fechar" onClick={() => setEditing(null)} /><form onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-      <header><div><span>REGRAS DE CASHBACK</span><h2>{data.cashbackCampaigns.some((item) => item.id === editing.id) ? "Editar campanha" : "Nova campanha"}</h2><p>Somente a campanha elegível com maior prioridade é aplicada a cada pedido.</p></div><button type="button" onClick={() => setEditing(null)} aria-label="Fechar">×</button></header>
+      <header><div><span>REGRAS DE CASHBACK</span><h2>{data.cashbackCampaigns.some((item) => item.id === editing.id) ? "Editar campanha" : "Nova campanha"}</h2><p>Somente a campanha elegível com maior prioridade é aplicada; ela substitui o cashback individual dos produtos participantes.</p></div><button type="button" onClick={() => setEditing(null)} aria-label="Fechar">×</button></header>
       <div className="cashback-editor-grid">
         <label className="full">Nome<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} placeholder="Ex.: Cashback em dobro para VIP" autoFocus /></label>
         <label className="full">Descrição interna<textarea rows={2} value={editing.description} onChange={(event) => setEditing({ ...editing, description: event.target.value })} placeholder="Objetivo e observações da campanha" /></label>
@@ -98,11 +98,11 @@ export function CashbackCenter() {
         <label>Prioridade<input type="number" min="0" max="1000" value={editing.priority} onChange={(event) => setEditing({ ...editing, priority: Number(event.target.value) })} /></label>
         <label>Início<input type="datetime-local" value={localDateTime(editing.startsAt)} onChange={(event) => setEditing({ ...editing, startsAt: isoDateTime(event.target.value) })} /></label>
         <label>Término<input type="datetime-local" value={localDateTime(editing.endsAt)} onChange={(event) => setEditing({ ...editing, endsAt: isoDateTime(event.target.value) })} /></label>
-        <label>Percentual do produto (%)<input type="number" min="0.1" max="100" step="0.1" value={editing.multiplier} onChange={(event) => setEditing({ ...editing, multiplier: Number(event.target.value) })} /><small>Ex: 1 para 1% de cashback no valor do produto.</small></label>
+        <label>Cashback da campanha (%)<input type="number" min="0.1" max="100" step="0.1" value={editing.multiplier} onChange={(event) => setEditing({ ...editing, multiplier: Number(event.target.value) })} /><small>Ex.: 1 concede 1% sobre o valor pago pelos produtos, depois dos descontos e sem frete.</small></label>
         <label>Bônus fixo por pedido<input type="number" min="0" step="0.01" value={editing.fixedBonus} onChange={(event) => setEditing({ ...editing, fixedBonus: Number(event.target.value) })} /></label>
         <label>Validade do crédito<input type="number" min="1" max="730" value={editing.creditValidDays} onChange={(event) => setEditing({ ...editing, creditValidDays: Number(event.target.value) })} /><small>Quantidade de dias após a confirmação.</small></label>
         <fieldset className="full"><legend>Segmentos elegíveis</legend><p>Sem seleção, a campanha vale para todos os clientes.</p><div className="cashback-choice-grid">{Object.entries(segmentLabels).map(([value, label]) => <label key={value}><input type="checkbox" checked={editing.targetSegments.includes(value as CustomerSegment)} onChange={() => toggleSegment(value as CustomerSegment)} /><span>{label}</span></label>)}</div></fieldset>
-        <fieldset className="full"><legend>Produtos participantes</legend><p>Sem seleção, o multiplicador vale para todos os produtos que já possuem cashback.</p><div className="cashback-product-picker">{eligibleProducts.map((product) => <label key={product.id}><input type="checkbox" checked={editing.productIds.includes(product.id)} onChange={() => toggleProduct(product.id)} /><span><strong>{product.name}</strong><small>{formatMoney(product.cashback)} por unidade</small></span></label>)}</div></fieldset>
+        <fieldset className="full"><legend>Produtos participantes</legend><p>Sem seleção, a campanha substitui o cashback individual de todos os produtos ativos.</p><div className="cashback-product-picker">{eligibleProducts.map((product) => <label key={product.id}><input type="checkbox" checked={editing.productIds.includes(product.id)} onChange={() => toggleProduct(product.id)} /><span><strong>{product.name}</strong><small>{product.cashback > 0 ? product.cashbackType === "percent" ? `${product.cashback.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de cashback individual` : `${formatMoney(product.cashback)} de cashback individual por unidade` : "Sem cashback individual"}</small></span></label>)}</div></fieldset>
       </div>
       {error && <p className="admin-form-error" role="alert">{error}</p>}
       <footer><button type="button" className="admin-button" onClick={() => setEditing(null)}>Cancelar</button><button className="admin-button primary" disabled={saving}>{saving ? "Salvando..." : "Salvar campanha"}</button></footer>

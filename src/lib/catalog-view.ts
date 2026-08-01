@@ -36,6 +36,7 @@ export function buildCatalogProductGroups(
     .filter((category) => category.active)
     .sort((a, b) => a.order - b.order);
   const activeCategoryIds = new Set(orderedCategories.map((category) => category.id));
+  const knownCategoryIds = new Set(categories.map((category) => category.id));
   const assignedProductIds = new Set<string>();
   const groups: CatalogProductGroup[] = [];
 
@@ -56,7 +57,7 @@ export function buildCatalogProductGroups(
 
   const remainingByName = new Map<string, StorefrontProduct[]>();
   visibleProducts
-    .filter((product) => !assignedProductIds.has(product.id))
+    .filter((product) => !assignedProductIds.has(product.id) && !knownCategoryIds.has(product.categoryId))
     .forEach((product) => {
       const categoryName = product.category.trim() || "Outros produtos";
       remainingByName.set(categoryName, [...(remainingByName.get(categoryName) ?? []), product]);

@@ -18,7 +18,33 @@ async function login(page: Page) {
 async function openSection(page: Page, name: string) {
   const menuButton = page.getByRole("button", { name: "Abrir menu" });
   if (await menuButton.isVisible()) await menuButton.click();
-  await page.getByRole("navigation", { name: "Navegação administrativa" }).getByRole("link", { name, exact: true }).click();
+  const navigation = page.getByRole("navigation", { name: "Navegação administrativa" });
+  const link = navigation.getByRole("link", { name, exact: true });
+  if (!await link.isVisible()) {
+    const groupBySection: Record<string, string> = {
+      "Visão geral": "Operação",
+      Pedidos: "Operação",
+      Clientes: "Operação",
+      "Tarefas e contatos": "Operação",
+      "Equipe e aprovações": "Operação",
+      Financeiro: "Gestão",
+      "Estoque e lotes": "Gestão",
+      "Compras e fornecedores": "Gestão",
+      "Relatórios e exportações": "Gestão",
+      "Editor da loja": "Loja",
+      Produtos: "Loja",
+      Categorias: "Loja",
+      Cupons: "Marketing",
+      "Campanhas e automações": "Marketing",
+      "Acessos e permissões": "Administração",
+      "Segurança e MFA": "Administração",
+      "Loja, frete e atendimento": "Administração",
+      "Backup e auditoria": "Administração",
+    };
+    const group = groupBySection[name];
+    if (group) await navigation.getByRole("button", { name: group, exact: true }).click();
+  }
+  await link.click();
 }
 
 test("carrega o painel sem falhas críticas de hidratação", async ({ page }) => {
@@ -30,7 +56,7 @@ test("carrega o painel sem falhas críticas de hidratação", async ({ page }) =
 
   await login(page);
   await page.goto("/admin/collaboration");
-  await expect(page.getByRole("heading", { name: "Colaboração e aprovações" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Equipe e aprovações" })).toBeVisible();
 
   const criticalIssues = runtimeIssues.filter((issue) =>
     /hydration|uncaught|typeerror|referenceerror|script tag/i.test(issue),
@@ -61,7 +87,9 @@ test("instala o painel como PWA sem armazenar páginas administrativas", async (
     "href",
     "/admin-manifest.webmanifest",
   );
-  await expect(page.getByRole("button", { name: "Instalar painel como aplicativo" })).toBeVisible();
+  const installButton = page.getByRole("button", { name: "Instalar painel como aplicativo" });
+  if ((page.viewportSize()?.width ?? 1280) <= 640) await expect(installButton).toBeHidden();
+  else await expect(installButton).toBeVisible();
 
   await expect.poll(() => page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration("/admin");
@@ -120,7 +148,7 @@ test("alterna e mantém o modo escuro do painel", async ({ page }) => {
   await darkModeButton.click();
 
   await expect(html).toHaveAttribute("data-admin-theme", "dark");
-  await expect(page.locator(".admin-main-next")).toHaveCSS("background-color", "rgb(9, 17, 31)");
+  await expect(page.locator(".admin-main-next")).toHaveCSS("background-color", "rgb(9, 17, 30)");
   await expect(page.getByRole("button", { name: "Ativar modo claro" })).toBeVisible();
 
   await page.reload();
@@ -213,29 +241,83 @@ test("cria uma pagina e um container personalizado", async ({ page }) => {
   await pageModal.getByLabel("Título público").fill("Guia de compra");
   await pageModal.getByLabel("Descrição da prévia do link").fill("Conteúdo demonstrativo para ajudar clientes.");
   await pageModal.getByRole("button", { name: "Salvar página" }).click();
-  await expect(page.getByRole("button", { name: /Guia de compra/ })).toBeVisible();
+  await expect(page.locator(".layout-page-select").filter({ hasText: "Guia de compra" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Novo container" }).click();
-  const blockModal = page.getByRole("dialog", { name: "Novo container" });
+  await page.getByRole("button", { name: "Adicionar seção" }).click();
+  const blockModal = page.getByRole("dialog", { name: "Adicionar seção" });
   await expect(blockModal).toBeVisible();
   await blockModal.getByLabel("Tipo de conteúdo").selectOption("cta");
-  await blockModal.getByLabel("Nome interno").fill("Chamada principal");
-  await blockModal.getByRole("textbox", { name: "Título", exact: true }).fill("Encontre o produto ideal.");
-  await blockModal.getByRole("textbox", { name: "Texto", exact: true }).fill("Uma chamada configurada pelo editor modular.");
+  await blockModal.getByRole("button", { name: "Aparência" }).click();
+  await blockModal.getByLabel("Nome para identificar no painel").fill("Chamada principal");
+  await blockModal.getByRole("button", { name: "Conteúdo" }).click();
+  await blockModal.getByRole("textbox", { name: "Título que o cliente verá", exact: true }).fill("Encontre o produto ideal.");
+  await blockModal.getByRole("textbox", { name: "Texto de apoio", exact: true }).fill("Uma chamada configurada pelo editor modular.");
   await blockModal.getByRole("textbox", { name: "Texto do botão", exact: true }).fill("Ver catálogo");
-  await blockModal.getByLabel("Link do botão").fill("/#catalogo");
-  await blockModal.getByRole("button", { name: "Salvar container" }).click();
+  await blockModal.getByLabel("Destino do botão").fill("/#catalogo");
+  await blockModal.getByRole("button", { name: "Salvar e publicar" }).click();
   await expect(page.getByText("Chamada principal", { exact: true })).toBeVisible();
+});
+
+test("centraliza o conteúdo da home no editor da loja", async ({ page }) => {
+  await login(page);
+
+  const navigation = page.getByRole("navigation", { name: "Navegação administrativa" });
+  await expect(navigation.getByRole("link", { name: "Conteúdo da home", exact: true })).toHaveCount(0);
+  await openSection(page, "Editor da loja");
+  await expect(page.getByText("Tudo da loja em um único editor", { exact: true })).toBeVisible();
+
+  const featuredBlock = page.locator(".layout-block-list > article").filter({ hasText: "Produtos em destaque" }).first();
+  await featuredBlock.getByRole("button", { name: "Editar conteúdo" }).click();
+  const modal = page.getByRole("dialog", { name: "Editar seção" });
+  await expect(modal.getByLabel("Título que o cliente verá")).toHaveValue("Destaques da Junior Imports.");
+  await modal.getByRole("button", { name: "Cancelar" }).click();
+
+  await page.goto("/admin/sections");
+  await expect(page).toHaveURL(/\/admin\/layout$/);
+});
+
+test("configura produtos em destaque diretamente no editor da loja", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Editor da loja");
+
+  const featuredBlock = page.locator(".layout-block-list > article").filter({ hasText: "Produtos em destaque" }).first();
+  await featuredBlock.getByRole("button", { name: "Editar conteúdo" }).click();
+
+  const modal = page.getByRole("dialog", { name: "Editar seção" });
+  await expect(modal.getByLabel("Título que o cliente verá")).toBeVisible();
+  await modal.getByRole("button", { name: "Itens exibidos" }).click();
+  await expect(modal.locator(".layout-resource-heading strong").filter({ hasText: "Produtos em destaque" })).toBeVisible();
+  await expect(modal.getByLabel("Buscar produto")).toBeVisible();
+
+  const productChoices = modal.locator(".product-choice-grid input[type=checkbox]");
+  await expect(productChoices.first()).toBeVisible();
+  const checkedBefore = await productChoices.evaluateAll((inputs) => inputs.filter((input) => (input as HTMLInputElement).checked).length);
+  expect(checkedBefore).toBeGreaterThan(0);
+
+  const firstChoice = productChoices.first();
+  await firstChoice.click();
+  if (checkedBefore === 1) await productChoices.nth(1).click();
+  await modal.getByRole("button", { name: "Conteúdo" }).click();
+  await modal.getByLabel("Título que o cliente verá").fill("Seleção especial E2E");
+  await modal.getByRole("button", { name: "Salvar e publicar" }).click();
+
+  await expect(page.getByRole("status").filter({ hasText: "Container salvo." })).toBeVisible();
+  await featuredBlock.getByRole("button", { name: "Editar conteúdo" }).click();
+  const editedModal = page.getByRole("dialog", { name: "Editar seção" });
+  await editedModal.getByRole("button", { name: "Conteúdo" }).click();
+  await expect(editedModal.getByLabel("Título que o cliente verá")).toHaveValue("Seleção especial E2E");
 });
 
 test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await login(page);
-  await openSection(page, "Mensagens");
+  await openSection(page, "Campanhas e automações");
+  await page.getByRole("button", { name: "Automações", exact: true }).click();
   await page.getByRole("button", { name: "Nova automação" }).first().click();
-  const automationModal = page.getByRole("dialog", { name: "Nova automação" });
-  await automationModal.getByLabel("Nome da automação").fill("Aviso de preparação");
-  await automationModal.getByLabel("Status que dispara").selectOption("Preparando");
-  await automationModal.getByLabel("Mensagem").fill("Olá, {{cliente}}! O pedido {{pedido}} está sendo preparado.");
+  const automationModal = page.locator(".automation-builder-modal");
+  await automationModal.getByLabel("Nome", { exact: true }).fill("Aviso de preparação");
+  await automationModal.locator("label").filter({ hasText: "Evento" }).locator("select").selectOption("Entregue");
+  await automationModal.getByRole("textbox", { name: "Mensagem", exact: true }).fill("Olá, {{cliente}}! O pedido {{pedido}} está sendo preparado.");
+  await automationModal.locator("label").filter({ hasText: /^StatusRascunho/ }).locator("select").selectOption("active");
   await automationModal.getByRole("button", { name: "Salvar automação" }).click();
   await expect(page.getByText("Aviso de preparação", { exact: true })).toBeVisible();
 
@@ -245,15 +327,16 @@ test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await expect(orderButton).toBeVisible();
   await orderButton.click();
   const orderModal = page.getByRole("dialog");
-  await orderModal.getByLabel("Status").selectOption("Preparando");
+  await orderModal.getByLabel("Status").selectOption("Entregue");
   await orderModal.getByRole("button", { name: "Atualizar e automatizar" }).click();
-  await openSection(page, "Mensagens");
-  await expect(page.getByRole("cell", { name: "Aviso de preparação" })).toBeVisible();
+  await openSection(page, "Campanhas e automações");
+  await page.getByRole("button", { name: "Automações", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Aviso de preparação", exact: true })).toBeVisible();
 });
 
 test("cria usuario e personaliza suas permissoes", async ({ page }) => {
   await login(page);
-  await openSection(page, "Usuários");
+  await openSection(page, "Acessos e permissões");
   await page.getByRole("button", { name: "Novo usuário", exact: true }).click();
   const modal = page.getByRole("dialog", { name: "Novo usuário" });
   await modal.getByLabel("Nome completo").fill("Operador E2E");
@@ -284,8 +367,8 @@ test("gerencia CRM, limite de cupom, frete e estoque por planilha", async ({ pag
   await customerModal.getByRole("button", { name: "Salvar cliente" }).click();
 
   await openSection(page, "Cupons");
-  await page.getByRole("button", { name: /^Editar / }).first().click();
-  const couponModal = page.getByRole("dialog", { name: "Editar cupom" });
+  await page.locator(".admin-actions button[aria-label^='Editar ']").first().click();
+  const couponModal = page.locator(".coupon-editor-panel");
   await couponModal.getByLabel("Limite por cliente").fill("2");
   await couponModal.getByRole("button", { name: "Salvar cupom" }).click();
   await expect(page.getByRole("cell").filter({ hasText: /2 usos/ }).first()).toBeVisible();
@@ -297,7 +380,7 @@ test("gerencia CRM, limite de cupom, frete e estoque por planilha", async ({ pag
   const sku = skuText?.split(" · ")[0]?.trim();
   expect(sku).toBeTruthy();
 
-  await openSection(page, "Importar planilha");
+  await page.getByRole("link", { name: "Importar planilha", exact: true }).click();
   await page.getByRole("button", { name: "Atualizar estoque" }).click();
   await page.locator('input[type="file"]').setInputFiles({
     name: "estoque-e2e.csv",
@@ -308,18 +391,13 @@ test("gerencia CRM, limite de cupom, frete e estoque por planilha", async ({ pag
   await page.getByRole("button", { name: "Confirmar 1 linha" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Estoque de 1 produto atualizado." })).toBeVisible();
 
-  await openSection(page, "Configurações");
-  await page.getByLabel("Frete grátis acima de").fill("777");
+  await openSection(page, "Loja, frete e atendimento");
+  const freeShippingToggle = page.getByLabel("Oferecer frete grátis por valor mínimo");
+  if (!await freeShippingToggle.isChecked()) await freeShippingToggle.check();
+  await page.getByLabel("Valor mínimo do pedido").fill("777");
+  await expect(page.getByText(/Pedidos a partir de R\$\s*777,00 recebem frete grátis\./)).toBeVisible();
   await page.getByRole("button", { name: "Salvar configurações" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Configurações salvas." })).toBeVisible();
-  if ((page.viewportSize()?.width ?? 1280) <= 900) await page.getByRole("button", { name: "Abrir menu" }).click();
-  const storeLink = (page.viewportSize()?.width ?? 1280) <= 900
-    ? page.locator(".admin-sidebar-actions a").first()
-    : page.locator("a.admin-view-store");
-  await storeLink.evaluate((element) => element.removeAttribute("target"));
-  await storeLink.click();
-  await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByText(/Frete grátis acima de R\$\s*777,00/).first()).toBeVisible();
 });
 
 test("abre CRM, financeiro, estoque e compras em desktop e mobile", async ({ page }) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, PackagePlus, Plus, Save, Search, Star, Trash2, UserRound, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, PackagePlus, Plus, Save, Search, Trash2, Truck, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -9,10 +9,11 @@ import { AdminEmpty, AdminPanel, StatusTag } from "./admin-ui";
 import { calculateCart } from "@/lib/commerce";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { manualOrderSchema, type ManualOrderInput } from "@/lib/validation";
+import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import type { Order, OrderStatus } from "@/types/store";
 import { useAdminDialog } from "./use-admin-dialog";
 
-const statuses: OrderStatus[] = ["Novo", "Aguardando pagamento", "Pago", "Preparando", "Enviado", "Entregue", "Cancelado"];
+const statuses: OrderStatus[] = ["Novo", "Pago", "Entregue", "Cancelado"];
 const states = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
 
 function emptyManualOrder(): ManualOrderInput {
@@ -21,6 +22,7 @@ function emptyManualOrder(): ManualOrderInput {
     name: "",
     phone: "",
     email: "",
+    deliveryMethod: "delivery",
     zip: "",
     city: "",
     state: "",
@@ -35,7 +37,7 @@ function emptyManualOrder(): ManualOrderInput {
 }
 
 export function OrdersAdmin() {
-  const { data } = useAdminData();
+  const { data, demoMode } = useAdminData();
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Order | null>(null);
   const [creating, setCreating] = useState(false);
@@ -55,7 +57,7 @@ export function OrdersAdmin() {
   return (
     <>
       <AdminPanel
-        title="Pedidos demonstrativos"
+        title="Pedidos"
         description="Localize pedidos, acompanhe o status ou registre uma venda feita pelo atendimento."
         action={<button className="admin-button primary" onClick={() => setCreating(true)}><Plus /> Criar pedido</button>}
       >
@@ -70,7 +72,7 @@ export function OrdersAdmin() {
             <div className="admin-mobile-cards">{visible.map((order) => <article key={order.id}><header><div><strong>{order.code}</strong><small>{formatDateTime(order.createdAt)}</small></div><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></header><div><strong>{order.customer.name}</strong><small>{order.customer.email}</small></div><footer><b>{formatMoney(order.total)}</b><button className="admin-button" onClick={() => setSelected(order)}>Abrir pedido <ChevronRight /></button></footer></article>)}</div>
             <div className="admin-pagination"><span>Página {currentPage} de {pageCount}</span><div><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Página anterior"><ChevronLeft /></button><button disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Próxima página"><ChevronRight /></button></div></div>
           </>
-        ) : <AdminEmpty><strong>Nenhum pedido encontrado.</strong><span>Ajuste os filtros ou faça uma compra demonstrativa na loja.</span></AdminEmpty>}
+        ) : <AdminEmpty><strong>Nenhum pedido encontrado.</strong><span>{demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : "Ajuste os filtros ou aguarde a próxima venda da loja."}</span></AdminEmpty>}
       </AdminPanel>
       {creating && <ManualOrderDialog onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setSelected(order); setPage(1); }} />}
       {selected && <OrderDetail order={data.orders.find((order) => order.id === selected.id) ?? selected} onClose={() => setSelected(null)} />}
@@ -93,8 +95,8 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
     [data.coupons, form.couponCode],
   );
   const calculation = useMemo(
-    () => calculateCart(form.items, data.products, data.settings, selectedCoupon, form.payment, data.cashbackCampaigns),
-    [data.products, data.settings, form.items, form.payment, selectedCoupon],
+    () => calculateCart(form.items, data.products, data.settings, selectedCoupon, form.payment, data.cashbackCampaigns, { city: form.city, state: form.state, deliveryMethod: form.deliveryMethod }),
+    [data.cashbackCampaigns, data.products, data.settings, form.city, form.deliveryMethod, form.items, form.payment, form.state, selectedCoupon],
   );
 
   function selectCustomer(customerId: string) {
@@ -183,12 +185,13 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
             <div className="manual-order-fields">
               <label>Pagamento<select aria-label="Forma de pagamento" value={form.payment} onChange={(event) => setForm((current) => ({ ...current, payment: event.target.value as ManualOrderInput["payment"] }))}><option value="Pix">Pix</option><option value="Cartao">Cartão · 2x sem juros</option><option value="Dinheiro">Dinheiro</option></select></label>
               <label>Cupom<input aria-label="Cupom" value={form.couponCode} onChange={(event) => setForm((current) => ({ ...current, couponCode: event.target.value.toUpperCase() }))} placeholder="Opcional" /></label>
-              <label>CEP<input aria-label="CEP" inputMode="numeric" value={form.zip} onChange={(event) => setForm((current) => ({ ...current, zip: event.target.value }))} placeholder="00000-000" /></label>
+              <label className="full">Forma de recebimento<select aria-label="Forma de recebimento" value={form.deliveryMethod} onChange={(event) => setForm((current) => ({ ...current, deliveryMethod: event.target.value as ManualOrderInput["deliveryMethod"] }))}><option value="delivery">Entrega no endereço</option>{data.settings.localPickupEnabled && <option value="pickup">Retirada no local · sem frete</option>}</select></label>
+              {form.deliveryMethod === "delivery" ? <><label>CEP<input aria-label="CEP" inputMode="numeric" value={form.zip} onChange={(event) => setForm((current) => ({ ...current, zip: event.target.value }))} placeholder="00000-000" /></label>
               <label>Cidade<input aria-label="Cidade" value={form.city} onChange={(event) => setForm((current) => ({ ...current, city: event.target.value }))} /></label>
               <label>Estado<select aria-label="Estado" value={form.state} onChange={(event) => setForm((current) => ({ ...current, state: event.target.value }))}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></label>
               <label>Endereço<input aria-label="Endereço" value={form.address} onChange={(event) => setForm((current) => ({ ...current, address: event.target.value }))} /></label>
               <label>Número<input aria-label="Número" value={form.number} onChange={(event) => setForm((current) => ({ ...current, number: event.target.value }))} /></label>
-              <label>Complemento<input aria-label="Complemento" value={form.complement} onChange={(event) => setForm((current) => ({ ...current, complement: event.target.value }))} /></label>
+              <label>Complemento<input aria-label="Complemento" value={form.complement} onChange={(event) => setForm((current) => ({ ...current, complement: event.target.value }))} /></label></> : <div className="admin-form-section full"><Truck /><div><strong>Retirada sem frete</strong><span>{data.settings.localPickupInstructions}</span></div></div>}
               <label className="full">Observações internas<textarea aria-label="Observações internas do novo pedido" rows={3} value={form.internalNotes} onChange={(event) => setForm((current) => ({ ...current, internalNotes: event.target.value }))} placeholder="Ex.: pedido recebido pelo WhatsApp, retirada combinada..." /></label>
             </div>
           </section>
@@ -196,9 +199,9 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
           <aside className="manual-order-summary" aria-label="Resumo do novo pedido">
             <div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>
             <div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div>
-            <div><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
+            <div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div>
             {calculation.cashback > 0 && <div className="cashback"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}
-            <div className="total"><span>Total do pedido</span><strong>{formatMoney(calculation.total)}</strong></div>
+            <div className="total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>
             <p><PackagePlus /> {calculation.items} item{calculation.items === 1 ? "" : "s"} será{calculation.items === 1 ? "" : "ão"} reservado{calculation.items === 1 ? "" : "s"} no estoque.</p>
           </aside>
 
@@ -211,7 +214,7 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
 }
 
 function OrderDetail({ order, onClose }: { order: Order; onClose: () => void }) {
-  const { data, updateOrderStatus, saveOrderDetails, createProductReview } = useAdminData();
+  const { data, demoMode, updateOrderStatus, saveOrderDetails } = useAdminData();
   const [status, setStatus] = useState(order.status);
   const [saving, setSaving] = useState(false);
   const [savingDetails, setSavingDetails] = useState(false);
@@ -220,5 +223,5 @@ function OrderDetail({ order, onClose }: { order: Order; onClose: () => void }) 
   const [error, setError] = useState("");
   const panelRef = useAdminDialog(onClose);
   const matchingAutomations = data.messageAutomations.filter((automation) => automation.active && automation.triggerStatus === status).length;
-  return <div className="admin-modal" role="dialog" aria-modal="true" aria-label={`Pedido ${order.code}`}><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel" ref={panelRef}><header><div><span>PEDIDO</span><h2>{order.code}</h2><small>{formatDateTime(order.createdAt)}</small></div><button type="button" onClick={onClose} aria-label="Fechar"><X /></button></header><div className="order-details"><section><h3>Cliente</h3><p><strong>{order.customer.name}</strong></p><p>{order.customer.email}</p><p>{order.customer.phone}</p><p>{order.customer.address}, {order.customer.number}</p><p>{order.customer.city}/{order.customer.state} · CEP {order.customer.zip}</p><Link className="admin-button" href="/admin/customers"><UserRound /> Abrir no CRM</Link></section><section><h3>Resumo</h3>{order.items.map((item) => <div className="order-item" key={`${item.productId}-${item.name}`} style={{ flexWrap: "wrap", gap: "0.5rem" }}><div style={{ width: "100%", display: "flex", justifyContent: "space-between" }}><span>{item.quantity}x {item.name}{item.unitCashback > 0 ? ` · +${formatMoney(item.unitCashback * item.quantity)} cashback` : ""}</span><strong>{formatMoney(item.unitPrice * item.quantity)}</strong></div><button type="button" className="admin-button" style={{ padding: "0.25rem 0.5rem", fontSize: "0.8rem", height: "auto" }} onClick={async () => { try { const token = await createProductReview(item.productId, order.customer.name); const link = `${window.location.origin}/loja/${data.tenant.slug}/avaliar/${token}`; await navigator.clipboard.writeText(link); alert("Link seguro copiado: " + link); } catch (e) { alert("Não foi possível gerar o link"); } }}><Star size={14} /> Link de avaliação</button></div>)}<div className="order-item"><span>Desconto</span><strong>- {formatMoney(order.discount)}</strong></div><div className="order-item"><span>Frete</span><strong>{formatMoney(order.shipping)}</strong></div><div className="order-item total"><span>Total</span><strong>{formatMoney(order.total)}</strong></div>{order.cashbackTotal > 0 && <div className="order-item cashback"><span>Cashback prometido</span><strong>+ {formatMoney(order.cashbackTotal)}</strong></div>}</section></div><div className="order-management-fields"><label>Código de rastreamento<input value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Opcional" /></label><label>Observações internas<textarea rows={3} value={internalNotes} onChange={(event) => setInternalNotes(event.target.value)} placeholder="Informações visíveis apenas para a equipe" /></label><button className="admin-button" disabled={savingDetails || (trackingCode === order.trackingCode && internalNotes === order.internalNotes)} onClick={async () => { setSavingDetails(true); try { await saveOrderDetails(order.id, { trackingCode, internalNotes }); } finally { setSavingDetails(false); } }}><Save /> {savingDetails ? "Salvando..." : "Salvar detalhes"}</button></div>{error && <p className="admin-form-error order-update-error" role="alert">{error}</p>}<div className="order-status-editor"><div className="order-automation-hint"><strong>{matchingAutomations ? `${matchingAutomations} mensagem automática será registrada` : "Nenhuma automação para este status"}</strong><span>Os disparos deste projeto são demonstrativos.</span></div><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label><button className="admin-button primary" disabled={saving || status === order.status} onClick={async () => { setSaving(true); setError(""); try { await updateOrderStatus(order.id, status); onClose(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível atualizar o pedido."); } finally { setSaving(false); } }}>{saving ? "Atualizando..." : "Atualizar e automatizar"}</button></div></div></div>;
+  return <div className="admin-modal" role="dialog" aria-modal="true" aria-label={`Pedido ${order.code}`}><button className="admin-modal-overlay" onClick={onClose} aria-label="Fechar" /><div className="admin-modal-panel" ref={panelRef}><header><div><span>PEDIDO</span><h2>{order.code}</h2><small>{formatDateTime(order.createdAt)}</small></div><button type="button" onClick={onClose} aria-label="Fechar"><X /></button></header><div className="order-details"><section><h3>Cliente</h3><p><strong>{order.customer.name}</strong></p><p>{order.customer.email}</p><p>{order.customer.phone}</p>{order.shippingStatus === "pickup" || order.customer.deliveryMethod === "pickup" ? <><p><strong>🏬 Retirada no local</strong></p><p>{data.settings.localPickupInstructions}</p></> : <><p>{order.customer.address}, {order.customer.number}</p><p>{order.customer.city}/{order.customer.state} · CEP {order.customer.zip}</p></>}<Link className="admin-button" href="/admin/customers"><UserRound /> Abrir no CRM</Link></section><section><h3>Resumo</h3>{order.items.map((item) => <div className="order-item" key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}{item.unitCashback > 0 ? ` · +${formatMoney(item.unitCashback * item.quantity)} cashback` : ""}</span><strong>{formatMoney(item.unitPrice * item.quantity)}</strong></div>)}<div className="order-item"><span>Desconto</span><strong>- {formatMoney(order.discount)}</strong></div><div className="order-item"><span>Frete</span><strong>{shippingPriceLabel(order.shippingStatus, order.shipping)}</strong></div><div className="order-item total"><span>{orderTotalLabel(order.shippingStatus)}</span><strong>{formatMoney(order.total)}</strong></div>{order.cashbackTotal > 0 && <div className="order-item cashback"><span>Cashback prometido</span><strong>+ {formatMoney(order.cashbackTotal)}</strong></div>}</section></div><div className="order-management-fields"><label>Código de rastreamento<input value={trackingCode} onChange={(event) => setTrackingCode(event.target.value)} placeholder="Opcional" /></label><label>Observações internas<textarea rows={3} value={internalNotes} onChange={(event) => setInternalNotes(event.target.value)} placeholder="Informações visíveis apenas para a equipe" /></label><button className="admin-button" disabled={savingDetails || (trackingCode === order.trackingCode && internalNotes === order.internalNotes)} onClick={async () => { setSavingDetails(true); try { await saveOrderDetails(order.id, { trackingCode, internalNotes }); } finally { setSavingDetails(false); } }}><Save /> {savingDetails ? "Salvando..." : "Salvar detalhes"}</button></div>{error && <p className="admin-form-error order-update-error" role="alert">{error}</p>}<div className="order-status-editor"><div className="order-automation-hint"><strong>{matchingAutomations ? `${matchingAutomations} mensagem automática será registrada` : "Nenhuma automação para este status"}</strong><span>{demoMode ? "Os disparos deste projeto são demonstrativos." : "O histórico registra as automações vinculadas à mudança de status."}</span></div><label>Status<select value={status} onChange={(event) => setStatus(event.target.value as OrderStatus)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label><button className="admin-button primary" disabled={saving || status === order.status} onClick={async () => { setSaving(true); setError(""); try { await updateOrderStatus(order.id, status); onClose(); } catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível atualizar o pedido."); } finally { setSaving(false); } }}>{saving ? "Atualizando..." : "Atualizar e automatizar"}</button></div></div></div>;
 }

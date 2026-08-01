@@ -29,7 +29,7 @@ import {
 } from "@/lib/browser-storage";
 import { calculateCart } from "@/lib/commerce";
 import { validateCouponForCustomer } from "@/lib/coupon-rules";
-import { buildCustomerInsights, normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
+import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
 import { normalizeAdminStoreData } from "@/lib/admin-store-data";
 import type {
@@ -38,6 +38,7 @@ import type {
   AdminUser,
   AutomationRun,
   Banner,
+  Benefit,
   CatalogImportRun,
   CashbackCampaign,
   CashbackEntry,
@@ -47,6 +48,7 @@ import type {
   CustomerContact,
   CustomerTask,
   ExportRun,
+  Faq,
   FinancialTransaction,
   HomeSection,
   InventoryMovement,
@@ -67,10 +69,11 @@ import type {
   StoreSettings,
   StockImportMode,
   Supplier,
+  TrustItem,
 } from "@/types/store";
 import type { AdminUserCreateInput, AdminUserUpdateInput, ManualOrderInput } from "@/lib/validation";
 import type { CashbackAdjustmentInput } from "@/lib/validation";
-import { activeCashbackCampaigns, cashbackWalletSummary } from "@/lib/cashback";
+import { cashbackWalletSummary } from "@/lib/cashback";
 import { canTransitionPublication, simulateMessageAutomation } from "@/lib/marketing";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
@@ -88,6 +91,7 @@ type PersistedOrder = {
   status: OrderStatus;
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
+  shipping_status?: Order["shippingStatus"];
 };
 
 type DatabaseRow = Record<string, unknown>;
@@ -136,6 +140,7 @@ function syncLocalPublicationEntity(current: StoreData, publication: MarketingPu
 interface AdminDataContextValue {
   data: StoreData;
   demoMode: boolean;
+  referenceNow: number;
   currentUser: { id: string; fullName: string; email: string; role: AdminRole; permissions: AdminPermission[] };
   saveProduct: (product: Product) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
@@ -149,6 +154,12 @@ interface AdminDataContextValue {
   savePageBlock: (block: PageBlock) => Promise<void>;
   deletePageBlock: (id: string) => Promise<void>;
   movePageBlock: (pageId: string, id: string, direction: -1 | 1) => Promise<void>;
+  saveFeaturedProducts: (productIds: string[]) => Promise<void>;
+  saveBannerVisibility: (bannerIds: string[]) => Promise<void>;
+  saveCategoryVisibility: (categoryIds: string[]) => Promise<void>;
+  saveTrustItems: (items: TrustItem[]) => Promise<void>;
+  saveBenefits: (items: Benefit[]) => Promise<void>;
+  saveFaqs: (items: Faq[]) => Promise<void>;
   saveMessageAutomation: (automation: MessageAutomation) => Promise<void>;
   deleteMessageAutomation: (id: string) => Promise<void>;
   saveCoupon: (coupon: Coupon) => Promise<void>;
@@ -183,7 +194,6 @@ interface AdminDataContextValue {
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
-  createProductReview: (productId: string, customerName: string) => Promise<string>;
   saveSettings: (settings: StoreSettings) => Promise<void>;
   uploadMedia: (file: File, bucket: "product-media" | "banner-media" | "site-media") => Promise<string>;
   clearOrders: () => Promise<void>;
@@ -198,7 +208,7 @@ interface AdminDataContextValue {
 const AdminDataContext = createContext<AdminDataContextValue | null>(null);
 
 function productRecord(product: Product) {
-  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cashback: product.cashback, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
+  return { id: product.id, slug: product.slug, name: product.name, category_id: product.categoryId, brand: product.brand, price: product.price, compare_at: product.compareAt, cashback: product.cashback, cashback_type: product.cashbackType, cost_price: product.costPrice, stock: product.stock, min_stock: product.minStock, badge: product.badge, accent: product.accent, description: product.description, sku: product.sku, rating: product.rating, reviews: product.reviews, featured: product.featured, active: product.active, order_index: product.order, image_url: product.imageUrl, image_urls: product.imageUrls, product_type: product.productType, regulatory_status: product.regulatoryStatus, active_ingredient: product.activeIngredient, anvisa_registration: product.anvisaRegistration, presentation: product.presentation, regulatory_warning: product.regulatoryWarning, pharmacist_reviewed: product.pharmacistReviewed };
 }
 
 function cashbackEntryRecord(row: Record<string, unknown>): CashbackEntry {
@@ -223,7 +233,7 @@ function cashbackEntryRecord(row: Record<string, unknown>): CashbackEntry {
 function orderCashbackEntries(data: StoreData, order: Order, status: OrderStatus, actorEmail: string) {
   const entries = [...data.cashbackEntries];
   if (!order.customerId) return entries;
-  const committed = ["Pago", "Preparando", "Enviado", "Entregue"] as OrderStatus[];
+  const committed = ["Pago", "Entregue"] as OrderStatus[];
   const now = new Date();
 
   if (committed.includes(status)) {
@@ -234,26 +244,6 @@ function orderCashbackEntries(data: StoreData, order: Order, status: OrderStatus
         operationId: crypto.randomUUID(), expiresAt: new Date(now.getTime() + 90 * 86_400_000).toISOString(),
         actorEmail: "", createdAt: now.toISOString(), allocatedAmount: 0, remainingAmount: order.cashbackTotal,
       });
-    }
-    if (!entries.some((entry) => entry.orderId === order.id && entry.kind === "campaign_bonus")) {
-      const segment = buildCustomerInsights(data.customers, data.orders.filter((candidate) => candidate.id !== order.id), now)
-        .find((customer) => customer.id === order.customerId)?.segment ?? "new";
-      const campaign = activeCashbackCampaigns(data.cashbackCampaigns, now)
-        .filter((item) => !item.targetSegments.length || item.targetSegments.includes(segment))
-        .filter((item) => !item.productIds.length || order.items.some((entry) => item.productIds.includes(entry.productId)))
-        .sort((a, b) => b.priority - a.priority)[0];
-      if (campaign) {
-        const matchingBase = order.items
-          .filter((item) => !campaign.productIds.length || campaign.productIds.includes(item.productId))
-          .reduce((sum, item) => sum + item.quantity * item.unitCashback, 0);
-        const bonus = Number((matchingBase * (campaign.multiplier - 1) + campaign.fixedBonus).toFixed(2));
-        if (bonus > 0) entries.unshift({
-          id: crypto.randomUUID(), customerId: order.customerId, kind: "campaign_bonus", amount: bonus,
-          description: `Bônus da campanha ${campaign.name}`, orderId: order.id, campaignId: campaign.id, referenceEntryId: "",
-          operationId: crypto.randomUUID(), expiresAt: new Date(now.getTime() + campaign.creditValidDays * 86_400_000).toISOString(),
-          actorEmail: "", createdAt: now.toISOString(), allocatedAmount: 0, remainingAmount: bonus,
-        });
-      }
     }
   }
 
@@ -270,7 +260,7 @@ function orderCashbackEntries(data: StoreData, order: Order, status: OrderStatus
   return entries;
 }
 
-export function AdminDataProvider({ initialData, currentUser, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; children: ReactNode }) {
+export function AdminDataProvider({ initialData, currentUser, referenceNow, children }: { initialData: StoreData; currentUser: AdminDataContextValue["currentUser"]; referenceNow: number; children: ReactNode }) {
   const store = useStore();
   const toast = useToast();
   const [data, setData] = useState(initialData);
@@ -357,6 +347,39 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       .limit(1000);
     if (error) throw new Error(error.message);
     const next = { ...dataRef.current, cashbackEntries: (rows ?? []).map((row) => cashbackEntryRecord(row as Record<string, unknown>)) };
+    dataRef.current = next;
+    setData(next);
+  }, [supabase]);
+
+  const refreshOrderInventoryState = useCallback(async (orderId: string, productIds: string[]) => {
+    if (!supabase || productIds.length === 0) return;
+    const tenantId = dataRef.current.tenant.id;
+    const [productsResult, orderResult] = await Promise.all([
+      supabase
+        .from("products")
+        .select("id, stock")
+        .eq("tenant_id", tenantId)
+        .in("id", productIds),
+      supabase
+        .from("orders")
+        .select("id, status")
+        .eq("tenant_id", tenantId)
+        .eq("id", orderId)
+        .maybeSingle(),
+    ]);
+    if (productsResult.error || orderResult.error) return;
+
+    const stocks = new Map((productsResult.data ?? []).map((row) => [String(row.id), Number(row.stock) || 0]));
+    const persistedStatus = orderResult.data?.status as OrderStatus | undefined;
+    const next: StoreData = {
+      ...dataRef.current,
+      products: dataRef.current.products.map((product) => (
+        stocks.has(product.id) ? { ...product, stock: stocks.get(product.id)! } : product
+      )),
+      orders: dataRef.current.orders.map((order) => (
+        order.id === orderId && persistedStatus ? { ...order, status: persistedStatus } : order
+      )),
+    };
     dataRef.current = next;
     setData(next);
   }, [supabase]);
@@ -569,6 +592,88 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     }, (next) => persistOrder("page_blocks", next.pageBlocks.filter((block) => block.pageId === pageId)));
   }, [commitMutation, persistOrder]);
 
+  const saveFeaturedProducts = useCallback(async (productIds: string[]) => {
+    const selected = new Set(productIds);
+    const changed: Product[] = [];
+    await commitMutation((current) => {
+      const products = current.products.map((product) => {
+        const featured = selected.has(product.id);
+        if (product.featured === featured) return product;
+        const next = { ...product, featured };
+        changed.push(next);
+        return next;
+      });
+      return changed.length ? { ...current, products } : current;
+    }, async () => {
+      if (!supabase || !changed.length) return;
+      const { error } = await supabase.from("products").upsert(changed.map((product) => ({ ...productRecord(product), tenant_id: dataRef.current.tenant.id })));
+      if (error) throw new Error(error.message);
+    }, "Produtos em destaque atualizados.");
+  }, [commitMutation, supabase]);
+
+  const saveBannerVisibility = useCallback(async (bannerIds: string[]) => {
+    const selected = new Set(bannerIds);
+    const changed: Banner[] = [];
+    await commitMutation((current) => {
+      const banners = current.banners.map((banner) => {
+        const active = selected.has(banner.id);
+        if (banner.active === active) return banner;
+        const next = { ...banner, active };
+        changed.push(next);
+        return next;
+      });
+      return changed.length ? { ...current, banners } : current;
+    }, () => Promise.all(changed.map((banner) => update("banners", banner.id, { active: banner.active }))).then(() => undefined), "Banners da vitrine atualizados.");
+  }, [commitMutation, update]);
+
+  const saveCategoryVisibility = useCallback(async (categoryIds: string[]) => {
+    const selected = new Set(categoryIds);
+    const changed: Category[] = [];
+    await commitMutation((current) => {
+      const categories = current.categories.map((category) => {
+        const active = selected.has(category.id);
+        if (category.active === active) return category;
+        const next = { ...category, active };
+        changed.push(next);
+        return next;
+      });
+      return changed.length ? { ...current, categories } : current;
+    }, () => Promise.all(changed.map((category) => update("categories", category.id, { active: category.active }))).then(() => undefined), "Categorias da vitrine atualizadas.");
+  }, [commitMutation, update]);
+
+  const saveTrustItems = useCallback(async (items: TrustItem[]) => {
+    const normalized = items.map((item, index) => ({ ...item, order: index + 1 }));
+    await commitMutation((current) => ({ ...current, trustItems: normalized }), async (_next, previous) => {
+      const nextIds = new Set(normalized.map((item) => item.id));
+      await Promise.all([
+        ...normalized.map((item) => persist("trust_items", { id: item.id, title: item.title, subtitle: item.subtitle, order_index: item.order })),
+        ...previous.trustItems.filter((item) => !nextIds.has(item.id)).map((item) => remove("trust_items", item.id)),
+      ]);
+    }, "Faixa de confiança atualizada.");
+  }, [commitMutation, persist, remove]);
+
+  const saveBenefits = useCallback(async (items: Benefit[]) => {
+    const normalized = items.map((item, index) => ({ ...item, order: index + 1 }));
+    await commitMutation((current) => ({ ...current, benefits: normalized }), async (_next, previous) => {
+      const nextIds = new Set(normalized.map((item) => item.id));
+      await Promise.all([
+        ...normalized.map((item) => persist("benefits", { id: item.id, title: item.title, text: item.text, order_index: item.order })),
+        ...previous.benefits.filter((item) => !nextIds.has(item.id)).map((item) => remove("benefits", item.id)),
+      ]);
+    }, "Benefícios atualizados.");
+  }, [commitMutation, persist, remove]);
+
+  const saveFaqs = useCallback(async (items: Faq[]) => {
+    const normalized = items.map((item, index) => ({ ...item, order: index + 1 }));
+    await commitMutation((current) => ({ ...current, faqs: normalized }), async (_next, previous) => {
+      const nextIds = new Set(normalized.map((item) => item.id));
+      await Promise.all([
+        ...normalized.map((item) => persist("faqs", { id: item.id, question: item.question, answer: item.answer, order_index: item.order })),
+        ...previous.faqs.filter((item) => !nextIds.has(item.id)).map((item) => remove("faqs", item.id)),
+      ]);
+    }, "Perguntas frequentes atualizadas.");
+  }, [commitMutation, persist, remove]);
+
   const saveMessageAutomation = useCallback(async (automation: MessageAutomation) => {
     await commitMutation((current) => ({
       ...current,
@@ -604,7 +709,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
   const saveCoupon = useCallback(async (coupon: Coupon) => {
     await commitMutation(
       (current) => ({ ...current, coupons: current.coupons.some((item) => item.id === coupon.id) ? current.coupons.map((item) => item.id === coupon.id ? coupon : item) : [...current.coupons, coupon] }),
-      () => persist("coupons", { id: coupon.id, code: coupon.code, discount_type: coupon.type, value: coupon.value, minimum: coupon.minimum, active: coupon.active, starts_at: coupon.startsAt || null, expires_at: coupon.expiresAt || null, total_usage_limit: coupon.totalUsageLimit, per_customer_limit: coupon.perCustomerLimit, first_order_only: coupon.firstOrderOnly }),
+      () => persist("coupons", { id: coupon.id, code: coupon.code, discount_type: coupon.type, value: coupon.value, minimum: coupon.minimum, active: coupon.active, starts_at: coupon.startsAt || null, expires_at: coupon.expiresAt || null, total_usage_limit: coupon.totalUsageLimit, per_customer_limit: coupon.perCustomerLimit, first_order_only: coupon.firstOrderOnly, applicable_category_ids: coupon.applicableCategoryIds, applicable_product_ids: coupon.applicableProductIds }),
       "Cupom salvo.",
     );
   }, [commitMutation, persist]);
@@ -1115,6 +1220,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       name: input.name,
       phone: input.phone,
       email: input.email,
+      deliveryMethod: input.deliveryMethod,
       zip: input.zip,
       city: input.city,
       state: input.state,
@@ -1122,7 +1228,8 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       number: input.number,
       complement: input.complement,
     };
-    const baseCalculation = calculateCart(lines, current.products, current.settings, null, input.payment, current.cashbackCampaigns);
+    const destination = { city: input.city, state: input.state, deliveryMethod: input.deliveryMethod };
+    const baseCalculation = calculateCart(lines, current.products, current.settings, null, input.payment, current.cashbackCampaigns, destination);
     const couponCode = input.couponCode.trim().toUpperCase();
     const coupon = couponCode
       ? current.coupons.find((candidate) => candidate.code.toUpperCase() === couponCode)
@@ -1137,14 +1244,14 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       }
     }
 
-    const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment, current.cashbackCampaigns);
+    const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment, current.cashbackCampaigns, destination);
     const items = selectedProducts.map(({ product, quantity }) => ({
       productId: product.id,
       name: product.name,
       quantity,
       unitPrice: product.price,
       unitCost: product.costPrice,
-      unitCashback: product.cashback,
+      unitCashback: (calculation.cashbackByProduct[product.id] ?? 0) / quantity,
     }));
     const nextNumber = current.orders.reduce(
       (max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000),
@@ -1182,6 +1289,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       trackingCode: "",
       orderSource: persisted?.order_source ?? "admin",
       reservationExpiresAt: persisted?.reservation_expires_at ?? "",
+      shippingStatus: persisted?.shipping_status ?? calculation.shippingStatus,
     };
     const generatedLogs = createMessageLogs(order, current.messageAutomations);
     const next = applyCreatedOrder(current, order, {
@@ -1234,7 +1342,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       let inventoryMovements = current.inventoryMovements;
       let financialTransactions = current.financialTransactions;
       const changedAt = new Date().toISOString();
-      const committedStatuses: OrderStatus[] = ["Pago", "Preparando", "Enviado", "Entregue"];
+      const committedStatuses: OrderStatus[] = ["Pago", "Entregue"];
       const wasCommitted = Boolean(previousOrder && (
         (previousOrder.orderSource ?? "legacy") === "legacy"
         || committedStatuses.includes(previousOrder.status)
@@ -1305,7 +1413,18 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       if (!supabase) return;
       const { error } = await supabase.rpc("update_tenant_order_status", { p_tenant_id: dataRef.current.tenant.id, p_order_id: id, p_status: status });
       if (!error) {
-        await refreshCashbackEntries();
+        const productIds = previous.orders.find((order) => order.id === id)?.items.map((item) => item.productId) ?? [];
+        try {
+          await refreshOrderInventoryState(id, productIds);
+        } catch {
+          // A alteração principal já foi confirmada pelo banco. Uma falha de
+          // atualização da tela não pode reverter visualmente a venda.
+        }
+        try {
+          await refreshCashbackEntries();
+        } catch {
+          // O saldo de cashback será relido no próximo carregamento do painel.
+        }
         return;
       }
       if (error.code !== "PGRST202" && error.code !== "42883") throw new Error(error.message);
@@ -1313,7 +1432,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
       await Promise.all(generatedLogs.map((log) => persist("message_logs", { id: log.id, order_id: log.orderId, order_code: log.orderCode, automation_id: log.automationId, automation_name: log.automationName, channel: log.channel, recipient: log.recipient, subject: log.subject, message: log.message, status: log.status, created_at: log.createdAt })));
       await refreshCashbackEntries();
     }, "Status atualizado.");
-  }, [commitMutation, currentUser.email, persist, refreshCashbackEntries, supabase, update]);
+  }, [commitMutation, currentUser.email, persist, refreshCashbackEntries, refreshOrderInventoryState, supabase, update]);
 
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
@@ -1323,41 +1442,10 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     );
   }, [commitMutation, persist]);
 
-  const createProductReview = useCallback(async (productId: string, customerName: string) => {
-    const id = crypto.randomUUID();
-    const token = crypto.randomUUID().replace(/-/g, "");
-    const review: import("@/types/store").ProductReview = {
-      id,
-      productId,
-      customerName,
-      rating: 5,
-      comment: "",
-      status: "pending",
-      reviewToken: token,
-      createdAt: new Date().toISOString(),
-    };
-    
-    await commitMutation(
-      (current) => ({ ...current, productReviews: [review, ...current.productReviews] }),
-      () => persist("product_reviews", {
-        id,
-        product_id: productId,
-        customer_name: customerName,
-        rating: 5,
-        comment: "",
-        status: "pending",
-        review_token: token,
-        created_at: review.createdAt,
-      }),
-      "Link de avaliação gerado.",
-    );
-    return token;
-  }, [commitMutation, persist]);
-
   const saveSettings = useCallback(async (settings: StoreSettings) => {
     await commitMutation(
       (current) => ({ ...current, settings }),
-      () => persist("store_settings", { id: "default", store_name: settings.storeName, logo_url: settings.logoUrl, mobile_logo_url: settings.mobileLogoUrl, favicon_url: settings.faviconUrl, whatsapp: settings.whatsapp, order_prefix: settings.orderPrefix, email: settings.email, hours: settings.hours, announcement: settings.announcement, footer_description: settings.footerDescription, primary_color: settings.primaryColor, secondary_color: settings.secondaryColor, background_color: settings.backgroundColor, text_color: settings.textColor, font_family: settings.fontFamily, header_layout: settings.headerLayout, content_width: settings.contentWidth, border_radius: settings.borderRadius, free_shipping_threshold: settings.freeShippingThreshold, shipping_flat: settings.shippingFlat, free_shipping_enabled: settings.freeShippingEnabled, free_shipping_banner_enabled: settings.freeShippingBannerEnabled, free_shipping_banner_eyebrow: settings.freeShippingBannerEyebrow, free_shipping_banner_title: settings.freeShippingBannerTitle, free_shipping_banner_subtitle: settings.freeShippingBannerSubtitle, free_shipping_banner_button_text: settings.freeShippingBannerButtonText, free_shipping_banner_button_link: settings.freeShippingBannerButtonLink, pix_discount: settings.pixDiscount, auto_banner_seconds: settings.autoBannerSeconds, checkout_mode: settings.checkoutMode, whatsapp_message: settings.whatsappMessage }),
+      () => persist("store_settings", { id: "default", store_name: settings.storeName, logo_url: settings.logoUrl, mobile_logo_url: settings.mobileLogoUrl, favicon_url: settings.faviconUrl, whatsapp: settings.whatsapp, order_prefix: settings.orderPrefix, email: settings.email, hours: settings.hours, announcement: settings.announcement, footer_description: settings.footerDescription, primary_color: settings.primaryColor, secondary_color: settings.secondaryColor, background_color: settings.backgroundColor, text_color: settings.textColor, font_family: settings.fontFamily, header_layout: settings.headerLayout, content_width: settings.contentWidth, border_radius: settings.borderRadius, free_shipping_threshold: settings.freeShippingThreshold, shipping_flat: settings.shippingFlat, shipping_city_rates: settings.shippingCityRates, quote_shipping_outside_cities: settings.quoteShippingOutsideCities, local_pickup_enabled: settings.localPickupEnabled, local_pickup_instructions: settings.localPickupInstructions, free_shipping_enabled: settings.freeShippingEnabled, free_shipping_banner_enabled: settings.freeShippingBannerEnabled, free_shipping_banner_eyebrow: settings.freeShippingBannerEyebrow, free_shipping_banner_title: settings.freeShippingBannerTitle, free_shipping_banner_subtitle: settings.freeShippingBannerSubtitle, free_shipping_banner_button_text: settings.freeShippingBannerButtonText, free_shipping_banner_button_link: settings.freeShippingBannerButtonLink, pix_discount: settings.pixDiscount, auto_banner_seconds: settings.autoBannerSeconds, checkout_mode: settings.checkoutMode, whatsapp_message: settings.whatsappMessage }),
       "Configurações salvas.",
     );
   }, [commitMutation, persist]);
@@ -1388,9 +1476,9 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
         const { error } = await supabase.from("orders").delete().eq("tenant_id", dataRef.current.tenant.id).neq("id", "");
         if (error) throw new Error(error.message);
       },
-      "Pedidos demonstrativos removidos.",
+      demoMode ? "Pedidos demonstrativos removidos." : "Pedidos removidos.",
     );
-  }, [commitMutation, supabase]);
+  }, [commitMutation, demoMode, supabase]);
 
   const applyTeamResponse = useCallback(async (response: Response) => {
     const payload = await response.json().catch(() => ({})) as { users?: AdminUser[]; error?: string };
@@ -1446,6 +1534,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
   const value = useMemo<AdminDataContextValue>(() => ({
     data,
     demoMode,
+    referenceNow,
     currentUser,
     saveProduct,
     deleteProduct,
@@ -1459,6 +1548,12 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     savePageBlock,
     deletePageBlock,
     movePageBlock,
+    saveFeaturedProducts,
+    saveBannerVisibility,
+    saveCategoryVisibility,
+    saveTrustItems,
+    saveBenefits,
+    saveFaqs,
     saveMessageAutomation,
     deleteMessageAutomation,
     saveCoupon,
@@ -1493,7 +1588,6 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     toggleItem,
     updateOrderStatus,
     saveOrderDetails,
-    createProductReview,
     saveSettings,
     uploadMedia,
     clearOrders,
@@ -1503,7 +1597,7 @@ export function AdminDataProvider({ initialData, currentUser, children }: { init
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData, createProductReview]);
+  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

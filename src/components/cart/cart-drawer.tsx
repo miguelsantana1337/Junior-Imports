@@ -5,7 +5,9 @@ import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
+import { ProductArt } from "@/components/ui/product-art";
 import { formatMoney } from "@/lib/format";
+import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function CartDrawer() {
@@ -90,7 +92,7 @@ export function CartDrawer() {
               if (!product) return null;
               return (
                 <article className="cart-item" key={line.productId}>
-                  <div className="cart-thumb">{data.settings.orderPrefix}</div>
+                  <div className="cart-thumb"><ProductArt product={product} /></div>
                   <div>
                     <h3>{product.name}</h3>
                     <strong>{formatMoney(product.price * line.quantity)}</strong>
@@ -127,8 +129,8 @@ export function CartDrawer() {
           </form>
           <div className="total-line"><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>
           {calculation.discount > 0 && <div className="total-line"><span>Desconto</span><strong>- {formatMoney(calculation.discount)}</strong></div>}
-          <div className="total-line"><span>Frete</span><strong>{calculation.shipping ? formatMoney(calculation.shipping) : "Grátis"}</strong></div>
-          <div className="total-line grand-total"><span>Total</span><strong>{formatMoney(calculation.total)}</strong></div>
+          <div className="total-line"><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div>
+          <div className="total-line grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>
           {calculation.cashback > 0 && <div className="total-line cart-cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}
           <Link className={`button button-primary button-full button-large ${lines.length ? "" : "disabled"}`} href={lines.length ? withStorefrontPath(data.tenant.storefrontPath, "/checkout") : "#"} onClick={() => lines.length && setDrawerOpen(false)}>Ir para o checkout</Link>
           <button className="text-button" onClick={clearCart} disabled={!lines.length}>Esvaziar carrinho</button>

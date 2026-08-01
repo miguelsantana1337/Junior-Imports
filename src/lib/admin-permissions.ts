@@ -17,7 +17,7 @@ export const adminPermissionCatalog: Array<{
   { key: "collaboration", label: "Colaboração da equipe", description: "Caixa de entrada, discussões, menções, aprovações e presença online." },
   { key: "copilot", label: "Copiloto Junior", description: "Consultas e orientações contextuais em modo somente leitura." },
   { key: "catalog", label: "Catálogo", description: "Produtos, categorias, estoque e ordenação." },
-  { key: "store", label: "Loja e layout", description: "Páginas, containers, banners e conteúdo da home." },
+  { key: "store", label: "Loja e layout", description: "Páginas, seções, banners e conteúdo da loja em um único editor." },
   { key: "marketing", label: "Marketing", description: "Cupons e mensagens automáticas." },
   { key: "settings", label: "Configurações", description: "Identidade visual e regras operacionais." },
   { key: "data", label: "Dados e backup", description: "Importação, exportação e limpeza de dados." },

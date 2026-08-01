@@ -80,17 +80,19 @@ export function useAdminNotifications({
   data,
   user,
   demoMode,
+  referenceNow,
 }: {
   data: StoreData;
   user: NotificationUser;
   demoMode: boolean;
+  referenceNow: number;
 }) {
   const supabase = useMemo(() => createClient(), []);
   const localKey = storageKey(data.tenant.id, user.id);
   const [states, setStates] = useState<Record<string, InteractionState>>({});
   const [health, setHealth] = useState<AdminHealthReport | null>(null);
   const [collaborationNotifications, setCollaborationNotifications] = useState<AdminNotification[]>([]);
-  const [clock, setClock] = useState(() => Date.now());
+  const [clock, setClock] = useState(referenceNow);
   const canAccessData = hasAdminPermission(user.role, user.permissions, "data");
   const canCollaborate = hasAdminPermission(user.role, user.permissions, "collaboration");
 

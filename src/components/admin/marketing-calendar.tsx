@@ -3,7 +3,7 @@
 import { CalendarDays, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { calendarItemsForDay, marketingCalendarItems } from "@/lib/marketing";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatStoreDateKey } from "@/lib/format";
 import type { MarketingPublication } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 
@@ -22,8 +22,9 @@ function monthCells(month: Date) {
   });
 }
 export function MarketingCalendar({ onOpen }: { onOpen: (publication: MarketingPublication) => void }) {
-  const { data } = useAdminData();
-  const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  const { data, referenceNow } = useAdminData();
+  const referenceDate = useMemo(() => new Date(`${formatStoreDateKey(referenceNow)}T12:00:00`), [referenceNow]);
+  const [month, setMonth] = useState(() => new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1));
   const [kind, setKind] = useState<"all" | keyof typeof kindLabels>("all");
   const items = useMemo(() => marketingCalendarItems(data.marketingPublications, data.coupons, data.cashbackCampaigns).filter((item) => kind === "all" || item.kind === kind), [data.cashbackCampaigns, data.coupons, data.marketingPublications, kind]);
   const cells = useMemo(() => monthCells(month), [month]);
@@ -43,7 +44,7 @@ export function MarketingCalendar({ onOpen }: { onOpen: (publication: MarketingP
     <div className="marketing-calendar-grid">{cells.map((day) => {
       const dayItems = calendarItemsForDay(items, day);
       const outside = day.getMonth() !== month.getMonth();
-      const today = day.toDateString() === new Date().toDateString();
+      const today = day.toDateString() === referenceDate.toDateString();
       return <article className={`${outside ? "outside" : ""} ${today ? "today" : ""}`} key={day.toISOString()}>
         <header><span>{day.getDate()}</span>{today && <b>Hoje</b>}</header>
         <div>{dayItems.slice(0, 3).map((item) => <button key={item.id} className={`calendar-campaign-pill ${item.kind} ${item.status}`} disabled={!item.publicationId} onClick={() => { const publication = data.marketingPublications.find((candidate) => candidate.id === item.publicationId); if (publication) onOpen(publication); }} title={`${item.name} · ${statusLabels[item.status]}`}><i /> <span>{item.name}</span></button>)}{dayItems.length > 3 && <small>+ {dayItems.length - 3} itens</small>}</div>

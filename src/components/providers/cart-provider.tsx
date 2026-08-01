@@ -16,7 +16,7 @@ import {
   writeSensitiveSessionValue,
 } from "@/lib/browser-storage";
 import { canAddProductToCart } from "@/lib/product-compliance";
-import type { CartLine, Coupon, PaymentMethod } from "@/types/store";
+import type { CartLine, Coupon, PaymentMethod, ShippingDestination } from "@/types/store";
 import { useStore } from "./store-provider";
 
 interface CartContextValue {
@@ -33,7 +33,7 @@ interface CartContextValue {
   toggleFavorite: (productId: string) => void;
   applyCoupon: (code: string) => Promise<{ ok: boolean; message: string }>;
   setDrawerOpen: (open: boolean) => void;
-  calculate: (payment?: PaymentMethod) => ReturnType<typeof calculateCart>;
+  calculate: (payment?: PaymentMethod, destination?: ShippingDestination) => ReturnType<typeof calculateCart>;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -141,8 +141,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const calculate = useCallback(
-    (payment?: PaymentMethod) =>
-      calculateCart(lines, data.products, data.settings, coupon, payment, data.cashbackCampaigns),
+    (payment?: PaymentMethod, destination?: ShippingDestination) =>
+      calculateCart(lines, data.products, data.settings, coupon, payment, data.cashbackCampaigns, destination),
     [lines, data.products, data.settings, coupon, data.cashbackCampaigns],
   );
 
@@ -178,6 +178,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         expiresAt: "",
         totalUsageLimit: 0,
         perCustomerLimit: 0,
+        applicableCategoryIds: [],
+        applicableProductIds: [],
         firstOrderOnly: false,
         usageCount: 0,
       });

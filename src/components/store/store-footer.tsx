@@ -18,6 +18,14 @@ export function StoreFooter() {
   return (
     <>
       <footer className="store-footer">
+        {data.settings.shippingCityRates.length > 0 && (
+          <div className="container footer-shipping-rates" aria-label="Valores de entrega">
+            {data.settings.shippingCityRates.map((rate) => (
+              <span key={`${rate.city}-${rate.state}`}>📍 {rate.city}: <strong>{new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(rate.amount)}</strong></span>
+            ))}
+            {data.settings.quoteShippingOutsideCities && <span>📦 Demais cidades: informe o seu CEP para realizarmos a cotação do frete.</span>}
+          </div>
+        )}
         <div className="container footer-grid">
           <div className="footer-brand">
             <Logo />

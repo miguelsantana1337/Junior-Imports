@@ -7,7 +7,7 @@ import { useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
 import { Logo } from "@/components/ui/logo";
-import { formatMoney } from "@/lib/format";
+import { resolveStoreAnnouncement } from "@/lib/store-announcement";
 import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function StoreHeader() {
@@ -20,10 +20,7 @@ export function StoreHeader() {
   const router = useRouter();
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
-  const shippingValue = formatMoney(data.settings.freeShippingThreshold);
-  const announcement = data.settings.announcement
-    .replaceAll("{{valor}}", shippingValue)
-    .replace(/(frete grátis.*?acima de)\s*R\$\s*[\d.,]+/i, `$1 ${shippingValue}`);
+  const announcement = resolveStoreAnnouncement(data.settings);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();

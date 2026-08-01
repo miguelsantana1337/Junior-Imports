@@ -14,7 +14,11 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
   return {
     tenant: isRecord(candidate.tenant) ? { ...fallback.tenant, ...candidate.tenant } : fallback.tenant,
     settings: isRecord(candidate.settings) ? { ...fallback.settings, ...candidate.settings } : fallback.settings,
-    products: arrayOrFallback<Product>(candidate.products, fallback.products).map((product) => ({ ...product, cashback: Number(product.cashback) || 0 })),
+    products: arrayOrFallback<Product>(candidate.products, fallback.products).map((product) => ({
+      ...product,
+      cashback: Number(product.cashback) || 0,
+      cashbackType: product.cashbackType === "percent" ? "percent" : "fixed",
+    })),
     categories: arrayOrFallback(candidate.categories, fallback.categories),
     banners: arrayOrFallback(candidate.banners, fallback.banners),
     sections: arrayOrFallback(candidate.sections, fallback.sections),
@@ -50,6 +54,7 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     automationRuns: arrayOrFallback(candidate.automationRuns, fallback.automationRuns),
     teamMembers: arrayOrFallback(candidate.teamMembers, fallback.teamMembers),
     auditLogs: arrayOrFallback(candidate.auditLogs, fallback.auditLogs),
+    productReviews: arrayOrFallback(candidate.productReviews, fallback.productReviews),
   };
 }
 

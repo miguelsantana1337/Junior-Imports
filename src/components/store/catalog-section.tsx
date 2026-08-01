@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/components/providers/store-provider";
 import { buildCatalogProductGroups, type CatalogSort } from "@/lib/catalog-view";
-import type { HomeSection } from "@/types/store";
+import type { HomeSection, PageBlock } from "@/types/store";
 import { ProductCarousel } from "./product-carousel";
 import { SectionHeading } from "./section-heading";
 
-export function CatalogSection({ section }: { section: HomeSection }) {
+export function CatalogSection({ section, block }: { section: HomeSection; block: PageBlock }) {
   const { data } = useStore();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<CatalogSort>("order");
@@ -34,8 +34,8 @@ export function CatalogSection({ section }: { section: HomeSection }) {
   }
 
   return (
-    <section className="section catalog-section" id="catalogo">
-      <div className="container">
+    <section className={`section catalog-section page-block-shell padding-${block.padding}`} id="catalogo" style={{ backgroundColor: block.backgroundColor || undefined, color: block.textColor || undefined }}>
+      <div className={`container page-block-container width-${block.containerWidth}`}>
         <SectionHeading eyebrow={section.eyebrow} title={section.title} subtitle={section.subtitle} />
         {search && (
           <div className="catalog-search-state">

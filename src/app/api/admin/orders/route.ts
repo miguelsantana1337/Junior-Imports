@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     name: input.name,
     phone: input.phone,
     email: input.email,
+    deliveryMethod: input.deliveryMethod,
     zip: input.zip,
     city: input.city,
     state: input.state,

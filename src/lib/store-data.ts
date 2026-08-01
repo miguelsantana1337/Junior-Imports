@@ -31,6 +31,7 @@ import type {
   Order,
   PageBlock,
   Product,
+  ProductReview,
   ProductLot,
   PurchaseOrder,
   SavedReport,
@@ -52,6 +53,15 @@ const num = (value: unknown) => Number(value) || 0;
 const str = (value: unknown) => String(value ?? "");
 const stringList = (value: unknown) => Array.isArray(value) ? value.map(str).filter(Boolean) : [];
 const objectValue = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+const shippingCityRates = (value: unknown): StoreSettings["shippingCityRates"] => Array.isArray(value)
+  ? value.flatMap((entry) => {
+      const rate = objectValue(entry);
+      const city = str(rate.city).trim();
+      const state = str(rate.state).trim().toUpperCase();
+      const amount = num(rate.amount);
+      return city ? [{ city, state, amount }] : [];
+    })
+  : [];
 
 function mapCategory(row: Row): Category {
   return {
@@ -77,6 +87,7 @@ function mapProduct(row: Row, categories: Category[]): Product {
     price: num(row.price),
     compareAt: num(row.compare_at),
     cashback: num(row.cashback),
+    cashbackType: str(row.cashback_type) === "percent" ? "percent" : "fixed",
     costPrice: num(row.cost_price),
     stock: num(row.stock),
     minStock: num(row.min_stock),
@@ -186,6 +197,8 @@ function mapCoupon(row: Row): Coupon {
     perCustomerLimit: num(row.per_customer_limit),
     firstOrderOnly: Boolean(row.first_order_only),
     usageCount: num(row.usage_count),
+    applicableCategoryIds: stringList(row.applicable_category_ids),
+    applicableProductIds: stringList(row.applicable_product_ids),
   };
 }
 
@@ -275,6 +288,7 @@ function mapStorefrontProduct(row: Row, categories: Category[]): StorefrontProdu
     price: num(row.price),
     compareAt: num(row.compare_at),
     cashback: num(row.cashback),
+    cashbackType: str(row.cashback_type) === "percent" ? "percent" : "fixed",
     stock: num(row.purchase_limit),
     badge: str(row.badge),
     accent: str(row.accent) || "#1677ff",
@@ -455,6 +469,14 @@ function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
     borderRadius: row.border_radius === undefined ? fallback.borderRadius : num(row.border_radius),
     freeShippingThreshold: num(row.free_shipping_threshold),
     shippingFlat: num(row.shipping_flat),
+    shippingCityRates: row.shipping_city_rates === undefined ? fallback.shippingCityRates : shippingCityRates(row.shipping_city_rates),
+    quoteShippingOutsideCities: row.quote_shipping_outside_cities === undefined
+      ? fallback.quoteShippingOutsideCities
+      : Boolean(row.quote_shipping_outside_cities),
+    localPickupEnabled: row.local_pickup_enabled === undefined
+      ? fallback.localPickupEnabled
+      : Boolean(row.local_pickup_enabled),
+    localPickupInstructions: str(row.local_pickup_instructions) || fallback.localPickupInstructions,
     freeShippingEnabled: row.free_shipping_enabled === undefined ? fallback.freeShippingEnabled : Boolean(row.free_shipping_enabled),
     freeShippingBannerEnabled: row.free_shipping_banner_enabled === undefined ? fallback.freeShippingBannerEnabled : Boolean(row.free_shipping_banner_enabled),
     freeShippingBannerEyebrow: str(row.free_shipping_banner_eyebrow) || fallback.freeShippingBannerEyebrow,
@@ -636,6 +658,7 @@ function mapOrder(row: Row): Order {
     trackingCode: str(row.tracking_code),
     orderSource: (str(row.order_source) || "legacy") as Order["orderSource"],
     reservationExpiresAt: str(row.reservation_expires_at),
+    shippingStatus: (str(row.shipping_status) || undefined) as Order["shippingStatus"],
   };
 }
 
@@ -671,8 +694,9 @@ async function resolveTenant(
   };
 }
 
-function scopeTenant<T extends { eq(column: string, value: string): T }>(query: T, tenantId: string | null): T {
-  return tenantId ? query.eq("tenant_id", tenantId) : query;
+function scopeTenant<Query>(query: Query, tenantId: string | null): Query {
+  if (!tenantId) return query;
+  return (query as { eq(column: string, value: string): Query }).eq("tenant_id", tenantId);
 }
 
 export async function getTenantBySlug(slug: string): Promise<StoreTenant | null> {
@@ -759,7 +783,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       ? scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index")
       : options.admin
         ? emptyQuery()
-        : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, badge, accent, description, rating, reviews, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
+        : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, cashback_type, badge, accent, description, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
     scopeTenant(supabase.from("banners").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("home_sections").select("*"), tenantId).order("order_index"),
     options.admin && canRead("marketing")
@@ -838,7 +862,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       : emptyQuery(),
     options.admin
       ? scopeTenant(supabase.from("product_reviews").select("*"), tenantId).order("created_at", { ascending: false })
-      : scopeTenant(supabase.from("product_reviews").select("*"), tenantId).eq("status", "approved").order("created_at", { ascending: false }),
+      : emptyQuery(),
   ]);
 
   if (resolution.persisted) {

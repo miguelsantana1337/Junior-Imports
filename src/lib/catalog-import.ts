@@ -31,15 +31,15 @@ const regulatoryAliases: Record<string, RegulatoryStatus> = {
 };
 
 const productTemplateHeaders = [
-  "sku", "nome", "categoria", "marca", "preco", "preco_comparacao", "cashback", "custo",
-  "estoque", "estoque_minimo", "etiqueta", "cor", "descricao", "avaliacao", "numero_avaliacoes",
+  "sku", "nome", "categoria", "marca", "preco", "preco_comparacao", "cashback_tipo", "cashback", "custo",
+  "estoque", "estoque_minimo", "etiqueta", "cor", "descricao",
   "ativo", "destaque", "ordem", "imagem_url", "imagens_urls", "tipo_produto", "status_regulatorio",
   "principio_ativo", "registro_anvisa", "apresentacao", "advertencia", "revisado_farmaceutico",
 ];
 
 const stockTemplateHeaders = [
   "sku", "nome", "categoria", "marca", "quantidade", "estoque_minimo", "preco", "preco_comparacao",
-  "cashback", "custo", "etiqueta", "cor", "descricao", "avaliacao", "numero_avaliacoes", "ativo",
+  "cashback_tipo", "cashback", "custo", "etiqueta", "cor", "descricao", "ativo",
   "destaque", "ordem", "imagem_url", "imagens_urls", "tipo_produto", "status_regulatorio",
   "principio_ativo", "registro_anvisa", "apresentacao", "advertencia", "revisado_farmaceutico",
 ];
@@ -90,6 +90,7 @@ function productTemplateRow(product: Product, stockTemplate = false) {
   }
 
   common.push(
+    product.cashbackType === "percent" ? "percentual" : "fixo",
     decimalValue(product.cashback),
     decimalValue(product.costPrice),
   );
@@ -102,8 +103,6 @@ function productTemplateRow(product: Product, stockTemplate = false) {
     product.badge,
     product.accent,
     product.description,
-    decimalValue(product.rating, 1),
-    product.reviews,
     booleanValue(product.active),
     booleanValue(product.featured),
     product.order,
@@ -128,14 +127,14 @@ function serializeTemplate(headers: string[], rows: Array<Array<string | number>
 export function buildProductImportTemplate(products: Product[]) {
   const rows = products.length
     ? products.map((product) => productTemplateRow(product))
-    : [["JI-A05", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", "49,90", "59,90", "5,00", "25,00", 20, 5, "", "#1677ff", "Descrição completa do produto", "5,0", 0, "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
+    : [["JI-A05", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", "49,90", "59,90", "percentual", "5,00", "25,00", 20, 5, "", "#1677ff", "Descrição completa do produto", "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
   return serializeTemplate(productTemplateHeaders, rows);
 }
 
 export function buildStockImportTemplate(products: Product[]) {
   const rows = products.length
     ? products.map((product) => productTemplateRow(product, true))
-    : [["JI-A04", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", 25, 5, "49,90", "59,90", "5,00", "25,00", "", "#1677ff", "Descrição completa do produto", "5,0", 0, "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
+    : [["JI-A04", "Produto exemplo", "Acessórios de cuidado", "Junior Imports", 25, 5, "49,90", "59,90", "percentual", "5,00", "25,00", "", "#1677ff", "Descrição completa do produto", "nao", "nao", 1, "", "", "nao_medicamento", "pendente", "", "", "", "", "nao"]];
   return serializeTemplate(stockTemplateHeaders, rows);
 }
 
@@ -189,6 +188,14 @@ function boolValue(value: string, fallback: boolean) {
   return ["1", "true", "sim", "yes", "ativo", "aprovado"].includes(value.trim().toLocaleLowerCase("pt-BR"));
 }
 
+function cashbackTypeValue(value: string, fallback: Product["cashbackType"]): Product["cashbackType"] | null {
+  const normalized = normalizeHeader(value.trim());
+  if (!normalized) return fallback;
+  if (["percentual", "porcentagem", "percent", "percentage"].includes(normalized) || value.trim() === "%") return "percent";
+  if (["fixo", "valor_fixo", "fixed", "reais", "rs"].includes(normalized) || value.trim().toUpperCase() === "R$") return "fixed";
+  return null;
+}
+
 export function parseProductImport(text: string, existing: Product[], categories: Category[]) {
   const records = parseCsv(text);
   const products: Product[] = [];
@@ -206,12 +213,14 @@ export function parseProductImport(text: string, existing: Product[], categories
     const category = categories.find((item) => [item.id, item.name.toLocaleLowerCase("pt-BR"), item.slug].includes(categoryValue));
     if (!category && !current) { errors.push({ row, message: `Categoria “${record.categoria || "vazia"}” não encontrada.` }); return; }
     const price = record.preco ? numberValue(record.preco) : current?.price ?? Number.NaN;
+    const cashbackType = cashbackTypeValue(record.cashback_tipo ?? "", current?.cashbackType ?? "fixed");
     const cashback = record.cashback ? numberValue(record.cashback) : current?.cashback ?? 0;
     const costPrice = record.custo ? numberValue(record.custo) : current?.costPrice ?? 0;
     const stock = record.estoque ? numberValue(record.estoque) : current?.stock ?? 0;
     const minStock = record.estoque_minimo ? numberValue(record.estoque_minimo) : current?.minStock ?? 0;
     if (!Number.isFinite(price) || price < 0) { errors.push({ row, message: "Preço inválido." }); return; }
-    if (!Number.isFinite(cashback) || cashback < 0 || cashback > price) { errors.push({ row, message: "Cashback deve estar entre zero e o preço de venda." }); return; }
+    if (!cashbackType) { errors.push({ row, message: "Tipo de cashback inválido. Use percentual ou fixo." }); return; }
+    if (!Number.isFinite(cashback) || cashback < 0 || (cashbackType === "fixed" && cashback > price) || (cashbackType === "percent" && cashback > 100)) { errors.push({ row, message: cashbackType === "percent" ? "Cashback percentual deve estar entre 0 e 100%." : "Cashback fixo deve estar entre zero e o preço de venda." }); return; }
     if (!Number.isFinite(costPrice) || costPrice < 0) { errors.push({ row, message: "Custo inválido." }); return; }
     if (!Number.isInteger(stock) || stock < 0) { errors.push({ row, message: "Estoque deve ser um número inteiro maior ou igual a zero." }); return; }
     if (!Number.isInteger(minStock) || minStock < 0) { errors.push({ row, message: "Estoque mínimo deve ser um número inteiro maior ou igual a zero." }); return; }
@@ -234,6 +243,7 @@ export function parseProductImport(text: string, existing: Product[], categories
       price,
       compareAt: record.preco_comparacao ? numberValue(record.preco_comparacao) : current?.compareAt ?? 0,
       cashback,
+      cashbackType,
       costPrice,
       stock,
       minStock,

@@ -1,23 +1,38 @@
 import { formatMoney, whatsappUrl } from "@/lib/format";
 import type { Order, StoreSettings } from "@/types/store";
 import { checkoutTermsConfirmation } from "@/lib/checkout-terms";
+import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 
-export const defaultWhatsappOrderMessage = `🛒 *Novo pedido – {{loja}}*
+export const defaultWhatsappOrderMessage = `*Novo pedido - {{loja}}*
 
 Olá! Gostaria de finalizar o seguinte pedido:
 
-📦 *Pedido:* {{pedido}}
+*Pedido:* {{pedido}}
 
 *Produtos:*
 {{itens}}
 
-💰 *Total do pedido:* {{total}}
-💳 *Forma de pagamento:* {{pagamento}}
-🎟️ *Cupom utilizado:* {{cupom}}
+*{{rotulo_total}}:* {{total}}
+*Frete:* {{frete}}
+*Forma de pagamento:* {{pagamento}}
+*Cupom utilizado:* {{cupom}}
 
-👤 *Cliente:* {{cliente}}
+*Cliente:* {{cliente}}
 
 Aguardo a confirmação. Obrigado!`;
+
+function normalizeForWhatsapp(message: string) {
+  return message
+    .replace(/\{\{sku\}\}/gi, "")
+    .replace(/^[ \t]*(?:[-•][ \t]*)?SKU[ \t]*:.*$/gim, "")
+    .replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}/gu, "")
+    .replace(/[\u200d\ufe0e\ufe0f\u20e3]/g, "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/^[ \t]+/gm, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 function paymentLabel(payment: Order["payment"]) {
   return payment === "Cartao" ? "Cartão" : payment;
@@ -42,6 +57,18 @@ function addDiscountSummary(message: string, summary: string) {
   return `${message}\n\n${summary}`;
 }
 
+function shippingMessage(order: Order) {
+  if (order.shippingStatus === "pickup" || order.customer.deliveryMethod === "pickup") {
+    return "Retirada no local";
+  }
+  if (order.shippingStatus === "quote") {
+    const destination = [order.customer.city, order.customer.state].filter(Boolean).join("/");
+    const location = [order.customer.zip, destination].filter(Boolean).join(" · ");
+    return `A cotar pelo CEP${location ? ` (${location})` : ""}`;
+  }
+  return shippingPriceLabel(order.shippingStatus, order.shipping);
+}
+
 function resolveMessageTemplate(message: string) {
   const normalized = message.replace(/\\n/g, "\n").trim();
   const isLegacyDefault = normalized.startsWith("Olá! Quero finalizar o pedido {{pedido}} da {{loja}}.");
@@ -50,11 +77,13 @@ function resolveMessageTemplate(message: string) {
 
 export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings) {
   const items = order.items
-    .map((item) => `• ${item.quantity}x ${item.name} — ${formatMoney(item.quantity * item.unitPrice)}`)
+    .map((item) => `- ${item.quantity}x ${item.name} - ${formatMoney(item.quantity * item.unitPrice)}`)
     .join("\n");
 
   const template = resolveMessageTemplate(settings.whatsappMessage);
   const discountPercentage = formatDiscountPercentage(order.discount, order.subtotal);
+  const freight = shippingMessage(order);
+  const totalLabel = orderTotalLabel(order.shippingStatus);
 
   const values: Record<string, string> = {
     "{{loja}}": settings.storeName,
@@ -62,6 +91,8 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
     "{{cliente}}": order.customer.name,
     "{{itens}}": items,
     "{{total}}": formatMoney(order.total),
+    "{{rotulo_total}}": totalLabel,
+    "{{frete}}": freight,
     "{{pagamento}}": paymentLabel(order.payment),
     "{{cupom}}": order.couponCode || "Nenhum",
     "{{desconto}}": formatMoney(order.discount),
@@ -73,19 +104,29 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
     template,
   );
 
+  if (order.shippingStatus === "quote" && !template.includes("{{rotulo_total}}")) {
+    rendered = rendered.replace(/Total do pedido/i, totalLabel);
+  }
+  if (!template.includes("{{frete}}")) {
+    rendered = addDiscountSummary(rendered, `*Frete:* ${freight}`);
+  }
+
   const templateControlsDiscount = template.includes("{{desconto}}") || template.includes("{{percentual_desconto}}");
   if (order.discount > 0 && order.subtotal > 0 && !templateControlsDiscount) {
     rendered = addDiscountSummary(
       rendered,
-      `🏷️ *Desconto obtido:* ${formatMoney(order.discount)} (${discountPercentage})`,
+      `*Desconto obtido:* ${formatMoney(order.discount)} (${discountPercentage})`,
     );
   }
 
   const cashbackNotice = order.cashbackTotal > 0
-    ? `\n\n🟢 *Cashback previsto:* ${formatMoney(order.cashbackTotal)} (após a confirmação do pedido)`
+    ? `\n\n*Cashback previsto:* ${formatMoney(order.cashbackTotal)} (após a confirmação do pedido)`
+    : "";
+  const pickupNotice = order.shippingStatus === "pickup" || order.customer.deliveryMethod === "pickup"
+    ? `\n\n*Retirada no local:* ${settings.localPickupInstructions}`
     : "";
 
-  return `${rendered}${cashbackNotice}\n\n✅ *${checkoutTermsConfirmation}*`;
+  return normalizeForWhatsapp(`${rendered}${cashbackNotice}${pickupNotice}\n\n*${checkoutTermsConfirmation}*`);
 }
 
 export function checkoutWhatsappUrl(order: Order, settings: StoreSettings) {

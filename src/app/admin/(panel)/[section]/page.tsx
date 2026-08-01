@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { BannersAdmin } from "@/components/admin/banners-admin";
 import { CategoriesAdmin } from "@/components/admin/categories-admin";
 import { CatalogImportAdmin } from "@/components/admin/catalog-import-admin";
@@ -15,7 +15,6 @@ import { MessagesAdmin } from "@/components/admin/messages-admin";
 import { ProductsAdmin } from "@/components/admin/products-admin";
 import { PurchasingAdmin } from "@/components/admin/purchasing-admin";
 import { ReportsAdmin } from "@/components/admin/reports-admin";
-import { SectionsAdmin } from "@/components/admin/sections-admin";
 import { SecurityMfaAdmin } from "@/components/admin/security-mfa-admin";
 import { SettingsAdmin } from "@/components/admin/settings-admin";
 import { UsersAdmin } from "@/components/admin/users-admin";
@@ -27,7 +26,6 @@ const sections = {
   banners: BannersAdmin,
   categories: CategoriesAdmin,
   import: CatalogImportAdmin,
-  sections: SectionsAdmin,
   layout: LayoutAdmin,
   coupons: CouponsAdmin,
   crm: CrmAdmin,
@@ -47,6 +45,10 @@ const sections = {
 
 export default async function AdminSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
+  if (section === "sections") {
+    await requireAdmin(sectionPermissions.sections);
+    redirect("/admin/layout");
+  }
   const Component = sections[section as keyof typeof sections];
   if (!Component) notFound();
   await requireAdmin(sectionPermissions[section]);

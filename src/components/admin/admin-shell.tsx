@@ -10,7 +10,6 @@ import {
   IconExternalLink,
   IconFileSpreadsheet,
   IconHome,
-  IconLayoutDashboard,
   IconLayoutGrid,
   IconLogout,
   IconMenu2,
@@ -49,82 +48,83 @@ import { AdminNotificationCenter } from "@/components/admin/admin-notification-c
 
 const navigationGroups = [
   {
+    id: "operation",
     label: "Operação",
     items: [
       { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
-      { href: "/admin/crm", label: "CRM", icon: IconUsers, permission: "crm" },
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
-      { href: "/admin/collaboration", label: "Central da equipe", icon: IconMessageCircle, permission: "collaboration" },
+      { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
+      { href: "/admin/crm", label: "Tarefas e contatos", icon: IconMessageCircle, permission: "crm" },
+      { href: "/admin/collaboration", label: "Equipe e aprovações", icon: IconUsers, permission: "collaboration" },
     ],
   },
   {
+    id: "management",
     label: "Gestão",
     items: [
       { href: "/admin/finance", label: "Financeiro", icon: IconReceipt2, permission: "finance" },
       { href: "/admin/inventory", label: "Estoque e lotes", icon: IconBox, permission: "inventory" },
-      { href: "/admin/purchasing", label: "Compras", icon: IconCloudCheck, permission: "purchasing" },
-      { href: "/admin/reports", label: "Relatórios", icon: IconChartBar, permission: "reports" },
-      { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
+      { href: "/admin/purchasing", label: "Compras e fornecedores", icon: IconCloudCheck, permission: "purchasing" },
+      { href: "/admin/reports", label: "Relatórios e exportações", icon: IconChartBar, permission: "reports" },
     ],
   },
   {
-    label: "Catálogo",
-    items: [
-      { href: "/admin/products", label: "Produtos", icon: IconPackage, permission: "catalog" },
-      { href: "/admin/categories", label: "Categorias", icon: IconTag, permission: "catalog" },
-      { href: "/admin/import", label: "Importar planilha", icon: IconFileSpreadsheet, permission: "catalog" },
-    ],
-  },
-  {
+    id: "store",
     label: "Loja",
     items: [
       { href: "/admin/layout", label: "Editor da loja", icon: IconLayoutGrid, permission: "store" },
-      { href: "/admin/sections", label: "Conteúdo da home", icon: IconLayoutDashboard, permission: "store" },
-      { href: "/admin/banners", label: "Banners", icon: IconPhoto, permission: "store" },
+      { href: "/admin/products", label: "Produtos", icon: IconPackage, permission: "catalog" },
+      { href: "/admin/categories", label: "Categorias", icon: IconTag, permission: "catalog" },
     ],
   },
   {
+    id: "marketing",
     label: "Marketing",
     items: [
       { href: "/admin/coupons", label: "Cupons", icon: IconTicket, permission: "marketing" },
-      { href: "/admin/messages", label: "Marketing Studio", icon: IconMessageCircle, permission: "marketing" },
+      { href: "/admin/messages", label: "Campanhas e automações", icon: IconMessageCircle, permission: "marketing" },
     ],
   },
   {
-    label: "Sistema",
+    id: "administration",
+    label: "Administração",
     items: [
-      { href: "/admin/users", label: "Usuários", icon: IconUsers, permission: "users" },
+      { href: "/admin/users", label: "Acessos e permissões", icon: IconUsers, permission: "users" },
       { href: "/admin/security", label: "Segurança e MFA", icon: IconShieldLock, permission: null },
-      { href: "/admin/settings", label: "Configurações", icon: IconSettings, permission: "settings" },
-      { href: "/admin/data", label: "Dados", icon: IconDatabase, permission: "data" },
+      { href: "/admin/settings", label: "Loja, frete e atendimento", icon: IconSettings, permission: "settings" },
+      { href: "/admin/data", label: "Backup e auditoria", icon: IconDatabase, permission: "data" },
     ],
   },
 ];
 
 const navigation = navigationGroups.flatMap((group) => group.items);
 
+const utilityNavigation = [
+  { href: "/admin/banners", label: "Biblioteca de banners", icon: IconPhoto, permission: "store" },
+  { href: "/admin/import", label: "Importar planilha", icon: IconFileSpreadsheet, permission: "catalog" },
+];
+
 const titles: Record<string, [string, string]> = {
   "/admin": ["PAINEL", "Visão geral"],
   "/admin/products": ["CATÁLOGO", "Produtos"],
-  "/admin/banners": ["LOJA VIRTUAL", "Banners rotativos"],
+  "/admin/banners": ["EDITOR DA LOJA", "Biblioteca de banners"],
   "/admin/categories": ["CATÁLOGO", "Categorias"],
-  "/admin/import": ["CATÁLOGO", "Importação em massa"],
-  "/admin/sections": ["LOJA VIRTUAL", "Página inicial"],
-  "/admin/layout": ["LOJA VIRTUAL", "Editor de layout"],
+  "/admin/import": ["PRODUTOS", "Importação por planilha"],
+  "/admin/layout": ["LOJA VIRTUAL", "Editor da loja"],
   "/admin/coupons": ["MARKETING", "Cupons"],
-  "/admin/messages": ["MARKETING", "Calendário, publicação e automações"],
-  "/admin/orders": ["OPERAÇÃO", "Pedidos demonstrativos"],
-  "/admin/crm": ["CRM", "Relacionamento e tarefas"],
-  "/admin/customers": ["CRM", "Clientes e relacionamento"],
+  "/admin/messages": ["MARKETING", "Campanhas e automações"],
+  "/admin/orders": ["OPERAÇÃO", "Pedidos"],
+  "/admin/crm": ["RELACIONAMENTO", "Tarefas e contatos"],
+  "/admin/customers": ["RELACIONAMENTO", "Clientes"],
   "/admin/finance": ["FINANCEIRO", "Caixa e resultados"],
   "/admin/inventory": ["ERP", "Estoque e lotes"],
-  "/admin/purchasing": ["ERP", "Compras e fornecedores"],
-  "/admin/reports": ["INTELIGÊNCIA", "Relatórios e exportações"],
-  "/admin/collaboration": ["EQUIPE", "Colaboração e aprovações"],
-  "/admin/settings": ["SISTEMA", "Configurações"],
-  "/admin/users": ["SISTEMA", "Usuários e permissões"],
-  "/admin/security": ["SISTEMA", "Segurança e MFA"],
-  "/admin/data": ["SISTEMA", "Dados e backup"],
+  "/admin/purchasing": ["GESTÃO", "Compras e fornecedores"],
+  "/admin/reports": ["GESTÃO", "Relatórios e exportações"],
+  "/admin/collaboration": ["EQUIPE", "Equipe e aprovações"],
+  "/admin/settings": ["ADMINISTRAÇÃO", "Loja, frete e atendimento"],
+  "/admin/users": ["ADMINISTRAÇÃO", "Acessos e permissões"],
+  "/admin/security": ["ADMINISTRAÇÃO", "Segurança e MFA"],
+  "/admin/data": ["ADMINISTRAÇÃO", "Backup e auditoria"],
 };
 
 const createLinks = [
@@ -144,7 +144,7 @@ const adminThemeStorageKey = "junior-imports:admin-theme";
 const adminSidebarStorageKey = "junior-imports:admin-sidebar";
 
 export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
-  const { data } = useAdminData();
+  const { data, referenceNow } = useAdminData();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -153,6 +153,9 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [commandOpen, setCommandOpen] = useState(false);
   const [theme, setTheme] = useState<AdminTheme>("light");
   const [navigationPending, setNavigationPending] = useState(false);
+  const activeNavigationGroupId = navigationGroups.find((group) => group.items.some((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`))))?.id
+    ?? (pathname.startsWith("/admin/banners") || pathname.startsWith("/admin/import") ? "store" : "operation");
+  const [expandedNavigationGroup, setExpandedNavigationGroup] = useState(activeNavigationGroupId);
   const createPopoverRef = useRef<HTMLDivElement>(null);
   const notificationsPopoverRef = useRef<HTMLDivElement>(null);
   const { preferences, updatePreferences } = useAdminPreferences(user.id);
@@ -162,9 +165,11 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const accountName = user.fullName || user.email.split("@")[0] || "Administrador";
   const can = (permission: string) => hasAdminPermission(user.role, user.permissions, permission as AdminPermission);
   const visibleNavigation = navigation.filter((item) => item.permission === null || can(item.permission));
+  const visibleUtilityNavigation = utilityNavigation.filter((item) => can(item.permission));
   const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
   const commandSources: AdminCommandSource[] = [
     ...visibleNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
+    ...visibleUtilityNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
     ...visibleCreateLinks.map((item) => ({ ...item, group: "Criar" as const })),
   ];
 
@@ -218,7 +223,11 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     setTheme(preferredTheme);
     document.documentElement.dataset.adminTheme = preferredTheme;
     setCollapsed(window.localStorage.getItem(adminSidebarStorageKey) === "collapsed");
-  }, []);
+  }, [activeNavigationGroupId]);
+
+  useEffect(() => {
+    setExpandedNavigationGroup(activeNavigationGroupId);
+  }, [activeNavigationGroupId]);
 
   const toggleTheme = () => {
     setTheme((currentTheme) => {
@@ -235,6 +244,10 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       window.localStorage.setItem(adminSidebarStorageKey, nextState ? "collapsed" : "expanded");
       return nextState;
     });
+  };
+
+  const toggleNavigationGroup = (groupId: string) => {
+    setExpandedNavigationGroup((current) => current === groupId ? "" : groupId);
   };
 
   return (
@@ -278,16 +291,21 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           </div>
 
           <nav className="admin-nav-groups" aria-label="Navegação administrativa">
-            {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => item.permission === null || can(item.permission)) })).filter((group) => group.items.length).map((group) => (
-              <div className="admin-nav-group" key={group.label}>
-                <span>{group.label}</span>
-                {group.items.map(({ href, label, icon: Icon }) => (
-                  <Link className={isNavigationActive(href) ? "active" : ""} href={href} key={href} title={collapsed ? label : undefined}>
-                    <Icon stroke={1.8} /><span>{label}</span>
-                  </Link>
-                ))}
-              </div>
-            ))}
+            {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => item.permission === null || can(item.permission)) })).filter((group) => group.items.length).map((group) => {
+              const expanded = collapsed || expandedNavigationGroup === group.id;
+              return <div className={`admin-nav-group ${expanded ? "is-expanded" : ""}`} key={group.id}>
+                <button className="admin-nav-group-toggle" type="button" onClick={() => toggleNavigationGroup(group.id)} aria-expanded={expanded} aria-controls={`admin-nav-${group.id}`}>
+                  <span>{group.label}</span><IconChevronDown aria-hidden="true" />
+                </button>
+                <div className="admin-nav-group-items" id={`admin-nav-${group.id}`} hidden={!expanded}>
+                  {group.items.map(({ href, label, icon: Icon }) => (
+                    <Link className={isNavigationActive(href) || (href === "/admin/layout" && pathname.startsWith("/admin/banners")) || (href === "/admin/products" && pathname.startsWith("/admin/import")) ? "active" : ""} href={href} key={href} title={collapsed ? label : undefined}>
+                      <Icon stroke={1.8} /><span>{label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>;
+            })}
           </nav>
 
           <div className="admin-sidebar-status">
@@ -297,9 +315,9 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
               <IconCloudCheck />
               <Link href="/admin/data"><IconDatabase /> Ver conexão</Link>
             </div>
-            <div className="admin-demo-card">
+            <div className={`admin-demo-card ${demoMode ? "" : "is-production"}`}>
               <IconBox />
-              <div><strong>Demonstração</strong><small>Não realiza vendas reais</small></div>
+              <div><strong>{demoMode ? "Demonstração" : "Operação ativa"}</strong><small>{demoMode ? "Não realiza vendas reais" : "Pedidos e dados reais"}</small></div>
             </div>
           </div>
 
@@ -360,6 +378,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
                 data={data}
                 user={user}
                 demoMode={demoMode}
+                referenceNow={referenceNow}
                 preferences={preferences}
                 updatePreferences={updatePreferences}
               />

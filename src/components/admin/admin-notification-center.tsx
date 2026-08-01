@@ -74,6 +74,7 @@ export function AdminNotificationCenter({
   data,
   user,
   demoMode,
+  referenceNow,
   preferences,
   updatePreferences,
 }: {
@@ -83,10 +84,11 @@ export function AdminNotificationCenter({
   data: StoreData;
   user: NotificationUser;
   demoMode: boolean;
+  referenceNow: number;
   preferences: AdminPreferences;
   updatePreferences: (update: (current: AdminPreferences) => AdminPreferences) => void;
 }) {
-  const { notifications, markRead, markAllRead, snooze } = useAdminNotifications({ data, user, demoMode });
+  const { notifications, markRead, markAllRead, snooze } = useAdminNotifications({ data, user, demoMode, referenceNow });
   const [tab, setTab] = useState<NotificationTab>("important");
   const enabledNotifications = useMemo(() => notifications.filter((notification) => !notification.snoozed && !preferences.mutedNotificationCategories.includes(notification.category)), [notifications, preferences.mutedNotificationCategories]);
   const unreadNotifications = enabledNotifications.filter((notification) => !notification.read);

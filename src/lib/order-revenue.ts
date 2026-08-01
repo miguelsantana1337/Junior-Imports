@@ -2,8 +2,6 @@ import type { Order, OrderStatus } from "@/types/store";
 
 export const revenueOrderStatuses: ReadonlySet<OrderStatus> = new Set([
   "Pago",
-  "Preparando",
-  "Enviado",
   "Entregue",
 ]);
 
