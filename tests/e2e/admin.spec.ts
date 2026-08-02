@@ -347,6 +347,21 @@ test("impede publicar uma pergunta frequente ainda vazia", async ({ page }) => {
   await expect(addedRow.getByLabel("Resposta")).toHaveValue("");
   await modal.getByRole("button", { name: "Salvar e publicar" }).click();
   await expect(modal.getByText("Preencha todas as perguntas e respostas antes de publicar.")).toBeVisible();
+
+  await addedRow.getByLabel("Pergunta").fill("Como acompanho meu pedido?");
+  await addedRow.getByLabel("Resposta").fill("A equipe envia as atualizações pelo WhatsApp.");
+  await modal.getByRole("button", { name: "Salvar e publicar" }).click();
+  await expect(modal).toBeHidden();
+  await expect(faqBlock).toContainText(`${countBefore + 1} perguntas`);
+
+  await faqBlock.getByRole("button", { name: "Editar conteúdo" }).click();
+  const reopenedModal = page.getByRole("dialog", { name: "Editar seção" });
+  await reopenedModal.getByRole("button", { name: "Itens exibidos" }).click();
+  const reopenedRows = reopenedModal.locator(".layout-editable-list > article");
+  await expect(reopenedRows).toHaveCount(countBefore + 1);
+  const persistedRow = reopenedRows.nth(countBefore);
+  await expect(persistedRow.getByLabel("Pergunta")).toHaveValue("Como acompanho meu pedido?");
+  await expect(persistedRow.getByLabel("Resposta")).toHaveValue("A equipe envia as atualizações pelo WhatsApp.");
 });
 
 test("configura mensagem automatica e registra o disparo", async ({ page }) => {

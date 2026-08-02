@@ -672,7 +672,26 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
         ...previous.faqs.filter((item) => !nextIds.has(item.id)).map((item) => remove("faqs", item.id)),
       ]);
     }, "Perguntas frequentes atualizadas.");
-  }, [commitMutation, persist, remove]);
+
+    if (!supabase) return;
+    const tenantId = dataRef.current.tenant.id;
+    const { data: persistedFaqs, error } = await supabase
+      .from("faqs")
+      .select("id, question, answer, order_index")
+      .eq("tenant_id", tenantId)
+      .order("order_index");
+
+    if (error || !persistedFaqs) return;
+    const confirmedFaqs: Faq[] = persistedFaqs.map((item) => ({
+      id: String(item.id),
+      question: String(item.question),
+      answer: String(item.answer),
+      order: Number(item.order_index),
+    }));
+    const confirmedData = { ...dataRef.current, faqs: confirmedFaqs };
+    dataRef.current = confirmedData;
+    setData(confirmedData);
+  }, [commitMutation, persist, remove, supabase]);
 
   const saveMessageAutomation = useCallback(async (automation: MessageAutomation) => {
     await commitMutation((current) => ({
