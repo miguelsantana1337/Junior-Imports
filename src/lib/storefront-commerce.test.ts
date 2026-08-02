@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { defaultPurchaseFaqs, ensurePurchaseFaqBlock, resolvePurchaseFaqs } from "./storefront-commerce";
+import { defaultPurchaseFaqs, ensurePurchaseFaqBlock, legacyFaqDraft, resolvePurchaseFaqs } from "./storefront-commerce";
 import type { Faq, PageBlock } from "@/types/store";
 
 describe("conteúdo comercial da vitrine", () => {
@@ -15,6 +15,17 @@ describe("conteúdo comercial da vitrine", () => {
       { id: "first", question: "Primeira", answer: "A", order: 1 },
     ];
     expect(resolvePurchaseFaqs(configured).map((faq) => faq.id)).toEqual(["first", "second"]);
+  });
+
+  it("não publica perguntas vazias nem os antigos textos de exemplo", () => {
+    const configured: Faq[] = [
+      { id: "draft", ...legacyFaqDraft, order: 1 },
+      { id: "empty", question: " ", answer: " ", order: 2 },
+      { id: "valid", question: "Como acompanho meu pedido?", answer: "A equipe envia as atualizações pelo WhatsApp.", order: 3 },
+    ];
+
+    expect(resolvePurchaseFaqs(configured).map((faq) => faq.id)).toEqual(["valid"]);
+    expect(resolvePurchaseFaqs(configured.slice(0, 2))).toEqual(defaultPurchaseFaqs);
   });
 
   it("restaura a aba de FAQ na página inicial sem duplicar um bloco existente", () => {

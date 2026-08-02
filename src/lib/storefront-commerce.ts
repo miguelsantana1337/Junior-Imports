@@ -8,6 +8,11 @@ export const defaultPurchaseFaqs: Faq[] = [
   { id: "commerce-faq-support", question: "Posso tirar dúvidas antes de comprar?", answer: "Sim. Use o botão de WhatsApp da loja para falar com a equipe antes de finalizar o pedido.", order: 5 },
 ];
 
+export const legacyFaqDraft = {
+  question: "Nova pergunta?",
+  answer: "Escreva a resposta de forma simples.",
+} as const;
+
 export const defaultPurchaseFaqBlock: PageBlock = {
   id: "commerce-faq-fallback", pageId: "home", kind: "faq", name: "Como comprar",
   eyebrow: "PERGUNTAS FREQUENTES", title: "Como comprar na Junior Imports.", body: "",
@@ -16,7 +21,16 @@ export const defaultPurchaseFaqBlock: PageBlock = {
 };
 
 export function resolvePurchaseFaqs(faqs: Faq[]) {
-  return faqs.length ? [...faqs].sort((left, right) => left.order - right.order) : defaultPurchaseFaqs;
+  const publishedFaqs = faqs.filter((faq) => {
+    const question = faq.question.trim();
+    const answer = faq.answer.trim();
+    return Boolean(question && answer)
+      && !(question === legacyFaqDraft.question && answer === legacyFaqDraft.answer);
+  });
+
+  return publishedFaqs.length
+    ? publishedFaqs.sort((left, right) => left.order - right.order)
+    : defaultPurchaseFaqs;
 }
 
 export function ensurePurchaseFaqBlock(blocks: PageBlock[], isHome: boolean) {

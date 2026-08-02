@@ -38,6 +38,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { slugify } from "@/lib/format";
 import { resolveStoreAnnouncement } from "@/lib/store-announcement";
+import { legacyFaqDraft } from "@/lib/storefront-commerce";
 import { pageBlockSchema, storePageSchema } from "@/lib/validation";
 import type { Benefit, Faq, HomeSection, PageBlock, PageBlockKind, StorePage, StoreSettings, TrustItem } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
@@ -374,7 +375,8 @@ function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | 
     else if (form.kind === "benefits" && !benefits.length) { setError("Adicione pelo menos um card de benefício."); setEditorStep("items"); }
     else if (form.kind === "benefits" && benefits.some((item) => !item.title.trim() || !item.text.trim())) { setError("Preencha o título e o texto de todos os benefícios."); setEditorStep("items"); }
     else if (form.kind === "faq" && !faqs.length) { setError("Adicione pelo menos uma pergunta frequente."); setEditorStep("items"); }
-    else if (form.kind === "faq" && faqs.some((item) => !item.question.trim() || !item.answer.trim())) { setError("Preencha todas as perguntas e respostas."); setEditorStep("items"); }
+    else if (form.kind === "faq" && faqs.some((item) => !item.question.trim() || !item.answer.trim())) { setError("Preencha todas as perguntas e respostas antes de publicar."); setEditorStep("items"); }
+    else if (form.kind === "faq" && faqs.some((item) => item.question.trim() === legacyFaqDraft.question && item.answer.trim() === legacyFaqDraft.answer)) { setError("Substitua ou exclua as perguntas de exemplo antes de publicar."); setEditorStep("items"); }
     else {
       setSaving(true);
       setError("");
@@ -493,5 +495,5 @@ function BenefitsEditor({ items, onChange }: { items: Benefit[]; onChange: (item
 }
 
 function FaqEditor({ items, onChange }: { items: Faq[]; onChange: (items: Faq[]) => void }) {
-  return <div className="layout-resource-section full"><div className="layout-resource-heading"><div><strong>Perguntas frequentes</strong><span>Edite as dúvidas que aparecem na seção “Como comprar”.</span></div><button className="admin-button" type="button" onClick={() => onChange([...items, { id: crypto.randomUUID(), question: "Nova pergunta?", answer: "Escreva a resposta de forma simples.", order: items.length + 1 }])}><Plus /> Adicionar pergunta</button></div><div className="layout-editable-list">{items.map((item, index) => <article key={item.id}><div className="layout-editable-fields"><label>Pergunta<input value={item.question} maxLength={140} onChange={(event) => onChange(items.map((current) => current.id === item.id ? { ...current, question: event.target.value } : current))} /></label><label>Resposta<textarea value={item.answer} maxLength={600} onChange={(event) => onChange(items.map((current) => current.id === item.id ? { ...current, answer: event.target.value } : current))} /></label></div><ResourceRowActions index={index} count={items.length} onMove={(direction) => onChange(moveResourceItem(items, index, direction))} onDelete={() => onChange(items.filter((current) => current.id !== item.id))} /></article>)}</div></div>;
+  return <div className="layout-resource-section full"><div className="layout-resource-heading"><div><strong>Perguntas frequentes</strong><span>Edite as dúvidas que aparecem na seção “Como comprar”.</span></div><button className="admin-button" type="button" onClick={() => onChange([...items, { id: crypto.randomUUID(), question: "", answer: "", order: items.length + 1 }])}><Plus /> Adicionar pergunta</button></div><div className="layout-editable-list">{items.map((item, index) => <article key={item.id}><div className="layout-editable-fields"><label>Pergunta<input value={item.question} maxLength={140} placeholder="Ex.: Como acompanho meu pedido?" onChange={(event) => onChange(items.map((current) => current.id === item.id ? { ...current, question: event.target.value } : current))} /></label><label>Resposta<textarea value={item.answer} maxLength={600} placeholder="Escreva uma resposta clara para o cliente." onChange={(event) => onChange(items.map((current) => current.id === item.id ? { ...current, answer: event.target.value } : current))} /></label></div><ResourceRowActions index={index} count={items.length} onMove={(direction) => onChange(moveResourceItem(items, index, direction))} onDelete={() => onChange(items.filter((current) => current.id !== item.id))} /></article>)}</div></div>;
 }

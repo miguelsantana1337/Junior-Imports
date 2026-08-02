@@ -328,6 +328,27 @@ test("configura produtos em destaque diretamente no editor da loja", async ({ pa
   await expect(editedModal.getByLabel("Título que o cliente verá")).toHaveValue("Seleção especial E2E");
 });
 
+test("impede publicar uma pergunta frequente ainda vazia", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Editor da loja");
+
+  const faqBlock = page.locator(".layout-section-card.kind-faq");
+  await faqBlock.getByRole("button", { name: "Editar conteúdo" }).click();
+  const modal = page.getByRole("dialog", { name: "Editar seção" });
+  await modal.getByRole("button", { name: "Itens exibidos" }).click();
+
+  const rows = modal.locator(".layout-editable-list > article");
+  const countBefore = await rows.count();
+  await modal.getByRole("button", { name: "Adicionar pergunta" }).click();
+  await expect(rows).toHaveCount(countBefore + 1);
+
+  const addedRow = rows.nth(countBefore);
+  await expect(addedRow.getByLabel("Pergunta")).toHaveValue("");
+  await expect(addedRow.getByLabel("Resposta")).toHaveValue("");
+  await modal.getByRole("button", { name: "Salvar e publicar" }).click();
+  await expect(modal.getByText("Preencha todas as perguntas e respostas antes de publicar.")).toBeVisible();
+});
+
 test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await login(page);
   await openSection(page, "Campanhas e automações");
