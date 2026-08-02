@@ -200,6 +200,26 @@ test("cria um pedido manual e reserva o estoque", async ({ page }) => {
   await expect(detail.getByText("Cliente Pedido Manual", { exact: true })).toBeVisible();
 });
 
+test("prepara uma mensagem de WhatsApp e registra o contato no CRM", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Pedidos");
+
+  await expect(page.getByRole("heading", { name: "As conversas certas, na hora certa." })).toBeVisible();
+  await expect(page.getByText("sem API ou disparo automático", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Preparar mensagem" }).first().click();
+
+  const dialog = page.getByRole("dialog", { name: /Preparar mensagem para/ });
+  await expect(dialog).toBeVisible();
+  const message = dialog.getByLabel("Mensagem pronta");
+  await expect(message).toHaveValue(/pedido/i);
+  const whatsappLink = dialog.getByRole("link", { name: /Abrir WhatsApp/ });
+  await expect(whatsappLink).toHaveAttribute("href", /^https:\/\/wa\.me\/\d+\?text=/);
+  await dialog.getByRole("button", { name: "Já enviei — registrar" }).click();
+
+  await expect(dialog.getByText("Contato registrado.", { exact: true })).toBeVisible();
+  await expect(dialog.getByText(/timeline do CRM/)).toBeVisible();
+});
+
 test("autentica no modo local e cadastra um produto", async ({ page }) => {
   await login(page);
   await expect(page.getByRole("heading", { name: /^(Bom dia|Boa tarde|Boa noite),/ })).toBeVisible();
