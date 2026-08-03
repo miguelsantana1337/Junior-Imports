@@ -9,6 +9,7 @@ import { savedReportSchema } from "@/lib/validation";
 import type { ExportRun, ReportFormat, ReportType, SavedReport } from "@/types/store";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { useAdminData } from "./admin-data-provider";
+import { operationStartLabel } from "@/lib/operation-scope";
 import { AdminEmpty } from "./admin-ui";
 
 type ReportTab = "builder" | "saved" | "exports";
@@ -58,6 +59,7 @@ export function ReportsAdmin() {
   const result = useMemo(() => buildReport(data, query), [data, query]);
   const maxSeries = Math.max(1, ...result.series.map((item) => Math.abs(item.value)));
   const selectedReport = data.savedReports.find((item) => item.id === selectedReportId);
+  const operationDate = operationStartLabel(data.settings);
 
   function setPeriod(days: number) {
     const end = new Date();
@@ -113,6 +115,8 @@ export function ReportsAdmin() {
       <div><span><Sparkles /> INTELIGÊNCIA OPERACIONAL</span><h2>Decisões melhores, sem depender de planilhas paralelas.</h2><p>Compare períodos, encontre rupturas antes que aconteçam e exporte informações confiáveis para conferência.</p></div>
       <aside><LineChart /><strong>{data.savedReports.length}</strong><span>relatórios salvos</span><small>{data.exportRuns.length} exportações registradas</small></aside>
     </section>
+
+    {operationDate && <div className="operation-baseline-note"><CalendarRange /><div><strong>Base oficial iniciada em {operationDate}</strong><span>Vendas, receita, DRE, clientes compradores e giro de estoque ignoram o histórico anterior. Cadastros, cashback e estoque atual permanecem íntegros.</span></div></div>}
 
     <nav className="reports-tabs" aria-label="Áreas da central de relatórios">
       <button className={tab === "builder" ? "active" : ""} onClick={() => setTab("builder")}><BarChart3 /> Analisar</button>

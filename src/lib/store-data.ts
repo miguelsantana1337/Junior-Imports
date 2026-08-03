@@ -449,6 +449,7 @@ function mapCatalogImport(row: Row): CatalogImportRun {
 
 function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
   return {
+    operationStartedAt: str(row.operation_started_at) || fallback.operationStartedAt,
     storeName: str(row.store_name),
     logoUrl: str(row.logo_url),
     mobileLogoUrl: str(row.mobile_logo_url),

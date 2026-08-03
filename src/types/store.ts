@@ -50,6 +50,7 @@ export type DeliveryMethod = "delivery" | "pickup";
 export type ShippingStatus = "free" | "calculated" | "quote" | "pending" | "pickup";
 
 export interface StoreSettings {
+  operationStartedAt: string;
   storeName: string;
   logoUrl: string;
   mobileLogoUrl: string;

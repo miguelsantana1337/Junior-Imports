@@ -1,6 +1,7 @@
 import type { AdminHealthReport } from "@/lib/admin-health";
 import type { AdminNotificationCategory } from "@/lib/admin-preferences";
 import type { StoreData } from "@/types/store";
+import { officialOrders } from "@/lib/operation-scope";
 
 export type AdminNotificationPriority = "critical" | "important" | "info";
 
@@ -84,6 +85,7 @@ export function buildAdminNotifications(
   const now = options.now ?? Date.now();
   const detectedAt = new Date(now).toISOString();
   const notifications: AdminNotification[] = [];
+  const operationOrders = officialOrders(data.orders, data.settings);
   const add = (notification: AdminNotification) => notifications.push(notification);
 
   for (const product of data.products.filter((item) => item.active && item.stock <= item.minStock)) {
@@ -119,7 +121,7 @@ export function buildAdminNotifications(
     });
   }
 
-  for (const order of data.orders.filter((item) => item.status === "Novo")) {
+  for (const order of operationOrders.filter((item) => item.status === "Novo")) {
     const hours = elapsedHours(order.createdAt, now);
     const priority: AdminNotificationPriority = hours >= 24 ? "critical" : "important";
     add({

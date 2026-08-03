@@ -343,6 +343,15 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .ops-hero h2 { margin: 5px 0 7px; font-size: clamp(22px, 3vw, 34px); line-height: 1; letter-spacing: -.045em; }
 .ops-hero p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
 .ops-hero-actions { display: flex; gap: 8px; flex: none; }
+.operation-baseline-note { min-height: 64px; padding: 13px 16px; display: flex; align-items: center; gap: 12px; border: 1px solid #bad7f7; border-radius: 14px; background: linear-gradient(135deg, #f3f8ff, #eaf3ff); color: #234d7d; }
+.operation-baseline-note > svg { width: 34px; height: 34px; padding: 8px; flex: none; border-radius: 11px; background: #dcecff; color: #1677ff; }
+.operation-baseline-note strong, .operation-baseline-note span { display: block; }
+.operation-baseline-note strong { font-size: 10px; }
+.operation-baseline-note span { margin-top: 3px; color: #607995; font-size: 8px; line-height: 1.5; }
+.operation-scope-tabs { margin: 14px 15px 0; padding: 5px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; border: 1px solid var(--line); border-radius: 12px; background: #f5f8fb; }
+.operation-scope-tabs button { min-height: 38px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; border: 0; border-radius: 9px; background: transparent; color: #617188; font-size: 9px; font-weight: 800; }
+.operation-scope-tabs button.active { background: #fff; color: #1677ff; box-shadow: 0 5px 14px rgb(36 76 122 / 10%); }
+.operation-scope-tabs b { min-width: 20px; padding: 2px 6px; border-radius: 999px; background: #e4edf8; color: inherit; font-size: 8px; }
 .ops-metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .ops-metric-grid article { min-height: 94px; padding: 15px; display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
 .ops-metric-grid article > span { width: 39px; height: 39px; display: grid; place-items: center; flex: none; border-radius: 10px; }
@@ -3809,6 +3818,13 @@ html[data-admin-theme="dark"] .shipping-rate-preview {
   background: linear-gradient(135deg, #111f34 0%, #132945 70%, #17365b 100%);
   color: var(--text);
 }
+html[data-admin-theme="dark"] .operation-baseline-note { border-color: #315982; background: linear-gradient(135deg, #101d2d, #12263c); color: #dcecff; }
+html[data-admin-theme="dark"] .operation-baseline-note > svg { background: #173b61; color: #78b9ff; }
+html[data-admin-theme="dark"] .operation-baseline-note span { color: #9aadc2; }
+html[data-admin-theme="dark"] .operation-scope-tabs { border-color: #31465d; background: #0c1724; }
+html[data-admin-theme="dark"] .operation-scope-tabs button { color: #9db0c4; }
+html[data-admin-theme="dark"] .operation-scope-tabs button.active { background: #15283d; color: #78b9ff; box-shadow: 0 5px 16px rgb(0 0 0 / 18%); }
+html[data-admin-theme="dark"] .operation-scope-tabs b { background: #1e354e; }
 
 html[data-admin-theme="dark"] .announcement-editor-fields label,
 html[data-admin-theme="dark"] .announcement-editor-actions > span {

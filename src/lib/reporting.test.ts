@@ -26,6 +26,22 @@ describe("análises e relatórios", () => {
     expect(report.metrics.find((metric) => metric.key === "orders")?.value).toBe(1);
   });
 
+  it("zera vendas e financeiro anteriores ao marco sem apagar cashback", () => {
+    const data = cloneSeedData();
+    data.settings.operationStartedAt = "2026-08-03T03:00:00.000Z";
+    const query = { dateFrom: "2026-07-01", dateTo: "2026-08-03", comparePrevious: false, filters: {} };
+
+    const sales = buildReport(data, { ...query, type: "sales" });
+    const finance = buildReport(data, { ...query, type: "finance" });
+    const cashback = buildReport(data, { ...query, type: "cashback" });
+
+    expect(sales.rows).toHaveLength(0);
+    expect(sales.metrics.find((metric) => metric.key === "revenue")?.value).toBe(0);
+    expect(finance.rows).toHaveLength(0);
+    expect(finance.metrics.find((metric) => metric.key === "income")?.value).toBe(0);
+    expect(cashback.rows.length).toBeGreaterThan(0);
+  });
+
   it("preserva a mesma quantidade de dias no período anterior", () => {
     expect(previousPeriod("2026-07-10", "2026-07-12")).toEqual({ dateFrom: "2026-07-07", dateTo: "2026-07-09" });
   });

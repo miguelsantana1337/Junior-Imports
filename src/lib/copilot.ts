@@ -1,4 +1,5 @@
 import type { StoreData } from "@/types/store";
+import { officialOrders } from "@/lib/operation-scope";
 
 export interface CopilotCard {
   title: string;
@@ -48,7 +49,7 @@ export function buildCopilotAnswer(question: string, data: StoreData, route: str
   }
 
   if (/pedido|venda|pendente|aguardando/.test(query)) {
-    const pending = data.orders.filter((order) => ["Novo", "Pago"].includes(order.status));
+    const pending = officialOrders(data.orders, data.settings).filter((order) => ["Novo", "Pago"].includes(order.status));
     const total = pending.reduce((sum, order) => sum + order.total, 0);
     return { title: "Pedidos em acompanhamento", message: `${pending.length} pedido${pending.length === 1 ? "" : "s"} aguardam acompanhamento, somando R$ ${total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}.`, cards: pending.slice(0, 5).map((order) => ({ title: order.code, detail: `${order.status} · R$ ${order.total.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, href: "/admin/orders" })), sources: ["Pedidos", "Status operacional"], intent: "pending_orders" };
   }

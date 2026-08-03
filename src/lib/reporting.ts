@@ -1,5 +1,6 @@
 import { buildCustomerInsights } from "@/lib/crm";
 import { financialSummary, productProfit } from "@/lib/operations";
+import { officialFinancialTransactions, officialOrders, operationStartTime } from "@/lib/operation-scope";
 import type { Order, ReportType, StoreData } from "@/types/store";
 
 export type ReportValue = string | number;
@@ -87,9 +88,12 @@ export function previousPeriod(from: string, to: string) {
 
 export function inventoryInsights(data: StoreData, lookbackDays = 90, now = new Date()): InventoryInsight[] {
   const from = now.getTime() - Math.max(1, lookbackDays) * dayMs;
-  const orders = data.orders.filter(activeOrder).filter((order) => {
+  const configuredStart = operationStartTime(data.settings);
+  const analysisStart = configuredStart === null ? from : Math.max(from, configuredStart);
+  const observedDays = Math.max(1, Math.ceil((now.getTime() - analysisStart) / dayMs));
+  const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => {
     const created = new Date(order.createdAt).getTime();
-    return created >= from && created <= now.getTime();
+    return created >= analysisStart && created <= now.getTime();
   });
   const activeSuppliers = data.suppliers.filter((supplier) => supplier.active);
   const defaultLeadTime = activeSuppliers.length
@@ -100,7 +104,7 @@ export function inventoryInsights(data: StoreData, lookbackDays = 90, now = new 
     const soldUnits = orders.reduce((sum, order) => sum + order.items
       .filter((item) => item.productId === product.id)
       .reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
-    const dailyDemand = soldUnits / Math.max(1, lookbackDays);
+    const dailyDemand = soldUnits / observedDays;
     const relatedOrders = data.purchaseOrders.filter((order) => order.items.some((item) => item.productId === product.id));
     const latestSupplierId = relatedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]?.supplierId;
     const leadTimeDays = data.suppliers.find((supplier) => supplier.id === latestSupplierId)?.leadTimeDays || defaultLeadTime;
@@ -140,7 +144,7 @@ export function inventoryInsights(data: StoreData, lookbackDays = 90, now = new 
 
 function salesReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "comparison"> {
   const primary = query.filters.primary || "all";
-  const orders = data.orders.filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo))
+  const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo))
     .filter((order) => primary === "all" || (primary.startsWith("status:") && order.status === primary.slice(7)) || (primary.startsWith("source:") && (order.orderSource || "legacy") === primary.slice(7)));
   const rows = orders.map((order) => ({
     date: order.createdAt.slice(0, 10), code: order.code, customer: order.customer.name, status: order.status,
@@ -170,7 +174,7 @@ function salesReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "c
 
 function financeReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "comparison"> {
   const primary = query.filters.primary || "all";
-  const transactions = data.financialTransactions.filter((item) => inRange(item.createdAt, query.dateFrom, query.dateTo))
+  const transactions = officialFinancialTransactions(data.financialTransactions, data.settings).filter((item) => inRange(item.createdAt, query.dateFrom, query.dateTo))
     .filter((item) => primary === "all" || (primary.startsWith("status:") && item.status === primary.slice(7)) || (primary.startsWith("type:") && item.type === primary.slice(5)));
   const summary = financialSummary(transactions, new Date(`${query.dateTo}T23:59:59`));
   return {
@@ -220,7 +224,7 @@ function inventoryReport(data: StoreData, query: ReportQuery): Omit<ReportResult
 }
 
 function customersReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "comparison"> {
-  const orders = data.orders.filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo));
+  const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo));
   const primary = query.filters.primary || "all";
   const insights = buildCustomerInsights(data.customers, data.orders, new Date(`${query.dateTo}T23:59:59`))
     .filter((customer) => primary === "all" || (primary.startsWith("segment:") && customer.segment === primary.slice(8)));

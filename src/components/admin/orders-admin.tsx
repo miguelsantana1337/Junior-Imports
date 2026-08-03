@@ -10,6 +10,7 @@ import { calculateCart } from "@/lib/commerce";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { manualOrderSchema, type ManualOrderInput } from "@/lib/validation";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
+import { historicalOrders, officialOrders, operationStartLabel } from "@/lib/operation-scope";
 import type { Order, OrderStatus } from "@/types/store";
 import { useAdminDialog } from "./use-admin-dialog";
 import { WhatsappAssistantDialog, WhatsappAssistantQueue, type WhatsappAssistantTarget } from "./whatsapp-assistant";
@@ -44,14 +45,18 @@ export function OrdersAdmin() {
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [status, setStatus] = useState("all");
+  const [scope, setScope] = useState<"official" | "history">("official");
   const [page, setPage] = useState(1);
   const [assistantTarget, setAssistantTarget] = useState<WhatsappAssistantTarget | null>(null);
   useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) { setQuery(externalQuery); setPage(1); } }, [searchParams]);
-  const filtered = useMemo(() => data.orders.filter((order) => {
+  const operationOrders = useMemo(() => officialOrders(data.orders, data.settings), [data.orders, data.settings]);
+  const historyOrders = useMemo(() => historicalOrders(data.orders, data.settings), [data.orders, data.settings]);
+  const operationDate = operationStartLabel(data.settings);
+  const filtered = useMemo(() => (scope === "official" ? operationOrders : historyOrders).filter((order) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matches = !normalized || `${order.code} ${order.customer.name} ${order.customer.email} ${order.customer.phone}`.toLocaleLowerCase("pt-BR").includes(normalized);
     return matches && (status === "all" || order.status === status);
-  }), [data.orders, query, status]);
+  }), [historyOrders, operationOrders, query, scope, status]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice((currentPage - 1) * 12, currentPage * 12);
@@ -66,6 +71,7 @@ export function OrdersAdmin() {
       >
         <div className="admin-list-toolbar">
           <label className="admin-search-field"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Buscar por pedido, cliente, e-mail ou telefone" aria-label="Buscar pedidos" /></label>
+          {operationDate && <label><span>Período</span><select value={scope} onChange={(event) => { setScope(event.target.value as "official" | "history"); setPage(1); }}><option value="official">Desde {operationDate}</option><option value="history">Histórico anterior</option></select></label>}
           <label><span>Status</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">Todos</option>{statuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
           <strong>{filtered.length} pedido{filtered.length === 1 ? "" : "s"}</strong>
         </div>
@@ -75,7 +81,7 @@ export function OrdersAdmin() {
             <div className="admin-mobile-cards">{visible.map((order) => <article key={order.id}><header><div><strong>{order.code}</strong><small>{formatDateTime(order.createdAt)}</small></div><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></header><div><strong>{order.customer.name}</strong><small>{order.customer.email}</small></div><footer><b>{formatMoney(order.total)}</b><div className="admin-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></footer></article>)}</div>
             <div className="admin-pagination"><span>Página {currentPage} de {pageCount}</span><div><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Página anterior"><ChevronLeft /></button><button disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Próxima página"><ChevronRight /></button></div></div>
           </>
-        ) : <AdminEmpty><strong>Nenhum pedido encontrado.</strong><span>{demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : "Ajuste os filtros ou aguarde a próxima venda da loja."}</span></AdminEmpty>}
+        ) : <AdminEmpty><strong>{scope === "history" ? "Nenhum pedido no histórico anterior." : "Nenhum pedido na operação oficial."}</strong><span>{scope === "history" ? "Os pedidos antigos continuam disponíveis aqui quando existirem." : demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : "A partir do início oficial, os novos pedidos aparecerão aqui."}</span></AdminEmpty>}
       </AdminPanel>
       {creating && <ManualOrderDialog onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setSelected(order); setPage(1); }} />}
       {selected && <OrderDetail order={data.orders.find((order) => order.id === selected.id) ?? selected} onClose={() => setSelected(null)} onWhatsApp={(order) => { setSelected(null); setAssistantTarget({ order }); }} />}

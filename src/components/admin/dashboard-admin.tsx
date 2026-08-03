@@ -27,6 +27,7 @@ import { useAdminData } from "./admin-data-provider";
 import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
 import { buildCustomerInsights, customerRecurrenceRate } from "@/lib/crm";
 import { confirmedOrderRevenue } from "@/lib/order-revenue";
+import { officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
 
 const auditEntityLabels: Record<string, string> = {
   products: "Produto",
@@ -62,14 +63,17 @@ export function DashboardAdmin() {
   const activeCoupons = data.coupons.filter((coupon) => coupon.active);
   const activeBanners = data.banners.filter((banner) => banner.active);
   const activeSections = data.sections.filter((section) => section.active);
+  const operationOrders = officialOrders(data.orders, data.settings);
+  const operationDate = operationStartLabel(data.settings);
+  const operationStart = operationStartTime(data.settings);
   const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
   const recurrenceRate = customerRecurrenceRate(customerInsights);
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
-  const ordersToday = data.orders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
+  const ordersToday = operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
   const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
   const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
-  const weeklyRevenue = confirmedOrderRevenue(data.orders, sevenDaysAgo);
+  const weeklyRevenue = confirmedOrderRevenue(operationOrders, sevenDaysAgo);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(referenceNow - (6 - index) * 86_400_000);
@@ -78,7 +82,7 @@ export function DashboardAdmin() {
       key: day,
       label: date.toLocaleDateString("pt-BR", { weekday: "short", timeZone: STORE_TIME_ZONE }).replace(".", ""),
       date: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: STORE_TIME_ZONE }),
-      value: data.orders.filter((order) => formatStoreDateKey(order.createdAt) === day).length,
+      value: operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === day).length,
     };
   });
   const maxOrders = Math.max(...days.map((day) => day.value), 1);
@@ -108,6 +112,8 @@ export function DashboardAdmin() {
           <div><span>Visão de hoje</span><time dateTime={todayKey}>{dateLabel}</time></div>
         </div>
       </header>
+
+      {operationDate && <div className="operation-baseline-note"><IconCalendarEvent /><div><strong>{operationStart !== null && now.getTime() < operationStart ? `Operação oficial programada para ${operationDate}` : `Operação oficial desde ${operationDate}`}</strong><span>Receita, pedidos operacionais, gráficos e comparativos consideram somente este novo ciclo. O histórico anterior continua preservado.</span></div></div>}
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
         <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
@@ -157,7 +163,7 @@ export function DashboardAdmin() {
             <header><div><h2>Pedidos dos últimos 7 dias</h2><p>{demoMode ? "Pedidos demonstrativos registrados no checkout" : "Pedidos registrados no checkout"}</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
             <div className="admin-weekly-chart" aria-label="Gráfico de pedidos dos últimos sete dias">
               {days.map((day) => <div className="admin-weekly-day" key={day.key}><div><span style={{ height: `${Math.max(2, (day.value / maxOrders) * 72)}px` }} /></div><small>{day.label} {day.date}</small></div>)}
-              {data.orders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href={data.tenant.storefrontPath || "/"}>{demoMode ? "Simular pedido" : "Abrir loja"}</Link></div>}
+              {operationOrders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href={data.tenant.storefrontPath || "/"}>{demoMode ? "Simular pedido" : "Abrir loja"}</Link></div>}
             </div>
           </section>
         </div>

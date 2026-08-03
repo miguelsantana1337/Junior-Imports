@@ -68,6 +68,7 @@ export const seedData: StoreData = {
     storefrontPath: "",
   },
   settings: {
+    operationStartedAt: "",
     storeName: platformConfig.storeName,
     logoUrl: "",
     mobileLogoUrl: "",

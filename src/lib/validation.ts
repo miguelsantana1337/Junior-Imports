@@ -306,6 +306,7 @@ export const supplierSchema = z.object({
 });
 
 export const settingsSchema = z.object({
+  operationStartedAt: z.union([z.literal(""), z.string().datetime({ offset: true })]),
   storeName: z.string().trim().min(2),
   logoUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para a logo.")]),
   mobileLogoUrl: z.union([z.literal(""), z.string().url("Use uma URL válida para a logo mobile.")]),
