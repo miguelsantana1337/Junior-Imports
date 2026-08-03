@@ -6,7 +6,6 @@ import {
   IconBox,
   IconBuildingStore,
   IconCalendarEvent,
-  IconCircleCheck,
   IconCloudCheck,
   IconCoin,
   IconDatabase,
@@ -16,16 +15,14 @@ import {
   IconPhoto,
   IconShoppingBag,
   IconShoppingCartOff,
-  IconSparkles,
   IconTag,
   IconTicket,
   IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import { useAdminData } from "./admin-data-provider";
 import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
-import { buildCustomerInsights, customerRecurrenceRate } from "@/lib/crm";
+import { buildCustomerInsights } from "@/lib/crm";
 import { confirmedOrderRevenue } from "@/lib/order-revenue";
 import { officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
 
@@ -60,17 +57,17 @@ export function DashboardAdmin() {
   const activityCategory = data.categories[0];
   const todayKey = formatStoreDateKey(now);
   const activeProducts = data.products.filter((product) => product.active);
-  const activeCoupons = data.coupons.filter((coupon) => coupon.active);
   const activeBanners = data.banners.filter((banner) => banner.active);
   const activeSections = data.sections.filter((section) => section.active);
   const operationOrders = officialOrders(data.orders, data.settings);
   const operationDate = operationStartLabel(data.settings);
   const operationStart = operationStartTime(data.settings);
   const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
-  const recurrenceRate = customerRecurrenceRate(customerInsights);
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
   const ordersToday = operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
+  const newOrders = operationOrders.filter((order) => order.status === "Novo");
+  const paidOrders = operationOrders.filter((order) => order.status === "Pago");
   const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
   const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
   const weeklyRevenue = confirmedOrderRevenue(operationOrders, sevenDaysAgo);
@@ -86,8 +83,6 @@ export function DashboardAdmin() {
     };
   });
   const maxOrders = Math.max(...days.map((day) => day.value), 1);
-  const completedSteps = [activeProducts.length > 0, activeSections.length > 0, Boolean(data.settings.whatsapp), data.orders.length > 0].filter(Boolean).length;
-
   const dateLabel = new Intl.DateTimeFormat("pt-BR", {
     weekday: "long",
     day: "2-digit",
@@ -100,8 +95,8 @@ export function DashboardAdmin() {
     <div className="admin-dashboard-command">
       <header className="admin-dashboard-hero">
         <div className="admin-dashboard-welcome">
-          <span className="admin-dashboard-kicker"><IconSparkles /> Centro de controle</span>
-          <h1>{greeting}, {accountName}</h1>
+          <span className="admin-dashboard-kicker">Início</span>
+          <h1><span className="admin-dashboard-title-desktop">{greeting}, {accountName}</span><span className="admin-dashboard-title-mobile">Início</span></h1>
           <div className="admin-dashboard-subtitle">
             <span>{demoMode ? "Sua loja está pronta para testes" : "Sua loja está pronta para operar"}</span>
             <strong>{demoMode ? <><IconFlask /> Demonstração — não realiza vendas reais</> : <><IconCloudCheck /> Operação conectada — pedidos reais</>}</strong>
@@ -115,13 +110,18 @@ export function DashboardAdmin() {
 
       {operationDate && <div className="operation-baseline-note"><IconCalendarEvent /><div><strong>{operationStart !== null && now.getTime() < operationStart ? `Operação oficial programada para ${operationDate}` : `Operação oficial desde ${operationDate}`}</strong><span>Receita, pedidos operacionais, gráficos e comparativos consideram somente este novo ciclo. O histórico anterior continua preservado.</span></div></div>}
 
+      <section className="admin-workflow-strip" aria-label="Fluxo operacional">
+        <Link href="/admin/orders?status=Novo"><span><IconShoppingBag /></span><div><strong>{newOrders.length}</strong><small>Novos pedidos</small></div></Link>
+        <Link href="/admin/orders?status=Pago"><span><IconCoin /></span><div><strong>{paidOrders.length}</strong><small>Pagos para preparar</small></div></Link>
+        <Link href="/admin/products"><span><IconAlertTriangle /></span><div><strong>{lowStock.length}</strong><small>Estoques para revisar</small></div></Link>
+        <Link href="/admin/customers"><span><IconUsers /></span><div><strong>{customersNeedingContact.length}</strong><small>Clientes para contatar</small></div></Link>
+      </section>
+
       <section className="admin-command-stats" aria-label="Resumo da loja">
         <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
         <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Pedidos pagos · últimos 7 dias</p></div></article>
         <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
-        <article className="stat-coupons"><span><IconTicket /></span><div><small>Cupons ativos</small><strong>{activeCoupons.length}</strong><p>{activeCoupons.length === 1 ? "1 disponível" : `${activeCoupons.length} disponíveis`}</p></div></article>
         <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
-        <article className="stat-recurrence"><span><IconShoppingBag /></span><div><small>Recompra</small><strong>{recurrenceRate.toFixed(0)}%</strong><p>{customerInsights.filter((customer) => customer.orderCount > 1).length} recorrentes</p></div></article>
       </section>
 
       <div className="admin-command-grid">
@@ -186,20 +186,6 @@ export function DashboardAdmin() {
               <article><IconBuildingStore /><strong>Vitrine</strong><span>{activeSections.length} seções publicadas</span><b>OK</b></article>
               <article><IconDatabase /><strong>Supabase</strong><span>{demoMode ? "Modo local" : "Conexão ativa"}</span><b>OK</b></article>
               <article><IconCloudCheck /><strong>{demoMode ? "Teste de checkout" : "Checkout WhatsApp"}</strong><span>{demoMode ? "Simulação disponível" : "Fluxo operacional"}</span><b>OK</b></article>
-            </div>
-          </section>
-
-          <section className="admin-command-panel admin-next-steps">
-            <header><h2>Próximos passos</h2></header>
-            <div className="admin-progress-layout">
-              <div className="admin-progress-ring"><CircularProgressbar value={(completedSteps / 4) * 100} text={`${completedSteps}/4`} styles={buildStyles({ pathColor: "#1677ff", trailColor: "#e6ebf2", textColor: "#0b1733", textSize: "22px", strokeLinecap: "butt" })} /></div>
-              <div className="admin-progress-copy"><strong>{completedSteps} de 4 concluídos</strong><p>Complete os passos para preparar sua loja.</p></div>
-            </div>
-            <div className="admin-step-list">
-              <span className="done"><IconCircleCheck /> Adicionar produtos ao catálogo</span>
-              <span className="done"><IconCircleCheck /> Configurar página inicial</span>
-              <span className={data.settings.whatsapp ? "done" : "current"}>{data.settings.whatsapp ? <IconCircleCheck /> : <b>3</b>} Confirmar atendimento no WhatsApp</span>
-              <span><b>4</b> {data.orders.length ? "Acompanhar pedidos recebidos" : "Realizar pedido de teste completo"}</span>
             </div>
           </section>
         </aside>

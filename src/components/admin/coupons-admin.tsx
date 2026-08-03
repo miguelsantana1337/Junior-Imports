@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock3, Pencil, Plus, TicketCheck, Trash2, UsersRound, X } from "lucide-react";
+import { Clock3, Pencil, Plus, Search, TicketCheck, Trash2, UsersRound, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useConfirm } from "@/components/providers/confirm-provider";
@@ -31,16 +31,28 @@ export function CouponsAdmin() {
   const { data, deleteCoupon } = useAdminData();
   const confirm = useConfirm();
   const [editing, setEditing] = useState<Coupon | "new" | null>(null);
+  const [query, setQuery] = useState("");
+  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const searchParams = useSearchParams();
   useEffect(() => { if (searchParams.get("novo") === "1") setEditing("new"); }, [searchParams]);
   const active = data.coupons.filter((coupon) => coupon.active).length;
   const totalUses = data.couponRedemptions.filter((item) => item.status === "used").length || data.coupons.reduce((sum, coupon) => sum + coupon.usageCount, 0);
+  const filteredCoupons = data.coupons.filter((coupon) => {
+    const matchesQuery = !query.trim() || coupon.code.toLocaleLowerCase("pt-BR").includes(query.trim().toLocaleLowerCase("pt-BR"));
+    const matchesStatus = status === "all" || (status === "active" ? coupon.active : !coupon.active);
+    return matchesQuery && matchesStatus;
+  });
 
   return <>
     <section className="coupon-summary-grid"><article><TicketCheck /><div><span>Cupons ativos</span><strong>{active}</strong><small>de {data.coupons.length} cadastrados</small></div></article><article><UsersRound /><div><span>Utilizações</span><strong>{totalUses}</strong><small>pedidos com desconto</small></div></article><article><Clock3 /><div><span>Com limite individual</span><strong>{data.coupons.filter((coupon) => coupon.perCustomerLimit > 0).length}</strong><small>proteções por cliente</small></div></article></section>
     <div className="admin-inline-note">O limite individual identifica o cliente pelo e-mail ou pelo número de WhatsApp informado no checkout. Se qualquer um deles já tiver usado o cupom, a utilização será contabilizada.</div>
     <AdminPanel title="Cupons e regras de utilização" description="Controle período, limite total, usos por cliente e primeira compra." action={<button className="admin-button primary" onClick={() => setEditing("new")}><Plus /> Adicionar cupom</button>}>
-      {data.coupons.length ? <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>Código</th><th>Desconto</th><th>Período</th><th>Limite por cliente</th><th>Utilizações</th><th>Status</th><th>Ações</th></tr></thead><tbody>{data.coupons.map((coupon) => <tr key={coupon.id}><td><strong>{coupon.code}</strong><small className="table-secondary">Mínimo {formatMoney(coupon.minimum)}</small></td><td>{coupon.type === "percent" ? `${coupon.value}%` : formatMoney(coupon.value)}</td><td>{coupon.startsAt || coupon.expiresAt ? `${coupon.startsAt ? new Date(`${coupon.startsAt}T12:00:00`).toLocaleDateString("pt-BR") : "Agora"} → ${coupon.expiresAt ? new Date(`${coupon.expiresAt}T12:00:00`).toLocaleDateString("pt-BR") : "Sem fim"}` : "Sem prazo"}</td><td>{coupon.perCustomerLimit > 0 ? `${coupon.perCustomerLimit} uso${coupon.perCustomerLimit === 1 ? "" : "s"}` : "Ilimitado"}{coupon.firstOrderOnly && <small className="table-secondary">Somente 1ª compra</small>}</td><td><strong>{coupon.usageCount}</strong>{coupon.totalUsageLimit > 0 && <small className="table-secondary">de {coupon.totalUsageLimit}</small>}</td><td><StatusTag active={coupon.active}>{coupon.active ? "Ativo" : "Inativo"}</StatusTag></td><td><div className="admin-actions"><button aria-label={`Editar ${coupon.code}`} onClick={() => setEditing(coupon)}><Pencil /></button><button className="danger" aria-label={`Excluir ${coupon.code}`} onClick={async () => { const accepted = await confirm({ title: "Excluir cupom?", description: `O cupom ${coupon.code} deixará de ficar disponível.`, confirmLabel: "Excluir cupom", danger: true }); if (accepted) await deleteCoupon(coupon.id); }}><Trash2 /></button></div></td></tr>)}</tbody></table></div> : <AdminEmpty><TicketCheck /><strong>Nenhum cupom cadastrado.</strong><span>Crie uma campanha e defina quantas vezes cada cliente poderá utilizá-la.</span></AdminEmpty>}
+      <div className="admin-list-toolbar">
+        <label className="admin-search-field"><Search /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar por código" aria-label="Buscar cupons" /></label>
+        <label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as typeof status)}><option value="all">Todos</option><option value="active">Ativos</option><option value="inactive">Inativos</option></select></label>
+        <strong>{filteredCoupons.length} {filteredCoupons.length === 1 ? "cupom" : "cupons"}</strong>
+      </div>
+      {filteredCoupons.length ? <div className="admin-table-wrap"><table className="admin-table admin-coupons-table"><thead><tr><th>Código</th><th>Desconto</th><th>Período</th><th>Limite por cliente</th><th>Utilizações</th><th>Status</th><th>Ações</th></tr></thead><tbody>{filteredCoupons.map((coupon) => <tr key={coupon.id}><td><button className="admin-table-link" onClick={() => setEditing(coupon)}>{coupon.code}</button><small className="table-secondary">Mínimo {formatMoney(coupon.minimum)}</small></td><td>{coupon.type === "percent" ? `${coupon.value}%` : formatMoney(coupon.value)}</td><td>{coupon.startsAt || coupon.expiresAt ? `${coupon.startsAt ? new Date(`${coupon.startsAt}T12:00:00`).toLocaleDateString("pt-BR") : "Agora"} → ${coupon.expiresAt ? new Date(`${coupon.expiresAt}T12:00:00`).toLocaleDateString("pt-BR") : "Sem fim"}` : "Sem prazo"}</td><td>{coupon.perCustomerLimit > 0 ? `${coupon.perCustomerLimit} uso${coupon.perCustomerLimit === 1 ? "" : "s"}` : "Ilimitado"}{coupon.firstOrderOnly && <small className="table-secondary">Somente 1ª compra</small>}</td><td><strong>{coupon.usageCount}</strong>{coupon.totalUsageLimit > 0 && <small className="table-secondary">de {coupon.totalUsageLimit}</small>}</td><td><StatusTag active={coupon.active}>{coupon.active ? "Ativo" : "Inativo"}</StatusTag></td><td><div className="admin-actions"><button aria-label={`Editar ${coupon.code}`} onClick={() => setEditing(coupon)}><Pencil /></button><button className="danger" aria-label={`Excluir ${coupon.code}`} onClick={async () => { const accepted = await confirm({ title: "Excluir cupom?", description: `O cupom ${coupon.code} deixará de ficar disponível.`, confirmLabel: "Excluir cupom", danger: true }); if (accepted) await deleteCoupon(coupon.id); }}><Trash2 /></button></div></td></tr>)}</tbody></table></div> : <AdminEmpty><TicketCheck /><strong>Nenhum cupom encontrado.</strong><span>Ajuste a busca ou crie uma nova campanha.</span></AdminEmpty>}
     </AdminPanel>
 
     <AdminPanel title="Utilizações recentes" description="Histórico usado para identificar clientes pelo e-mail ou WhatsApp.">

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, MessageCircle, PackagePlus, Plus, Save, Search, Trash2, Truck, UserRound, X } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, MessageCircle, MoreVertical, PackagePlus, Plus, Save, Search, Trash2, Truck, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
@@ -44,7 +44,7 @@ export function OrdersAdmin() {
   const [selected, setSelected] = useState<Order | null>(null);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
-  const [status, setStatus] = useState("all");
+  const [status, setStatus] = useState(() => searchParams.get("status") ?? "all");
   const [scope, setScope] = useState<"official" | "history">("official");
   const [page, setPage] = useState(1);
   const [assistantTarget, setAssistantTarget] = useState<WhatsappAssistantTarget | null>(null);
@@ -52,37 +52,55 @@ export function OrdersAdmin() {
   const operationOrders = useMemo(() => officialOrders(data.orders, data.settings), [data.orders, data.settings]);
   const historyOrders = useMemo(() => historicalOrders(data.orders, data.settings), [data.orders, data.settings]);
   const operationDate = operationStartLabel(data.settings);
-  const filtered = useMemo(() => (scope === "official" ? operationOrders : historyOrders).filter((order) => {
+  const scopeOrders = useMemo(() => scope === "official" ? operationOrders : historyOrders, [historyOrders, operationOrders, scope]);
+  const statusCounts = useMemo(() => Object.fromEntries(statuses.map((item) => [item, scopeOrders.filter((order) => order.status === item).length])), [scopeOrders]);
+  const filtered = useMemo(() => scopeOrders.filter((order) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matches = !normalized || `${order.code} ${order.customer.name} ${order.customer.email} ${order.customer.phone}`.toLocaleLowerCase("pt-BR").includes(normalized);
     return matches && (status === "all" || order.status === status);
-  }), [historyOrders, operationOrders, query, scope, status]);
+  }), [query, scopeOrders, status]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice((currentPage - 1) * 12, currentPage * 12);
 
   return (
     <>
-      <WhatsappAssistantQueue onCompose={setAssistantTarget} />
       <AdminPanel
         title="Pedidos"
         description="Localize pedidos, acompanhe o status ou registre uma venda feita pelo atendimento."
-        action={<button className="admin-button primary" onClick={() => setCreating(true)}><Plus /> Criar pedido</button>}
+        action={<button className="admin-button primary" onClick={() => setCreating(true)}><Plus /><span>Criar pedido</span></button>}
       >
+        <div className="admin-order-status-strip" aria-label="Etapas dos pedidos">
+          <button className={status === "all" ? "active" : ""} onClick={() => { setStatus("all"); setPage(1); }}><span>Todos</span><strong>{scopeOrders.length}</strong></button>
+          {statuses.map((item) => <button className={status === item ? "active" : ""} key={item} onClick={() => { setStatus(item); setPage(1); }}><span>{item === "Novo" ? "Novos" : item === "Pago" ? "Pagos" : item === "Entregue" ? "Entregues" : "Cancelados"}</span><strong>{statusCounts[item] ?? 0}</strong></button>)}
+        </div>
         <div className="admin-list-toolbar">
           <label className="admin-search-field"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Buscar por pedido, cliente, e-mail ou telefone" aria-label="Buscar pedidos" /></label>
           {operationDate && <label><span>Período</span><select value={scope} onChange={(event) => { setScope(event.target.value as "official" | "history"); setPage(1); }}><option value="official">Desde {operationDate}</option><option value="history">Histórico anterior</option></select></label>}
-          <label><span>Status</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">Todos</option>{statuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
+          <label className="admin-order-status-select"><span>Status</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">Todos</option>{statuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
           <strong>{filtered.length} pedido{filtered.length === 1 ? "" : "s"}</strong>
         </div>
         {visible.length ? (
           <>
-            <div className="admin-table-wrap admin-orders-desktop"><table className="admin-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Pagamento</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>{visible.map((order) => <tr key={order.id}><td><strong>{order.code}</strong></td><td><div className="admin-customer-cell"><strong>{order.customer.name}</strong><small>{order.customer.email}</small></div></td><td>{formatDateTime(order.createdAt)}</td><td>{order.payment === "Cartao" ? "Cartão" : order.payment}</td><td>{formatMoney(order.total)}</td><td><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></td><td><div className="admin-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></td></tr>)}</tbody></table></div>
-            <div className="admin-mobile-cards">{visible.map((order) => <article key={order.id}><header><div><strong>{order.code}</strong><small>{formatDateTime(order.createdAt)}</small></div><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></header><div><strong>{order.customer.name}</strong><small>{order.customer.email}</small></div><footer><b>{formatMoney(order.total)}</b><div className="admin-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></footer></article>)}</div>
+            <div className="admin-table-wrap admin-orders-desktop"><table className="admin-table admin-orders-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Pagamento</th><th>Total</th><th>Status</th><th>Ações</th></tr></thead><tbody>{visible.map((order) => <tr key={order.id}><td><button className="admin-table-link" onClick={() => setSelected(order)}>{order.code}</button></td><td><button className="admin-customer-cell admin-table-link" onClick={() => setSelected(order)}><strong>{order.customer.name}</strong><small>{order.customer.email}</small></button></td><td>{formatDateTime(order.createdAt)}</td><td><div className="admin-payment-cell"><span className={order.status === "Novo" ? "pending" : order.status === "Cancelado" ? "cancelled" : "received"}>{order.status === "Novo" ? "Pendente" : order.status === "Cancelado" ? "Cancelado" : "Recebido"}</span><small>{order.payment === "Cartao" ? "Cartão" : order.payment}</small></div></td><td><strong>{formatMoney(order.total)}</strong></td><td><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></td><td><div className="admin-actions admin-row-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></td></tr>)}</tbody></table></div>
+            <div className="admin-mobile-cards admin-orders-mobile-list">{visible.map((order) => {
+              const itemCount = order.items.reduce((total, item) => total + item.quantity, 0);
+              const paymentLabel = order.status === "Novo" ? "Pendente" : order.status === "Cancelado" ? "Cancelado" : "Recebido";
+              return <article className="admin-order-mobile-card" key={order.id}>
+                <header><button className="admin-table-link" onClick={() => setSelected(order)}>{order.code}</button><time dateTime={order.createdAt}>{formatDateTime(order.createdAt)}</time></header>
+                <div className="admin-order-mobile-main"><strong>{order.customer.name}</strong><b>{formatMoney(order.total)}</b></div>
+                <button className="admin-order-mobile-items" type="button" onClick={() => setSelected(order)}>{itemCount} {itemCount === 1 ? "unidade" : "unidades"} <ChevronDown /></button>
+                <footer>
+                  <div className="admin-order-mobile-statuses"><span className={`admin-payment-pill ${order.status === "Novo" ? "pending" : order.status === "Cancelado" ? "cancelled" : "received"}`}>{paymentLabel}</span><StatusTag active={order.status !== "Cancelado"}>{order.status}</StatusTag></div>
+                  <button className="admin-mobile-kebab" type="button" aria-label={`Abrir pedido ${order.code}`} onClick={() => setSelected(order)}><MoreVertical /></button>
+                </footer>
+              </article>;
+            })}</div>
             <div className="admin-pagination"><span>Página {currentPage} de {pageCount}</span><div><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Página anterior"><ChevronLeft /></button><button disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Próxima página"><ChevronRight /></button></div></div>
           </>
         ) : <AdminEmpty><strong>{scope === "history" ? "Nenhum pedido no histórico anterior." : "Nenhum pedido na operação oficial."}</strong><span>{scope === "history" ? "Os pedidos antigos continuam disponíveis aqui quando existirem." : demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : "A partir do início oficial, os novos pedidos aparecerão aqui."}</span></AdminEmpty>}
       </AdminPanel>
+      <WhatsappAssistantQueue onCompose={setAssistantTarget} />
       {creating && <ManualOrderDialog onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setSelected(order); setPage(1); }} />}
       {selected && <OrderDetail order={data.orders.find((order) => order.id === selected.id) ?? selected} onClose={() => setSelected(null)} onWhatsApp={(order) => { setSelected(null); setAssistantTarget({ order }); }} />}
       {assistantTarget && <WhatsappAssistantDialog target={assistantTarget} onClose={() => setAssistantTarget(null)} />}

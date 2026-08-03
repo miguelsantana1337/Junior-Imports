@@ -252,7 +252,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
   return (
     <div
-      className={`admin-shell-next ${collapsed ? "is-collapsed" : ""}`}
+      className={`admin-shell-next admin-minimal-preview ${collapsed ? "is-collapsed" : ""}`}
       onClickCapture={(event) => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
@@ -290,6 +290,12 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
             <button className="admin-mobile-close" onClick={() => setOpen(false)} aria-label="Fechar menu"><IconX /></button>
           </div>
 
+          <div className="admin-mobile-drawer-tools" aria-label="Ações rápidas">
+            <button type="button" onClick={() => { setOpen(false); setCommandOpen(true); }}><IconSearch /><span>Buscar</span></button>
+            <button type="button" onClick={toggleTheme}>{theme === "dark" ? <IconSun /> : <IconMoon />}<span>{theme === "dark" ? "Modo claro" : "Modo escuro"}</span></button>
+            <Link href={data.tenant.storefrontPath || "/"} target="_blank"><IconExternalLink /><span>Ver loja</span></Link>
+          </div>
+
           <nav className="admin-nav-groups" aria-label="Navegação administrativa">
             {navigationGroups.map((group) => ({ ...group, items: group.items.filter((item) => item.permission === null || can(item.permission)) })).filter((group) => group.items.length).map((group) => {
               const expanded = collapsed || expandedNavigationGroup === group.id;
@@ -323,7 +329,8 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
           <div className="admin-sidebar-actions">
             <button className="admin-sidebar-toggle" type="button" onClick={toggleSidebar} aria-label={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"} title={collapsed ? "Expandir menu lateral" : "Recolher menu lateral"}><IconChevronLeft /><span>{collapsed ? "Expandir menu" : "Recolher menu"}</span></button>
-            <Link href={data.tenant.storefrontPath || "/"} target="_blank" title="Ver loja"><IconExternalLink /><span>Ver loja</span></Link>
+            <Link className="admin-mobile-settings" href="/admin/settings"><IconSettings /><span>Configurações</span></Link>
+            <Link className="admin-sidebar-store-link" href={data.tenant.storefrontPath || "/"} target="_blank" title="Ver loja"><IconExternalLink /><span>Ver loja</span></Link>
             <form action={logoutAction} onSubmit={clearAdminSensitiveBrowserStorage}><button title="Sair"><IconLogout /><span>Sair</span></button></form>
           </div>
         </div>
@@ -398,6 +405,13 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
           </div>
         </div>
       </section>
+
+      <nav className="admin-mobile-tabbar" aria-label="Navegação principal mobile">
+        <Link className={isNavigationActive("/admin") ? "active" : ""} href="/admin" aria-label="Início"><IconHome /><span>Início</span></Link>
+        <Link className={isNavigationActive("/admin/orders") ? "active" : ""} href="/admin/orders" aria-label="Pedidos"><IconReceipt2 /><span>Pedidos</span></Link>
+        <Link className={isNavigationActive("/admin/products") ? "active" : ""} href="/admin/products" aria-label="Produtos"><IconTag /><span>Produtos</span></Link>
+        <button className={open ? "active" : ""} type="button" onClick={() => setOpen(true)} aria-label="Abrir menu"><IconMenu2 /><span>Menu</span></button>
+      </nav>
     </div>
   );
 }
