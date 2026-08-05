@@ -41,7 +41,6 @@ export const checkoutCustomerSchema = checkoutCustomerObject.superRefine(validat
 
 export const checkoutSchema = checkoutCustomerObject.extend({
   payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
-  consent: z.boolean().refine(Boolean, "Confirme que autoriza o envio dos dados para atendimento."),
   termsAccepted: z.boolean().refine(Boolean, "Leia e aceite os termos para concluir o pedido."),
   botField: z.string().max(0, "Solicitação inválida."),
   startedAt: z.coerce.number().int().positive(),

@@ -24,6 +24,7 @@ async function openSection(page: Page, name: string) {
     const groupBySection: Record<string, string> = {
       "Visão geral": "Operação",
       Pedidos: "Operação",
+      "Carrinhos abandonados": "Operação",
       Clientes: "Operação",
       "Tarefas e contatos": "Operação",
       "Equipe e aprovações": "Operação",
@@ -189,7 +190,10 @@ test("cria um pedido manual e reserva o estoque", async ({ page }) => {
   await modal.getByLabel("Nome completo do cliente").fill("Cliente Pedido Manual");
   await modal.getByLabel("WhatsApp do cliente").fill("(31) 99999-1122");
   await modal.getByLabel("E-mail do cliente").fill("pedido.manual@exemplo.com");
-  await modal.getByLabel("Produto 1", { exact: true }).selectOption({ index: 1 });
+  const productSearch = modal.getByRole("combobox", { name: "Produto 1", exact: true });
+  await productSearch.fill("Organizador semanal premium");
+  await modal.getByRole("option", { name: /Organizador semanal premium/ }).click();
+  await expect(productSearch).toHaveValue("Organizador semanal premium");
   await modal.getByLabel("Quantidade do produto 1").fill("1");
   await modal.getByLabel("Forma de pagamento").selectOption("Pix");
   await modal.getByRole("button", { name: "Criar pedido e reservar estoque" }).click();
@@ -198,6 +202,69 @@ test("cria um pedido manual e reserva o estoque", async ({ page }) => {
   const detail = page.getByRole("dialog", { name: /Pedido / });
   await expect(detail).toBeVisible();
   await expect(detail.getByText("Cliente Pedido Manual", { exact: true })).toBeVisible();
+});
+
+test("ajusta o financeiro e arquiva um pedido sem apagar o histórico", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Pedidos");
+  await page.getByRole("button", { name: "Criar pedido", exact: true }).click();
+
+  const creation = page.getByRole("dialog", { name: "Criar pedido" });
+  await creation.getByLabel("Nome completo do cliente").fill("Cliente Controle Financeiro");
+  await creation.getByLabel("WhatsApp do cliente").fill("(31) 99999-3344");
+  await creation.getByLabel("E-mail do cliente").fill("financeiro.pedido@exemplo.com");
+  const productSearch = creation.getByRole("combobox", { name: "Produto 1", exact: true });
+  await productSearch.fill("Organizador semanal premium");
+  await creation.getByRole("option", { name: /Organizador semanal premium/ }).click();
+  await creation.getByRole("button", { name: "Criar pedido e reservar estoque" }).click();
+
+  let detail = page.getByRole("dialog", { name: /Pedido / });
+  const orderCode = (await detail.locator("h2").textContent())!;
+  await detail.getByLabel("Valor financeiro confirmado").fill("111.50");
+  await detail.getByLabel("Motivo da alteração financeira").fill("Valor renegociado no atendimento");
+  await detail.getByRole("button", { name: "Registrar ajuste" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Valor financeiro atualizado" })).toBeVisible();
+  await expect(detail.getByText("R$ 111,50", { exact: true }).first()).toBeVisible();
+
+  await detail.getByLabel("Status").selectOption("Entregue");
+  await detail.getByRole("button", { name: "Atualizar status" }).click();
+  await expect(detail).toBeHidden();
+
+  await page.getByLabel("Buscar pedidos").fill(orderCode);
+  await page.getByRole("button", { name: `Abrir pedido ${orderCode}` }).click();
+  detail = page.getByRole("dialog", { name: `Pedido ${orderCode}` });
+  await detail.getByRole("button", { name: "Arquivar", exact: true }).click();
+  await expect(detail).toBeHidden();
+  await expect(page.getByText(orderCode, { exact: true })).toHaveCount(0);
+
+  await page.getByRole("tab", { name: /Arquivados/ }).click();
+  const archivedList = (page.viewportSize()?.width ?? 1280) <= 760
+    ? page.locator(".admin-mobile-cards")
+    : page.locator(".admin-orders-desktop");
+  await expect(archivedList.getByText(orderCode, { exact: true })).toBeVisible();
+  await archivedList.getByRole("button", { name: /Abrir/ }).click();
+  detail = page.getByRole("dialog", { name: `Pedido ${orderCode}` });
+  await expect(detail.getByText("Fora da fila operacional", { exact: true })).toBeVisible();
+  await detail.getByRole("button", { name: "Restaurar", exact: true }).click();
+  await expect(detail).toBeHidden();
+});
+
+test("oferece busca rápida no pedido manual e monitora carrinhos abandonados", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Pedidos");
+  await page.getByRole("button", { name: "Criar pedido", exact: true }).click();
+
+  const modal = page.getByRole("dialog", { name: "Criar pedido" });
+  const customerSearch = modal.getByRole("combobox", { name: "Buscar cliente no CRM" });
+  await customerSearch.fill("Maria Teste");
+  await modal.getByRole("option", { name: /Maria Teste/ }).click();
+  await expect(modal.getByLabel("Nome completo do cliente")).toHaveValue("Maria Teste");
+  await modal.locator("header").getByRole("button", { name: "Fechar" }).click();
+
+  await openSection(page, "Carrinhos abandonados");
+  await expect(page.getByRole("heading", { name: "Carrinhos abandonados", level: 2 })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Abandonado/ })).toBeVisible();
+  await expect(page.getByLabel("Buscar carrinhos")).toBeVisible();
 });
 
 test("prepara uma mensagem de WhatsApp e registra o contato no CRM", async ({ page }) => {

@@ -25,7 +25,8 @@ export function useAdminDialog<T extends HTMLElement = HTMLDivElement>(onClose: 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const panel = panelRef.current;
-    const firstField = panel?.querySelector<HTMLElement>("[autofocus]")
+    const firstField = panel?.querySelector<HTMLElement>("[data-dialog-initial-focus]")
+      ?? panel?.querySelector<HTMLElement>("[autofocus]")
       ?? panel?.querySelector<HTMLElement>("input:not([disabled]), select:not([disabled]), textarea:not([disabled])")
       ?? panel?.querySelector<HTMLElement>(focusableSelector);
     firstField?.focus();

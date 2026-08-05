@@ -27,6 +27,7 @@ const requestSchema = z.object({
   botField: z.string().max(0),
   startedAt: z.coerce.number().int().positive(),
   turnstileToken: z.string().max(4096),
+  cartSessionId: z.string().uuid().optional(),
 });
 
 export async function POST(request: Request) {
@@ -86,6 +87,15 @@ export async function POST(request: Request) {
     });
     if (error || !data) {
       throw new StorefrontRequestError(friendlyOrderError(error?.message || ""), 400);
+    }
+    const order = data as { id?: string };
+    if (parsed.data.cartSessionId && order.id) {
+      await supabase.from("storefront_cart_sessions").update({
+        status: "recovered",
+        recovered_at: new Date().toISOString(),
+        recovered_order_id: order.id,
+        updated_at: new Date().toISOString(),
+      }).eq("tenant_id", parsed.data.tenantId).eq("session_id", parsed.data.cartSessionId);
     }
     return Response.json({ order: data }, {
       status: 201,

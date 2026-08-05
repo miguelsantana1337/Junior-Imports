@@ -16,12 +16,12 @@ describe("receita confirmada de pedidos", () => {
   it("soma somente pedidos confirmados dentro do período", () => {
     const baseOrder = seedData.orders[0];
     const orders = [
-      { ...baseOrder, id: "paid", status: "Pago" as const, total: 500, createdAt: "2026-07-18T12:00:00-03:00" },
+      { ...baseOrder, id: "paid", status: "Pago" as const, total: 500, financialTotal: 450, createdAt: "2026-07-18T12:00:00-03:00" },
       { ...baseOrder, id: "cancelled", status: "Cancelado" as const, total: 900, createdAt: "2026-07-18T12:00:00-03:00" },
       { ...baseOrder, id: "waiting", status: "Novo" as const, total: 700, createdAt: "2026-07-18T12:00:00-03:00" },
       { ...baseOrder, id: "old", status: "Entregue" as const, total: 300, createdAt: "2026-07-01T12:00:00-03:00" },
     ];
 
-    expect(confirmedOrderRevenue(orders, new Date("2026-07-13T00:00:00-03:00"))).toBe(500);
+    expect(confirmedOrderRevenue(orders, new Date("2026-07-13T00:00:00-03:00"))).toBe(450);
   });
 });

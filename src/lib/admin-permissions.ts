@@ -46,6 +46,7 @@ export const sectionPermissions: Record<string, AdminPermission> = {
   customers: "customers",
   crm: "crm",
   orders: "orders",
+  "abandoned-carts": "orders",
   finance: "finance",
   inventory: "inventory",
   purchasing: "purchasing",

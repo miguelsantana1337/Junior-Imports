@@ -17,6 +17,7 @@ import {
 } from "@/lib/browser-storage";
 import { canAddProductToCart } from "@/lib/product-compliance";
 import type { CartLine, Coupon, PaymentMethod, ShippingDestination } from "@/types/store";
+import type { CartRecoveryContact } from "@/types/abandoned-cart";
 import { useStore } from "./store-provider";
 
 interface CartContextValue {
@@ -25,6 +26,7 @@ interface CartContextValue {
   coupon: Coupon | null;
   drawerOpen: boolean;
   ready: boolean;
+  cartSessionId: string;
   itemCount: number;
   addItem: (productId: string, quantity?: number) => void;
   updateItem: (productId: string, quantity: number) => void;
@@ -32,6 +34,7 @@ interface CartContextValue {
   clearCart: () => void;
   toggleFavorite: (productId: string) => void;
   applyCoupon: (code: string) => Promise<{ ok: boolean; message: string }>;
+  trackCheckout: (input: { contactAllowed: boolean; customer?: CartRecoveryContact }) => void;
   setDrawerOpen: (open: boolean) => void;
   calculate: (payment?: PaymentMethod, destination?: ShippingDestination) => ReturnType<typeof calculateCart>;
 }
@@ -39,27 +42,31 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { data } = useStore();
+  const { data, demoMode } = useStore();
   const cartKey = `${data.tenant.id}:cart:v1`;
   const favoritesKey = `${data.tenant.id}:favorites:v1`;
+  const cartSessionKey = `${data.tenant.id}:cart-session:v1`;
   const [lines, setLines] = useState<CartLine[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [cartSessionId, setCartSessionId] = useState("");
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     try {
       const storedLines = JSON.parse(readSensitiveSessionValue(cartKey) ?? "[]") as CartLine[];
       const storedFavorites = JSON.parse(readSensitiveSessionValue(favoritesKey) ?? "[]") as string[];
+      const storedSessionId = readSensitiveSessionValue(cartSessionKey);
       setLines(storedLines);
       setFavorites(storedFavorites);
+      setCartSessionId(storedSessionId && /^[0-9a-f-]{36}$/i.test(storedSessionId) ? storedSessionId : crypto.randomUUID());
     } catch {
       removeSensitiveBrowserValue(cartKey);
       removeSensitiveBrowserValue(favoritesKey);
     }
     setHydrated(true);
-  }, [cartKey, favoritesKey]);
+  }, [cartKey, cartSessionKey, favoritesKey]);
 
   useEffect(() => {
     if (hydrated) writeSensitiveSessionValue(cartKey, JSON.stringify(lines));
@@ -69,6 +76,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (hydrated)
       writeSensitiveSessionValue(favoritesKey, JSON.stringify(favorites));
   }, [favorites, hydrated, favoritesKey]);
+
+  useEffect(() => {
+    if (hydrated && cartSessionId) writeSensitiveSessionValue(cartSessionKey, cartSessionId);
+  }, [cartSessionId, cartSessionKey, hydrated]);
+
+  const syncTrackedCart = useCallback(async (
+    trackedSessionId: string,
+    trackedLines: CartLine[],
+    details?: { checkoutStarted?: boolean; contactAllowed?: boolean; customer?: CartRecoveryContact },
+  ) => {
+    if (demoMode || !trackedSessionId) return;
+    await fetch("/api/storefront/carts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: data.tenant.id, sessionId: trackedSessionId, items: trackedLines, ...details }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }, [data.tenant.id, demoMode]);
+
+  useEffect(() => {
+    if (!hydrated || !cartSessionId) return;
+    const timer = window.setTimeout(() => void syncTrackedCart(cartSessionId, lines), 900);
+    return () => window.clearTimeout(timer);
+  }, [cartSessionId, hydrated, lines, syncTrackedCart]);
 
   useEffect(() => {
     document.body.classList.toggle("locked", drawerOpen);
@@ -128,9 +159,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 
   const clearCart = useCallback(() => {
+    void syncTrackedCart(cartSessionId, []);
     setLines([]);
     setCoupon(null);
-  }, []);
+    setCartSessionId(crypto.randomUUID());
+  }, [cartSessionId, syncTrackedCart]);
+
+  const trackCheckout = useCallback((input: { contactAllowed: boolean; customer?: CartRecoveryContact }) => {
+    void syncTrackedCart(cartSessionId, lines, { checkoutStarted: true, ...input });
+  }, [cartSessionId, lines, syncTrackedCart]);
 
   const toggleFavorite = useCallback((productId: string) => {
     setFavorites((current) =>
@@ -195,6 +232,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       coupon,
       drawerOpen,
       ready: hydrated,
+      cartSessionId,
       itemCount: lines.reduce((sum, line) => sum + line.quantity, 0),
       addItem,
       updateItem,
@@ -202,6 +240,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       clearCart,
       toggleFavorite,
       applyCoupon,
+      trackCheckout,
       setDrawerOpen,
       calculate,
     }),
@@ -211,12 +250,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
       coupon,
       drawerOpen,
       hydrated,
+      cartSessionId,
       addItem,
       updateItem,
       removeItem,
       clearCart,
       toggleFavorite,
       applyCoupon,
+      trackCheckout,
       calculate,
     ],
   );

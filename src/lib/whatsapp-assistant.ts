@@ -118,6 +118,7 @@ export function buildWhatsappAssistantSuggestions(
   const suggestions: WhatsappAssistantSuggestion[] = [];
 
   for (const order of data.orders) {
+    if (order.archivedAt) continue;
     const orderAge = ageInHours(order.createdAt, now);
 
     if (order.status === "Novo") {

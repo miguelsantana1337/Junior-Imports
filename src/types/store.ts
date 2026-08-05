@@ -424,6 +424,12 @@ export interface Order {
   discount: number;
   shipping: number;
   total: number;
+  /** Valor reconhecido nos relatórios e lançamentos financeiros. */
+  financialTotal?: number;
+  financialAdjustment?: number;
+  financialAdjustmentReason?: string;
+  financialAdjustedAt?: string;
+  financialAdjustedBy?: string;
   cashbackTotal: number;
   payment: PaymentMethod;
   status: OrderStatus;
@@ -433,6 +439,8 @@ export interface Order {
   orderSource?: "legacy" | "storefront" | "admin";
   reservationExpiresAt?: string;
   shippingStatus?: ShippingStatus;
+  archivedAt?: string;
+  archivedBy?: string;
 }
 
 export type FinancialTransactionType = "income" | "expense";

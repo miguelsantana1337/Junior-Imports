@@ -651,6 +651,11 @@ function mapOrder(row: Row): Order {
     discount: num(row.discount),
     shipping: num(row.shipping),
     total: num(row.total),
+    financialTotal: row.financial_total === null || row.financial_total === undefined ? num(row.total) : num(row.financial_total),
+    financialAdjustment: num(row.financial_adjustment),
+    financialAdjustmentReason: str(row.financial_adjustment_reason),
+    financialAdjustedAt: str(row.financial_adjusted_at),
+    financialAdjustedBy: str(row.financial_adjusted_by),
     cashbackTotal: num(row.cashback_total),
     payment: str(row.payment) as Order["payment"],
     status: str(row.status) as Order["status"],
@@ -660,6 +665,8 @@ function mapOrder(row: Row): Order {
     orderSource: (str(row.order_source) || "legacy") as Order["orderSource"],
     reservationExpiresAt: str(row.reservation_expires_at),
     shippingStatus: (str(row.shipping_status) || undefined) as Order["shippingStatus"],
+    archivedAt: str(row.archived_at),
+    archivedBy: str(row.archived_by),
   };
 }
 

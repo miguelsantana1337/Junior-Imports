@@ -32,6 +32,7 @@ import { validateCouponForCustomer } from "@/lib/coupon-rules";
 import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
 import { normalizeAdminStoreData } from "@/lib/admin-store-data";
+import { canArchiveOrder, orderFinancialTotal } from "@/lib/order-finance";
 import type {
   AdminPermission,
   AdminRole,
@@ -194,6 +195,8 @@ interface AdminDataContextValue {
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
+  adjustOrderFinancialTotal: (id: string, adjustment: { total: number; reason: string }) => Promise<void>;
+  setOrderArchived: (id: string, archived: boolean) => Promise<void>;
   saveSettings: (settings: StoreSettings) => Promise<void>;
   uploadMedia: (file: File, bucket: "product-media" | "banner-media" | "site-media") => Promise<string>;
   clearOrders: () => Promise<void>;
@@ -1417,9 +1420,9 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
           : transaction);
       }
 
-      if (previousOrder && status === "Pago" && previousOrder.status !== "Pago") {
+      if (previousOrder && committedStatuses.includes(status) && !committedStatuses.includes(previousOrder.status)) {
         const cost = previousOrder.items.reduce((sum, item) => sum + item.unitCost * item.quantity, 0);
-        const income: FinancialTransaction = { id: `order-income-${id}`, type: "income", status: "paid", description: `Venda ${previousOrder.code}`, amount: previousOrder.total, category: "Vendas", account: "Conta principal", costCenter: "Comercial", dueDate: changedAt.slice(0, 10), paidAt: changedAt, orderId: id, purchaseOrderId: "", recurring: false, notes: "Gerado automaticamente ao marcar o pedido como pago.", createdAt: changedAt };
+        const income: FinancialTransaction = { id: `order-income-${id}`, type: "income", status: "paid", description: `Venda ${previousOrder.code}`, amount: orderFinancialTotal(previousOrder), category: "Vendas", account: "Conta principal", costCenter: "Comercial", dueDate: changedAt.slice(0, 10), paidAt: changedAt, orderId: id, purchaseOrderId: "", recurring: false, notes: "Gerado automaticamente ao confirmar o pedido.", createdAt: changedAt };
         const cogs: FinancialTransaction = { id: `order-cogs-${id}`, type: "expense", status: "paid", description: `Custo dos produtos - ${previousOrder.code}`, amount: cost, category: "CMV", account: "Estoque", costCenter: "Operação", dueDate: changedAt.slice(0, 10), paidAt: changedAt, orderId: id, purchaseOrderId: "", recurring: false, notes: "Custo congelado nos itens do pedido.", createdAt: changedAt };
         financialTransactions = [income, ...(cost > 0 ? [cogs] : []), ...financialTransactions.filter((transaction) => transaction.id !== income.id && transaction.id !== cogs.id)];
       }
@@ -1460,6 +1463,88 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
       "Pedido atualizado.",
     );
   }, [commitMutation, persist]);
+
+  const adjustOrderFinancialTotal = useCallback(async (id: string, adjustment: { total: number; reason: string }) => {
+    const total = Math.round(Number(adjustment.total) * 100) / 100;
+    const reason = adjustment.reason.trim();
+    if (currentUser.role !== "owner" && !currentUser.permissions.includes("finance")) throw new Error("Seu usuário não possui permissão financeira.");
+    if (!Number.isFinite(total) || total < 0 || total > 1_000_000_000) throw new Error("Informe um valor financeiro válido.");
+    if (reason.length < 5 || reason.length > 300) throw new Error("Explique o ajuste em pelo menos 5 caracteres.");
+
+    await commitMutation(
+      (current) => {
+        const order = current.orders.find((item) => item.id === id);
+        if (!order) throw new Error("Pedido não encontrado.");
+        if (order.status === "Cancelado") throw new Error("Pedidos cancelados não geram receita e não podem ter o valor financeiro ajustado.");
+        const adjustedAt = new Date().toISOString();
+        let financialTransactions = current.financialTransactions.map((transaction) => (
+          transaction.orderId === id && transaction.type === "income"
+            ? { ...transaction, amount: total, status: "paid" as const, notes: `Valor financeiro ajustado no pedido. Motivo: ${reason}` }
+            : transaction
+        ));
+        if (["Pago", "Entregue"].includes(order.status) && !financialTransactions.some((transaction) => transaction.orderId === id && transaction.type === "income")) {
+          financialTransactions = [{
+            id: `order-income-${id}`, type: "income", status: "paid", description: `Venda ${order.code}`, amount: total,
+            category: "Vendas", account: "Conta principal", costCenter: "Comercial", dueDate: order.createdAt.slice(0, 10),
+            paidAt: adjustedAt, orderId: id, purchaseOrderId: "", recurring: false,
+            notes: `Valor financeiro ajustado no pedido. Motivo: ${reason}`, createdAt: order.createdAt,
+          }, ...financialTransactions];
+        }
+        return {
+          ...current,
+          orders: current.orders.map((item) => item.id === id ? {
+            ...item,
+            financialTotal: total,
+            financialAdjustment: total - item.total,
+            financialAdjustmentReason: reason,
+            financialAdjustedAt: adjustedAt,
+            financialAdjustedBy: currentUser.email,
+          } : item),
+          financialTransactions,
+        };
+      },
+      async () => {
+        if (!supabase) return;
+        const { error } = await supabase.rpc("adjust_tenant_order_financial_total", {
+          p_tenant_id: dataRef.current.tenant.id,
+          p_order_id: id,
+          p_financial_total: total,
+          p_reason: reason,
+        });
+        if (error) throw new Error(error.message);
+      },
+      "Valor financeiro atualizado com histórico.",
+    );
+  }, [commitMutation, currentUser, supabase]);
+
+  const setOrderArchived = useCallback(async (id: string, archived: boolean) => {
+    await commitMutation(
+      (current) => {
+        const order = current.orders.find((item) => item.id === id);
+        if (!order) throw new Error("Pedido não encontrado.");
+        if (archived && !canArchiveOrder(order)) throw new Error("Finalize ou cancele o pedido antes de arquivá-lo.");
+        const archivedAt = archived ? new Date().toISOString() : "";
+        return {
+          ...current,
+          orders: current.orders.map((item) => item.id === id ? {
+            ...item,
+            archivedAt,
+            archivedBy: archived ? currentUser.email : "",
+          } : item),
+        };
+      },
+      async () => {
+        if (!supabase) return;
+        const { error } = await supabase.rpc("set_tenant_order_archived", {
+          p_tenant_id: dataRef.current.tenant.id,
+          p_order_id: id,
+          p_archived: archived,
+        });
+        if (error) throw new Error(error.message);
+      },
+      archived ? "Pedido arquivado." : "Pedido restaurado.",
+    );
+  }, [commitMutation, currentUser.email, supabase]);
 
   const saveSettings = useCallback(async (settings: StoreSettings) => {
     await commitMutation(
@@ -1607,6 +1692,8 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     toggleItem,
     updateOrderStatus,
     saveOrderDetails,
+    adjustOrderFinancialTotal,
+    setOrderArchived,
     saveSettings,
     uploadMedia,
     clearOrders,
@@ -1616,7 +1703,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, adjustOrderFinancialTotal, setOrderArchived, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

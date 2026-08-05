@@ -1,6 +1,5 @@
 import { formatMoney, whatsappUrl } from "@/lib/format";
 import type { Order, StoreSettings } from "@/types/store";
-import { checkoutTermsConfirmation } from "@/lib/checkout-terms";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 
 export const defaultWhatsappOrderMessage = `*Novo pedido - {{loja}}*
@@ -25,6 +24,7 @@ function normalizeForWhatsapp(message: string) {
   return message
     .replace(/\{\{sku\}\}/gi, "")
     .replace(/^[ \t]*(?:[-•][ \t]*)?SKU[ \t]*:.*$/gim, "")
+    .replace(/^[ \t*_~-]*(?:(?:o[ \t]+)?cliente[ \t]+)?(?:concordou|consentiu|autorizou)[^\n]*(?:tratamento|uso)[^\n]*dados(?: pessoais)?[^\n]*$/gim, "")
     .replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}/gu, "")
     .replace(/[\u200d\ufe0e\ufe0f\u20e3]/g, "")
     .replace(/[ \t]+\n/g, "\n")
@@ -126,7 +126,7 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
     ? `\n\n*Retirada no local:* ${settings.localPickupInstructions}`
     : "";
 
-  return normalizeForWhatsapp(`${rendered}${cashbackNotice}${pickupNotice}\n\n*${checkoutTermsConfirmation}*`);
+  return normalizeForWhatsapp(`${rendered}${cashbackNotice}${pickupNotice}`);
 }
 
 export function checkoutWhatsappUrl(order: Order, settings: StoreSettings) {

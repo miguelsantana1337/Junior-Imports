@@ -13,7 +13,6 @@ describe("validacao do checkout", () => {
     number: "100",
     complement: "",
     payment: "Pix",
-    consent: true,
     termsAccepted: true,
     botField: "",
     startedAt: Date.now(),
@@ -28,19 +27,17 @@ describe("validacao do checkout", () => {
     expect(checkoutSchema.safeParse({ ...validCheckout, payment: "Boleto" }).success).toBe(false);
   });
 
-  it("exige consentimento e dados de contato validos", () => {
+  it("exige aceite dos termos e dados de contato validos", () => {
     const result = checkoutSchema.safeParse({
       ...validCheckout,
       phone: "123",
       email: "invalido",
-      consent: false,
       termsAccepted: false,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
       expect(result.error.flatten().fieldErrors.phone).toBeDefined();
       expect(result.error.flatten().fieldErrors.email).toBeDefined();
-      expect(result.error.flatten().fieldErrors.consent).toBeDefined();
       expect(result.error.flatten().fieldErrors.termsAccepted).toBeDefined();
     }
   });

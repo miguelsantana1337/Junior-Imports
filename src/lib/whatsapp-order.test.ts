@@ -20,6 +20,7 @@ describe("pedido direcionado ao WhatsApp", () => {
     expect(message).not.toMatch(/\p{Extended_Pictographic}/u);
     expect(message).not.toContain("\\n");
     expect(message).not.toContain("{{pedido}}");
+    expect(message).not.toMatch(/termos e condições aceitos no checkout/i);
   });
 
   it("informa quando nenhum cupom foi utilizado e normaliza quebras escapadas", () => {
@@ -123,5 +124,17 @@ describe("pedido direcionado ao WhatsApp", () => {
     expect(message).not.toContain("JI-INTERNO-001");
     expect(message).not.toMatch(/\bSKU\b/i);
     expect(message).not.toMatch(/\p{Extended_Pictographic}/u);
+  });
+
+  it("remove avisos antigos de tratamento de dados salvos no modelo", () => {
+    const settings = {
+      ...seedData.settings,
+      whatsappMessage: "Pedido {{pedido}}\nCliente concordou com o tratamento de dados pessoais.\nTotal: {{total}}",
+    };
+    const message = renderWhatsappOrderMessage(seedData.orders[0], settings);
+
+    expect(message).toContain(`Pedido ${seedData.orders[0].code}`);
+    expect(message).toContain("Total:");
+    expect(message).not.toMatch(/tratamento de dados|concordou/i);
   });
 });

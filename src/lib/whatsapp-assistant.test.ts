@@ -51,4 +51,13 @@ describe("Assistente WhatsApp", () => {
     expect(hasUsableWhatsappPhone("+55 31 99999-0000")).toBe(true);
     expect(hasUsableWhatsappPhone("1234")).toBe(false);
   });
+
+  it("não cria pendências operacionais para pedidos arquivados", () => {
+    const data = cloneSeedData();
+    const archived = data.orders.find((order) => order.status === "Novo")!;
+    archived.archivedAt = "2026-08-01T11:00:00-03:00";
+
+    const suggestions = buildWhatsappAssistantSuggestions(data, new Date("2026-08-01T12:00:00-03:00"));
+    expect(suggestions.some((item) => item.orderId === archived.id)).toBe(false);
+  });
 });

@@ -39,6 +39,11 @@ test("organiza o catálogo em carrosséis por categoria", async ({ page }) => {
   await expect(categories.first().locator(".product-carousel-viewport")).toBeVisible();
   await expect(categories.first().locator(".product-card").first()).toBeVisible();
   await expect(catalog.locator(".product-grid")).toHaveCount(0);
+
+  const search = catalog.getByRole("searchbox", { name: "Buscar no catálogo" });
+  await search.fill("Organizador semanal premium");
+  await expect(catalog.getByText("Resultados para")).toBeVisible();
+  await expect(catalog.getByRole("heading", { name: "Organizador semanal premium" })).toBeVisible();
 });
 
 test("permite adicionar ao carrinho um item sujeito a confirmação pelo WhatsApp", async ({ page }) => {
@@ -77,19 +82,19 @@ test("conclui o carrinho e envia o pedido para o WhatsApp oficial", async ({ pag
   await page.getByLabel("Nome completo").fill("Cliente Demonstracao");
   await page.getByRole("textbox", { name: "WhatsApp", exact: true }).fill("(31) 99999-9999");
   await page.getByLabel("E-mail").fill("cliente@exemplo.com");
-  await page.getByLabel("CEP").fill("35160-000");
-  await expect(page.getByLabel("Logradouro")).toHaveValue("Rua Exemplo");
-  await expect(page.getByLabel("Cidade")).toHaveValue("Ipatinga");
-  await expect(page.getByLabel("Estado")).toHaveValue("MG");
-  await expect(page.getByLabel("Número")).toHaveValue("");
-  await expect(page.getByLabel("Complemento")).toHaveValue("");
+  await page.getByRole("textbox", { name: "CEP", exact: true }).fill("35160-000");
+  await expect(page.getByRole("textbox", { name: "Logradouro", exact: true })).toHaveValue("Rua Exemplo");
+  await expect(page.getByRole("textbox", { name: "Cidade", exact: true })).toHaveValue("Ipatinga");
+  await expect(page.getByRole("combobox", { name: "Estado", exact: true })).toHaveValue("MG");
+  await expect(page.getByRole("textbox", { name: "Número", exact: true })).toHaveValue("");
+  await expect(page.getByRole("textbox", { name: "Complemento", exact: true })).toHaveValue("");
   await expect(page.getByText("Dados do CEP preenchidos.")).toBeVisible();
   await expect(page.getByRole("radio", { name: /Cartão 2x sem juros/ })).toBeVisible();
   await expect(page.getByRole("radio", { name: /Dinheiro Pagamento combinado/ })).toBeVisible();
   await expect(page.getByText("Boleto", { exact: true })).toHaveCount(0);
   await page.getByLabel("Número").fill("100");
   await page.getByRole("checkbox", { name: "Declaração: Declaro que li e concordo com os termos acima." }).check();
-  await page.getByRole("checkbox", { name: "Autorizo o envio dos dados deste pedido para o atendimento da loja pelo WhatsApp." }).check();
+  await expect(page.getByText(/inclusive se o checkout não for concluído/)).toBeVisible();
   await page.route("https://wa.me/**", (route) => route.abort());
   const whatsappRequest = page.waitForRequest((request) => request.url().startsWith("https://wa.me/"));
   await page.getByRole("button", { name: "Finalizar pedido no WhatsApp" }).click();

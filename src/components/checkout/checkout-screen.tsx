@@ -41,7 +41,7 @@ type PersistedOrder = {
 
 export function CheckoutScreen() {
   const { data, addOrder, demoMode } = useStore();
-  const { lines, coupon, calculate, clearCart } = useCart();
+  const { lines, coupon, calculate, clearCart, cartSessionId, trackCheckout } = useCart();
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
@@ -68,7 +68,6 @@ export function CheckoutScreen() {
       number: "",
       complement: "",
       payment: "Pix",
-      consent: false,
       termsAccepted: false,
       botField: "",
       startedAt,
@@ -79,6 +78,9 @@ export function CheckoutScreen() {
   const zip = useWatch({ control, name: "zip" });
   const city = useWatch({ control, name: "city" });
   const state = useWatch({ control, name: "state" });
+  const name = useWatch({ control, name: "name" });
+  const phone = useWatch({ control, name: "phone" });
+  const email = useWatch({ control, name: "email" });
   const calculation = calculate(payment, { city, state, deliveryMethod });
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const cartProducts = useMemo(
@@ -121,6 +123,18 @@ export function CheckoutScreen() {
       controller.abort();
     };
   }, [deliveryMethod, setValue, zip]);
+
+  useEffect(() => {
+    if (!lines.length) return;
+    const timer = window.setTimeout(() => {
+      const contactReady = /^\D*(?:\d\D*){10,13}$/.test(phone ?? "");
+      trackCheckout({
+        contactAllowed: contactReady,
+        customer: contactReady ? { name: name ?? "", phone: phone ?? "", email: email ?? "" } : undefined,
+      });
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [email, lines.length, name, phone, trackCheckout]);
 
   async function submit(values: CheckoutInput) {
     setSubmitError("");
@@ -167,6 +181,7 @@ export function CheckoutScreen() {
           botField: values.botField,
           startedAt: values.startedAt,
           turnstileToken,
+          cartSessionId,
         }),
       });
       const payload = await response.json().catch(() => null) as { order?: PersistedOrder; error?: string } | null;
@@ -232,7 +247,7 @@ export function CheckoutScreen() {
           <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />
-          <label className="consent-line"><input type="checkbox" {...register("consent")} /><span>Autorizo o envio dos dados deste pedido para o atendimento da loja pelo WhatsApp.</span></label>{errors.consent && <small className="field-error">{errors.consent.message}</small>}
+          <p className="checkout-data-notice"><LockKeyhole /> Ao usar a loja e informar seus dados, eles poderão ser utilizados para registrar o pedido e oferecer suporte pelo WhatsApp, inclusive se o checkout não for concluído. Nenhuma mensagem é enviada automaticamente.</p>
           <TurnstileWidget onToken={handleTurnstileToken} />
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {isSubmitting ? "Registrando pedido..." : "Finalizar pedido no WhatsApp"}</button>

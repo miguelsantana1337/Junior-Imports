@@ -37,6 +37,13 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     faqs: arrayOrFallback(candidate.faqs, fallback.faqs),
     orders: arrayOrFallback<Order>(candidate.orders, fallback.orders).map((order) => ({
       ...order,
+      financialTotal: order.financialTotal === undefined ? Number(order.total) || 0 : Number(order.financialTotal) || 0,
+      financialAdjustment: Number(order.financialAdjustment) || 0,
+      financialAdjustmentReason: order.financialAdjustmentReason || "",
+      financialAdjustedAt: order.financialAdjustedAt || "",
+      financialAdjustedBy: order.financialAdjustedBy || "",
+      archivedAt: order.archivedAt || "",
+      archivedBy: order.archivedBy || "",
       cashbackTotal: Number(order.cashbackTotal) || 0,
       items: order.items.map((item) => ({ ...item, unitCashback: Number(item.unitCashback) || 0 })),
     })),

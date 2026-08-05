@@ -8,6 +8,7 @@ import { CustomersAdmin } from "@/components/admin/customers-admin";
 import { CollaborationAdmin } from "@/components/admin/collaboration-admin";
 import { DataAdmin } from "@/components/admin/data-admin";
 import { OrdersAdmin } from "@/components/admin/orders-admin";
+import { AbandonedCartsAdmin } from "@/components/admin/abandoned-carts-admin";
 import { LayoutAdmin } from "@/components/admin/layout-admin";
 import { FinanceAdmin } from "@/components/admin/finance-admin";
 import { InventoryAdmin } from "@/components/admin/inventory-admin";
@@ -32,6 +33,7 @@ const sections = {
   customers: CustomersAdmin,
   collaboration: CollaborationAdmin,
   orders: OrdersAdmin,
+  "abandoned-carts": AbandonedCartsAdmin,
   finance: FinanceAdmin,
   inventory: InventoryAdmin,
   purchasing: PurchasingAdmin,

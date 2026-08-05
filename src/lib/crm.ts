@@ -1,4 +1,6 @@
 import type { Customer, CustomerInsight, CustomerSegment, Order } from "@/types/store";
+import { orderFinancialTotal } from "@/lib/order-finance";
+import { isRevenueOrder } from "@/lib/order-revenue";
 
 const DAY = 86_400_000;
 
@@ -59,10 +61,10 @@ export function buildCustomerInsights(customers: Customer[], orders: Order[], no
 
   return allCustomers.map((customer) => {
     const customerOrders = orders
-      .filter((order) => order.status !== "Cancelado" && customerMatchesOrder(customer, order))
+      .filter((order) => isRevenueOrder(order) && customerMatchesOrder(customer, order))
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
     const orderCount = customerOrders.length;
-    const totalSpent = customerOrders.reduce((sum, order) => sum + order.total, 0);
+    const totalSpent = customerOrders.reduce((sum, order) => sum + orderFinancialTotal(order), 0);
     const firstOrderAt = customerOrders[0]?.createdAt ?? "";
     const lastOrderAt = customerOrders.at(-1)?.createdAt ?? "";
     const intervals = customerOrders.slice(1).map((order, index) => (

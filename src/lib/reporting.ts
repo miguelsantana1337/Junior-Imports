@@ -1,6 +1,8 @@
 import { buildCustomerInsights } from "@/lib/crm";
 import { financialSummary, productProfit } from "@/lib/operations";
 import { officialFinancialTransactions, officialOrders, operationStartTime } from "@/lib/operation-scope";
+import { orderFinancialTotal } from "@/lib/order-finance";
+import { isRevenueOrder } from "@/lib/order-revenue";
 import type { Order, ReportType, StoreData } from "@/types/store";
 
 export type ReportValue = string | number;
@@ -91,7 +93,7 @@ export function inventoryInsights(data: StoreData, lookbackDays = 90, now = new 
   const configuredStart = operationStartTime(data.settings);
   const analysisStart = configuredStart === null ? from : Math.max(from, configuredStart);
   const observedDays = Math.max(1, Math.ceil((now.getTime() - analysisStart) / dayMs));
-  const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => {
+  const orders = officialOrders(data.orders, data.settings).filter(isRevenueOrder).filter((order) => {
     const created = new Date(order.createdAt).getTime();
     return created >= analysisStart && created <= now.getTime();
   });
@@ -146,13 +148,14 @@ function salesReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "c
   const primary = query.filters.primary || "all";
   const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo))
     .filter((order) => primary === "all" || (primary.startsWith("status:") && order.status === primary.slice(7)) || (primary.startsWith("source:") && (order.orderSource || "legacy") === primary.slice(7)));
+  const confirmedOrders = orders.filter(isRevenueOrder);
   const rows = orders.map((order) => ({
     date: order.createdAt.slice(0, 10), code: order.code, customer: order.customer.name, status: order.status,
     source: order.orderSource || "legacy", items: order.items.reduce((sum, item) => sum + item.quantity, 0),
-    subtotal: order.subtotal, discount: order.discount, cashback: order.cashbackTotal, total: order.total,
+    subtotal: order.subtotal, discount: order.discount, cashback: order.cashbackTotal, total: orderFinancialTotal(order),
   }));
-  const revenue = orders.reduce((sum, order) => sum + order.total, 0);
-  const cost = orders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitCost, 0), 0);
+  const revenue = confirmedOrders.reduce((sum, order) => sum + orderFinancialTotal(order), 0);
+  const cost = confirmedOrders.reduce((sum, order) => sum + order.items.reduce((itemSum, item) => itemSum + item.quantity * item.unitCost, 0), 0);
   return {
     type: "sales", title: reportTypeLabels.sales, periodLabel: `${query.dateFrom} a ${query.dateTo}`,
     columns: [
@@ -164,11 +167,11 @@ function salesReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "c
     ], rows,
     metrics: [
       { key: "revenue", label: "Receita", value: revenue, format: "money" },
-      { key: "orders", label: "Pedidos", value: orders.length, format: "number" },
-      { key: "ticket", label: "Ticket médio", value: orders.length ? revenue / orders.length : 0, format: "money" },
+      { key: "orders", label: "Pedidos confirmados", value: confirmedOrders.length, format: "number" },
+      { key: "ticket", label: "Ticket médio", value: confirmedOrders.length ? revenue / confirmedOrders.length : 0, format: "money" },
       { key: "grossMargin", label: "Margem bruta", value: revenue ? ((revenue - cost) / revenue) * 100 : 0, format: "percent" },
     ],
-    series: dailySeries(orders.map((order) => ({ date: order.createdAt, value: order.total }))),
+    series: dailySeries(confirmedOrders.map((order) => ({ date: order.createdAt, value: orderFinancialTotal(order) }))),
   };
 }
 
@@ -224,13 +227,13 @@ function inventoryReport(data: StoreData, query: ReportQuery): Omit<ReportResult
 }
 
 function customersReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "comparison"> {
-  const orders = officialOrders(data.orders, data.settings).filter(activeOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo));
+  const orders = officialOrders(data.orders, data.settings).filter(isRevenueOrder).filter((order) => inRange(order.createdAt, query.dateFrom, query.dateTo));
   const primary = query.filters.primary || "all";
   const insights = buildCustomerInsights(data.customers, data.orders, new Date(`${query.dateTo}T23:59:59`))
     .filter((customer) => primary === "all" || (primary.startsWith("segment:") && customer.segment === primary.slice(8)));
   const rows = insights.map((customer) => {
     const periodOrders = orders.filter((order) => order.customerId === customer.id);
-    return { customer: customer.name, segment: customer.segment, city: customer.city, state: customer.state, orders: periodOrders.length, revenue: periodOrders.reduce((sum, order) => sum + order.total, 0), lastOrder: customer.lastOrderAt ? customer.lastOrderAt.slice(0, 10) : "", daysSince: customer.daysSinceLastOrder ?? "", tags: customer.tags.join(", ") };
+    return { customer: customer.name, segment: customer.segment, city: customer.city, state: customer.state, orders: periodOrders.length, revenue: periodOrders.reduce((sum, order) => sum + orderFinancialTotal(order), 0), lastOrder: customer.lastOrderAt ? customer.lastOrderAt.slice(0, 10) : "", daysSince: customer.daysSinceLastOrder ?? "", tags: customer.tags.join(", ") };
   });
   return {
     type: "customers", title: reportTypeLabels.customers, periodLabel: `${query.dateFrom} a ${query.dateTo}`,

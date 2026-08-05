@@ -25,6 +25,7 @@ import {
   IconSun,
   IconTag,
   IconTicket,
+  IconShoppingCartOff,
   IconUsers,
   IconX,
 } from "@tabler/icons-react";
@@ -53,6 +54,7 @@ const navigationGroups = [
     items: [
       { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
+      { href: "/admin/abandoned-carts", label: "Carrinhos abandonados", icon: IconShoppingCartOff, permission: "orders" },
       { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
       { href: "/admin/crm", label: "Tarefas e contatos", icon: IconMessageCircle, permission: "crm" },
       { href: "/admin/collaboration", label: "Equipe e aprovações", icon: IconUsers, permission: "collaboration" },
@@ -114,6 +116,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/coupons": ["MARKETING", "Cupons"],
   "/admin/messages": ["MARKETING", "Campanhas e automações"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos"],
+  "/admin/abandoned-carts": ["OPERAÇÃO", "Carrinhos abandonados"],
   "/admin/crm": ["RELACIONAMENTO", "Tarefas e contatos"],
   "/admin/customers": ["RELACIONAMENTO", "Clientes"],
   "/admin/finance": ["FINANCEIRO", "Caixa e resultados"],
