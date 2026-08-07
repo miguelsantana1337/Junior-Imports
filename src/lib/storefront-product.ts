@@ -3,7 +3,7 @@ import type { Product, StorefrontProduct } from "@/types/store";
 export function sanitizeProductForStorefront(
   product: Product | StorefrontProduct,
   purchaseLimit = product.stock,
-  bucketStock = true,
+  bucketStock = false,
 ): StorefrontProduct {
   const publicPurchaseLimit = !bucketStock
     ? Math.min(10, Math.max(0, purchaseLimit))

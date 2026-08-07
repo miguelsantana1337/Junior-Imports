@@ -15,11 +15,11 @@ describe("catálogo público", () => {
     expect(serialized).not.toContain('"sku"');
   });
 
-  it("publica faixas de compra em vez do saldo exato", () => {
+  it("permite comprar até o saldo disponível, limitado a dez unidades", () => {
     const internalProduct = cloneSeedData().products[0];
 
-    expect(sanitizeProductForStorefront(internalProduct, 4).stock).toBe(1);
-    expect(sanitizeProductForStorefront(internalProduct, 8).stock).toBe(5);
+    expect(sanitizeProductForStorefront(internalProduct, 4).stock).toBe(4);
+    expect(sanitizeProductForStorefront(internalProduct, 8).stock).toBe(8);
     expect(sanitizeProductForStorefront(internalProduct, 42).stock).toBe(10);
   });
 });
