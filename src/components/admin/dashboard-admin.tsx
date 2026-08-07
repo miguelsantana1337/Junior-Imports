@@ -119,7 +119,7 @@ export function DashboardAdmin() {
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
         <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
-        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong>{formatMoney(weeklyRevenue)}</strong><p>Pedidos pagos · últimos 7 dias</p></div></article>
+        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong className="admin-money-value">{formatMoney(weeklyRevenue)}</strong><p>Pedidos pagos · últimos 7 dias</p></div></article>
         <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
         <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
       </section>

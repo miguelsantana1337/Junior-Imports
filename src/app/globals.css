@@ -1022,6 +1022,11 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .admin-search-submit:hover { border-color: #9abdec; background: #eef5ff; color: #1677ff; }
 .admin-search-submit svg { width: 13px; }
 .admin-topbar-actions { min-width: 540px; margin-left: auto; display: flex; align-items: center; justify-content: flex-end; gap: 9px; }
+.admin-money-toggle { width: 36px; height: 36px; display: grid; place-items: center; flex: none; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); }
+.admin-money-toggle:hover { border-color: #9abdec; background: #f3f8ff; color: #1677ff; }
+.admin-money-toggle svg { width: 17px; }
+.admin-money-value { transition: filter 160ms ease, opacity 160ms ease; }
+.admin-money-hidden .admin-money-value { filter: blur(7px); opacity: .58; user-select: none; }
 .admin-popover-wrap { position: relative; }
 .admin-create-button, .admin-view-store, .admin-notification-button { height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--text); font-size: 10px; font-weight: 750; transition: transform var(--motion-press) var(--ease-out-fluid), border-color var(--motion-fast) ease, background-color var(--motion-fast) ease, color var(--motion-fast) ease, box-shadow var(--motion-fast) ease; }
 .admin-create-button { padding: 0 10px 0 12px; gap: 7px; border-color: #1677ff; background: #1677ff; color: #fff; }

@@ -8,6 +8,8 @@ import {
   IconCloudCheck,
   IconDatabase,
   IconExternalLink,
+  IconEye,
+  IconEyeOff,
   IconFileSpreadsheet,
   IconHome,
   IconLayoutGrid,
@@ -145,6 +147,7 @@ type AdminTheme = "light" | "dark";
 
 const adminThemeStorageKey = "junior-imports:admin-theme";
 const adminSidebarStorageKey = "junior-imports:admin-sidebar";
+const adminMoneyVisibilityStorageKey = "junior-imports:admin-money-hidden";
 
 export function AdminShell({ children, user, demoMode }: { children: ReactNode; user: ShellUser; demoMode: boolean }) {
   const { data, referenceNow } = useAdminData();
@@ -155,6 +158,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [theme, setTheme] = useState<AdminTheme>("light");
+  const [moneyHidden, setMoneyHidden] = useState(false);
   const [navigationPending, setNavigationPending] = useState(false);
   const activeNavigationGroupId = navigationGroups.find((group) => group.items.some((item) => pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`))))?.id
     ?? (pathname.startsWith("/admin/banners") || pathname.startsWith("/admin/import") ? "store" : "operation");
@@ -226,6 +230,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     setTheme(preferredTheme);
     document.documentElement.dataset.adminTheme = preferredTheme;
     setCollapsed(window.localStorage.getItem(adminSidebarStorageKey) === "collapsed");
+    setMoneyHidden(window.localStorage.getItem(adminMoneyVisibilityStorageKey) === "true");
   }, [activeNavigationGroupId]);
 
   useEffect(() => {
@@ -249,13 +254,21 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
     });
   };
 
+  const toggleMoneyVisibility = () => {
+    setMoneyHidden((currentState) => {
+      const nextState = !currentState;
+      window.localStorage.setItem(adminMoneyVisibilityStorageKey, String(nextState));
+      return nextState;
+    });
+  };
+
   const toggleNavigationGroup = (groupId: string) => {
     setExpandedNavigationGroup((current) => current === groupId ? "" : groupId);
   };
 
   return (
     <div
-      className={`admin-shell-next admin-minimal-preview ${collapsed ? "is-collapsed" : ""}`}
+      className={`admin-shell-next admin-minimal-preview ${collapsed ? "is-collapsed" : ""} ${moneyHidden ? "admin-money-hidden" : ""}`}
       onClickCapture={(event) => {
         if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
         const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
@@ -352,6 +365,16 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
           <div className="admin-topbar-actions">
             <AdminPwaInstall />
+            <button
+              className="admin-money-toggle"
+              type="button"
+              onClick={toggleMoneyVisibility}
+              aria-label={moneyHidden ? "Mostrar valores" : "Ocultar valores"}
+              aria-pressed={moneyHidden}
+              title={moneyHidden ? "Mostrar valores" : "Ocultar valores"}
+            >
+              {moneyHidden ? <IconEyeOff /> : <IconEye />}
+            </button>
             <div className="admin-popover-wrap" ref={createPopoverRef}>
               <button
                 className="admin-create-button"
