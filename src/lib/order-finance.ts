@@ -1,6 +1,7 @@
-import type { Order, OrderStatus } from "@/types/store";
+import { orderOperationalStatus } from "@/lib/order-lifecycle";
+import type { Order, OrderOperationalStatus } from "@/types/store";
 
-const archiveableStatuses: ReadonlySet<OrderStatus> = new Set(["Entregue", "Cancelado"]);
+const archiveableStatuses: ReadonlySet<OrderOperationalStatus> = new Set(["Entregue", "Cancelado"]);
 
 export function orderFinancialTotal(order: Pick<Order, "total" | "financialTotal">) {
   const value = Number(order.financialTotal);
@@ -13,10 +14,13 @@ export function orderFinancialAdjustment(order: Pick<Order, "total" | "financial
   return orderFinancialTotal(order) - order.total;
 }
 
-export function isOrderArchived(order: Pick<Order, "archivedAt">) {
-  return Boolean(order.archivedAt);
+export function isOrderArchived(order: Pick<Order, "archivedAt" | "archiveAfter">, now = new Date()) {
+  if (order.archivedAt) return true;
+  if (!order.archiveAfter) return false;
+  const archiveTime = new Date(order.archiveAfter).getTime();
+  return Number.isFinite(archiveTime) && archiveTime <= now.getTime();
 }
 
-export function canArchiveOrder(order: Pick<Order, "status">) {
-  return archiveableStatuses.has(order.status);
+export function canArchiveOrder(order: Pick<Order, "status" | "operationalStatus">) {
+  return archiveableStatuses.has(orderOperationalStatus(order));
 }

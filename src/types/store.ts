@@ -33,6 +33,27 @@ export type OrderStatus =
   | "Entregue"
   | "Cancelado";
 
+/**
+ * Status legado usado pelas rotinas já consolidadas de estoque, financeiro e
+ * cashback. A operação 3.0 usa as duas dimensões abaixo e mantém `status`
+ * sincronizado apenas como camada de compatibilidade.
+ */
+export type OrderOperationalStatus =
+  | "Novo"
+  | "Em atendimento"
+  | "Confirmado"
+  | "Em preparação"
+  | "Enviado"
+  | "Entregue"
+  | "Cancelado";
+
+export type OrderPaymentStatus =
+  | "Pendente"
+  | "Recebido"
+  | "Parcial"
+  | "Estornado"
+  | "Cancelado";
+
 export interface ShippingCityRate {
   city: string;
   state: string;
@@ -433,6 +454,11 @@ export interface Order {
   cashbackTotal: number;
   payment: PaymentMethod;
   status: OrderStatus;
+  operationalStatus?: OrderOperationalStatus;
+  paymentStatus?: OrderPaymentStatus;
+  lifecycleVersion?: number;
+  cancelledAt?: string;
+  archiveAfter?: string;
   couponCode: string;
   internalNotes: string;
   trackingCode: string;

@@ -1,11 +1,13 @@
 "use client";
 
-import { IconAlertTriangle, IconCalendarEvent, IconCash, IconCheck, IconPlus, IconReceipt2, IconTrendingUp, IconWallet } from "@tabler/icons-react";
+import { IconCalendarEvent, IconCash, IconCheck, IconPlus, IconReceipt2, IconTrendingUp, IconWallet } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import { formatMoney, formatStoreDateKey } from "@/lib/format";
-import { financialSummary, productProfit } from "@/lib/operations";
+import { financialSummary } from "@/lib/operations";
 import { financialTransactionSchema } from "@/lib/validation";
-import { historicalFinancialTransactions, officialFinancialTransactions, operationStartLabel } from "@/lib/operation-scope";
+import { historicalFinancialTransactions, officialFinancialTransactions, officialOrders, operationStartLabel } from "@/lib/operation-scope";
+import { isOrderArchived, orderFinancialTotal } from "@/lib/order-finance";
+import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 import type { FinancialTransaction } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel } from "./admin-ui";
@@ -23,9 +25,12 @@ export function FinanceAdmin() {
   const operationTransactions = useMemo(() => officialFinancialTransactions(data.financialTransactions, data.settings), [data.financialTransactions, data.settings]);
   const historyTransactions = useMemo(() => historicalFinancialTransactions(data.financialTransactions, data.settings), [data.financialTransactions, data.settings]);
   const summary = useMemo(() => financialSummary(operationTransactions), [operationTransactions]);
+  const receivable = useMemo(() => officialOrders(data.orders, data.settings)
+    .filter((order) => !isOrderArchived(order, new Date(referenceNow)))
+    .filter((order) => orderOperationalStatus(order) !== "Cancelado" && ["Pendente", "Parcial"].includes(orderPaymentStatus(order)))
+    .reduce((total, order) => total + orderFinancialTotal(order), 0), [data.orders, data.settings, referenceNow]);
   const transactions = (scope === "official" ? operationTransactions : historyTransactions).filter((item) => filter === "all" || item.type === filter);
   const operationDate = operationStartLabel(data.settings);
-  const profitableProducts = data.products.map((product) => ({ product, ...productProfit(product) })).sort((a, b) => b.marginPercent - a.marginPercent).slice(0, 6);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -38,17 +43,17 @@ export function FinanceAdmin() {
   }
 
   return <div className="ops-page">
-    <section className="ops-hero"><div><span>FINANCEIRO</span><h2>Caixa, custos e lucro em uma única visão.</h2><p>Os pedidos alimentam o resultado automaticamente e os lançamentos manuais completam a operação.</p></div><div className="ops-hero-actions"><button className="admin-button primary" onClick={() => setFormOpen((value) => !value)}><IconPlus /> Novo lançamento</button></div></section>
+    <section className="ops-hero"><div><span>CAIXA E RESULTADOS</span><h2>Veja o que entrou, saiu e ainda precisa entrar.</h2><p>Os pedidos atualizam o caixa automaticamente. Registre aqui somente o que acontecer fora deles.</p></div><div className="ops-hero-actions"><button className="admin-button primary" onClick={() => setFormOpen((value) => !value)}><IconPlus /> Registrar entrada ou saída</button></div></section>
     {operationDate && <div className="operation-baseline-note"><IconCalendarEvent /><div><strong>Financeiro oficial desde {operationDate}</strong><span>Os indicadores e os relatórios não somam lançamentos anteriores. Use “Histórico anterior” apenas para consulta.</span></div></div>}
     <section className="ops-metric-grid finance">
-      <article><span className="green"><IconTrendingUp /></span><div><small>Receita realizada</small><strong className="admin-money-value">{formatMoney(summary.income)}</strong><p><span className="admin-money-value">{formatMoney(summary.receivable)}</span> a receber</p></div></article>
-      <article><span className="danger"><IconReceipt2 /></span><div><small>Saídas realizadas</small><strong className="admin-money-value">{formatMoney(summary.expenses)}</strong><p><span className="admin-money-value">{formatMoney(summary.payable)}</span> a pagar</p></div></article>
-      <article><span className={summary.netProfit >= 0 ? "blue" : "danger"}><IconCash /></span><div><small>Lucro líquido</small><strong className="admin-money-value">{formatMoney(summary.netProfit)}</strong><p>{summary.marginPercent.toFixed(1)}% de margem</p></div></article>
-      <article><span className={summary.overdue > 0 ? "warning" : "green"}><IconAlertTriangle /></span><div><small>Vencido</small><strong className="admin-money-value">{formatMoney(summary.overdue)}</strong><p>projeção <span className="admin-money-value">{formatMoney(summary.projectedBalance)}</span></p></div></article>
+      <article><span className="green"><IconTrendingUp /></span><div><small>Entrou</small><strong className="admin-money-value">{formatMoney(summary.income)}</strong><p>pagamentos confirmados</p></div></article>
+      <article><span className="blue"><IconWallet /></span><div><small>Ainda vai entrar</small><strong className="admin-money-value">{formatMoney(receivable)}</strong><p>pedidos ativos com pagamento pendente</p></div></article>
+      <article><span className="danger"><IconReceipt2 /></span><div><small>Saiu</small><strong className="admin-money-value">{formatMoney(summary.expenses)}</strong><p>custos, despesas e taxas</p></div></article>
+      <article><span className={summary.netProfit >= 0 ? "blue" : "danger"}><IconCash /></span><div><small>Sobrou</small><strong className="admin-money-value">{formatMoney(summary.netProfit)}</strong><p>{summary.marginPercent.toFixed(1)}% do que entrou</p></div></article>
     </section>
 
-    {formOpen && <AdminPanel title="Adicionar entrada ou saída" description="Registre valores manuais com vencimento, conta e centro de custo."><form className="ops-form" onSubmit={submit}>
-      <label>Tipo<select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as FinancialTransaction["type"] }))}><option value="income">Entrada</option><option value="expense">Saída</option></select></label>
+    {formOpen && <AdminPanel title="O dinheiro entrou ou saiu?" description="Informe apenas os dados essenciais; detalhes adicionais continuam opcionais."><form className="ops-form" onSubmit={submit}>
+      <label>Movimento<select value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value as FinancialTransaction["type"] }))}><option value="income">Entrou</option><option value="expense">Saiu</option></select></label>
       <label>Situação<select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value as FinancialTransaction["status"] }))}><option value="pending">Pendente</option><option value="paid">Pago</option></select></label>
       <label className="wide">Descrição<input value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} placeholder="Ex.: embalagem, aluguel ou recebimento" /></label>
       <label>Valor (R$)<input type="number" min="0.01" step="0.01" value={form.amount} onChange={(event) => setForm((current) => ({ ...current, amount: Number(event.target.value) }))} /></label>
@@ -63,15 +68,14 @@ export function FinanceAdmin() {
     </form></AdminPanel>}
 
     <div className="ops-two-columns">
-      <AdminPanel title="Fluxo financeiro" description="Entradas e saídas automáticas ou manuais.">
+      <AdminPanel title="Extrato de movimentações" description="Todas as entradas e saídas, automáticas ou manuais.">
         {operationDate && <div className="operation-scope-tabs"><button className={scope === "official" ? "active" : ""} onClick={() => setScope("official")}>Operação oficial <b>{operationTransactions.length}</b></button><button className={scope === "history" ? "active" : ""} onClick={() => setScope("history")}>Histórico anterior <b>{historyTransactions.length}</b></button></div>}
         <div className="ops-tabs compact"><button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>Todos</button><button className={filter === "income" ? "active" : ""} onClick={() => setFilter("income")}>Entradas</button><button className={filter === "expense" ? "active" : ""} onClick={() => setFilter("expense")}>Saídas</button></div>
         <div className="finance-list">{transactions.map((item) => <article key={item.id}><span className={item.type}>{item.type === "income" ? "+" : "−"}</span><div><strong>{item.description}</strong><small>{item.category} · {item.account} · venc. {item.dueDate || "sem data"}</small>{item.orderId && <em>Gerado por pedido</em>}{item.purchaseOrderId && <em>Gerado por compra</em>}</div><div><b className="admin-money-value">{item.type === "income" ? "+ " : "- "}{formatMoney(item.amount)}</b><small className={`finance-status ${item.status}`}>{statusLabels[item.status]}</small></div><div className="ops-row-actions">{item.status === "pending" && <button className="admin-icon-button" aria-label={`Marcar ${item.description} como pago`} onClick={() => void saveFinancialTransaction({ ...item, status: "paid", paidAt: new Date().toISOString() })}><IconCheck /></button>}{!item.orderId && !item.purchaseOrderId && <button className="admin-icon-button" aria-label={`Excluir ${item.description}`} onClick={() => void deleteFinancialTransaction(item.id)}>×</button>}</div></article>)}{!transactions.length && <AdminEmpty><IconWallet /><strong>{scope === "history" ? "Nenhum lançamento no histórico anterior." : "Nenhum lançamento na operação oficial."}</strong><span>{scope === "history" ? "Os registros anteriores continuam preservados quando existirem." : "As novas entradas e saídas aparecerão aqui a partir do início oficial."}</span></AdminEmpty>}</div>
       </AdminPanel>
 
       <div className="ops-side-stack">
-        <section className="ops-profit-card"><header><div><span>RESULTADO</span><h3>DRE gerencial</h3></div><IconCash /></header><dl><div><dt>Receita realizada</dt><dd className="admin-money-value">{formatMoney(summary.income)}</dd></div><div><dt>(−) Custos e despesas</dt><dd className="admin-money-value">- {formatMoney(summary.expenses)}</dd></div><div className="total"><dt>Lucro líquido</dt><dd className="admin-money-value">{formatMoney(summary.netProfit)}</dd></div></dl><footer><span>Margem líquida</span><strong>{summary.marginPercent.toFixed(1)}%</strong></footer></section>
-        <section className="ops-profitability"><header><div><h3>Margem por produto</h3><p>Com base no custo cadastrado.</p></div></header>{profitableProducts.map(({ product, grossProfit, marginPercent }) => <article key={product.id}><div><strong>{product.name}</strong><small><span className="admin-money-value">{formatMoney(grossProfit)}</span> por unidade</small></div><span>{product.costPrice > 0 ? `${marginPercent.toFixed(1)}%` : "Sem custo"}</span></article>)}</section>
+        <section className="ops-profit-card"><header><div><span>RESULTADO</span><h3>Resumo do resultado</h3></div><IconCash /></header><dl><div><dt>Entrou</dt><dd className="admin-money-value">{formatMoney(summary.income)}</dd></div><div><dt>(−) Saiu</dt><dd className="admin-money-value">- {formatMoney(summary.expenses)}</dd></div><div className="total"><dt>Sobrou</dt><dd className="admin-money-value">{formatMoney(summary.netProfit)}</dd></div></dl><footer><span>Percentual que sobrou</span><strong>{summary.marginPercent.toFixed(1)}%</strong></footer></section>
       </div>
     </div>
   </div>;

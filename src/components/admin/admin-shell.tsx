@@ -46,29 +46,32 @@ import { AdminLoadingScreen } from "@/components/admin/admin-loading-screen";
 import { AdminCommandPalette, type AdminCommandSource } from "@/components/admin/admin-command-palette";
 import { useAdminPreferences } from "@/components/admin/use-admin-preferences";
 import { CopilotJunior } from "@/components/admin/copilot-junior";
-import { TeamPresencePulse } from "@/components/admin/use-team-presence";
 import { AdminNotificationCenter } from "@/components/admin/admin-notification-center";
 
 const navigationGroups = [
   {
+    id: "today",
+    label: "Hoje",
+    items: [
+      { href: "/admin", label: "Prioridades do dia", icon: IconHome, permission: "dashboard" },
+    ],
+  },
+  {
     id: "operation",
     label: "Operação",
     items: [
-      { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
       { href: "/admin/abandoned-carts", label: "Carrinhos abandonados", icon: IconShoppingCartOff, permission: "orders" },
       { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
       { href: "/admin/crm", label: "Tarefas e contatos", icon: IconMessageCircle, permission: "crm" },
-      { href: "/admin/collaboration", label: "Equipe e aprovações", icon: IconUsers, permission: "collaboration" },
     ],
   },
   {
     id: "management",
     label: "Gestão",
     items: [
-      { href: "/admin/finance", label: "Financeiro", icon: IconReceipt2, permission: "finance" },
+      { href: "/admin/finance", label: "Caixa e resultados", icon: IconReceipt2, permission: "finance" },
       { href: "/admin/inventory", label: "Estoque e lotes", icon: IconBox, permission: "inventory" },
-      { href: "/admin/purchasing", label: "Compras e fornecedores", icon: IconCloudCheck, permission: "purchasing" },
       { href: "/admin/reports", label: "Relatórios e exportações", icon: IconChartBar, permission: "reports" },
     ],
   },
@@ -109,7 +112,7 @@ const utilityNavigation = [
 ];
 
 const titles: Record<string, [string, string]> = {
-  "/admin": ["PAINEL", "Visão geral"],
+  "/admin": ["HOJE", "Prioridades do dia"],
   "/admin/products": ["CATÁLOGO", "Produtos"],
   "/admin/banners": ["EDITOR DA LOJA", "Biblioteca de banners"],
   "/admin/categories": ["CATÁLOGO", "Categorias"],
@@ -121,11 +124,9 @@ const titles: Record<string, [string, string]> = {
   "/admin/abandoned-carts": ["OPERAÇÃO", "Carrinhos abandonados"],
   "/admin/crm": ["RELACIONAMENTO", "Tarefas e contatos"],
   "/admin/customers": ["RELACIONAMENTO", "Clientes"],
-  "/admin/finance": ["FINANCEIRO", "Caixa e resultados"],
+  "/admin/finance": ["GESTÃO", "Caixa e resultados"],
   "/admin/inventory": ["ERP", "Estoque e lotes"],
-  "/admin/purchasing": ["GESTÃO", "Compras e fornecedores"],
   "/admin/reports": ["GESTÃO", "Relatórios e exportações"],
-  "/admin/collaboration": ["EQUIPE", "Equipe e aprovações"],
   "/admin/settings": ["ADMINISTRAÇÃO", "Loja, frete e atendimento"],
   "/admin/users": ["ADMINISTRAÇÃO", "Acessos e permissões"],
   "/admin/security": ["ADMINISTRAÇÃO", "Segurança e MFA"],
@@ -280,7 +281,6 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       }}
     >
       <AdminLoadingScreen autoDismiss />
-      {can("collaboration") && <TeamPresencePulse />}
       {can("copilot") && <CopilotJunior />}
       <AdminCommandPalette
         open={commandOpen}

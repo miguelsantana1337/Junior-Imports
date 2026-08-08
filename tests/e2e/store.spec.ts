@@ -111,7 +111,12 @@ test("conclui o carrinho e envia o pedido para o WhatsApp oficial", async ({ pag
 
 test("exibe como comprar e o WhatsApp oficial no rodapé", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator(".desktop-nav").getByRole("link", { name: "Como comprar" })).toHaveAttribute("href", "/#duvidas");
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole("button", { name: "Abrir menu" }).click();
+    await expect(page.getByRole("link", { name: "Como comprar" }).first()).toHaveAttribute("href", "/#duvidas");
+  } else {
+    await expect(page.locator(".desktop-nav").getByRole("link", { name: "Como comprar" })).toHaveAttribute("href", "/#duvidas");
+  }
   await expect(page.locator("#duvidas").getByRole("heading")).toBeVisible();
   await expect(page.locator("#duvidas").getByText("Como faço uma compra?")).toBeVisible();
   const footer = page.locator(".store-footer");

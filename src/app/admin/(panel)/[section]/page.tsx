@@ -47,6 +47,10 @@ const sections = {
 
 export default async function AdminSectionPage({ params }: { params: Promise<{ section: string }> }) {
   const { section } = await params;
+  if (section === "purchasing" || section === "collaboration") {
+    await requireAdmin(sectionPermissions.dashboard);
+    redirect("/admin");
+  }
   if (section === "sections") {
     await requireAdmin(sectionPermissions.sections);
     redirect("/admin/layout");

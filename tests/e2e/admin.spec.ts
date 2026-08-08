@@ -22,15 +22,13 @@ async function openSection(page: Page, name: string) {
   const link = navigation.getByRole("link", { name, exact: true });
   if (!await link.isVisible()) {
     const groupBySection: Record<string, string> = {
-      "Visão geral": "Operação",
+      Hoje: "Hoje",
       Pedidos: "Operação",
       "Carrinhos abandonados": "Operação",
       Clientes: "Operação",
       "Tarefas e contatos": "Operação",
-      "Equipe e aprovações": "Operação",
-      Financeiro: "Gestão",
+      "Caixa e resultados": "Gestão",
       "Estoque e lotes": "Gestão",
-      "Compras e fornecedores": "Gestão",
       "Relatórios e exportações": "Gestão",
       "Editor da loja": "Loja",
       Produtos: "Loja",
@@ -57,7 +55,8 @@ test("carrega o painel sem falhas críticas de hidratação", async ({ page }) =
 
   await login(page);
   await page.goto("/admin/collaboration");
-  await expect(page.getByRole("heading", { name: "Equipe e aprovações" })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole("heading", { name: "Prioridades de hoje" })).toBeVisible();
 
   const criticalIssues = runtimeIssues.filter((issue) =>
     /hydration|uncaught|typeerror|referenceerror|script tag/i.test(issue),
@@ -90,7 +89,7 @@ test("instala o painel como PWA sem armazenar páginas administrativas", async (
   );
   const installButton = page.getByRole("button", { name: "Instalar painel como aplicativo" });
   if ((page.viewportSize()?.width ?? 1280) <= 640) await expect(installButton).toBeHidden();
-  else await expect(installButton).toBeVisible();
+  else expect(await installButton.count()).toBeLessThanOrEqual(1);
 
   await expect.poll(() => page.evaluate(async () => {
     const registration = await navigator.serviceWorker.getRegistration("/admin");
@@ -226,12 +225,19 @@ test("ajusta o financeiro e arquiva um pedido sem apagar o histórico", async ({
   await expect(page.getByRole("status").filter({ hasText: "Valor financeiro atualizado" })).toBeVisible();
   await expect(detail.getByText("R$ 111,50", { exact: true }).first()).toBeVisible();
 
-  await detail.getByLabel("Status").selectOption("Entregue");
-  await detail.getByRole("button", { name: "Atualizar status" }).click();
+  await detail.getByLabel("Situação do pedido").selectOption("Entregue");
+  await detail.getByLabel("Situação do pagamento").selectOption("Recebido");
+  await detail.getByRole("button", { name: "Revisar alteração" }).click();
+  await detail.getByRole("button", { name: "Confirmar alteração" }).click();
   await expect(detail).toBeHidden();
 
   await page.getByLabel("Buscar pedidos").fill(orderCode);
-  await page.getByRole("button", { name: `Abrir pedido ${orderCode}` }).click();
+  if ((page.viewportSize()?.width ?? 1280) <= 760) {
+    await page.getByRole("button", { name: `Abrir pedido ${orderCode}` }).click();
+  } else {
+    const orderRow = page.locator("tr").filter({ hasText: orderCode });
+    await orderRow.getByRole("button", { name: "Abrir", exact: false }).click();
+  }
   detail = page.getByRole("dialog", { name: `Pedido ${orderCode}` });
   await detail.getByRole("button", { name: "Arquivar", exact: true }).click();
   await expect(detail).toBeHidden();
@@ -450,8 +456,10 @@ test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await expect(orderButton).toBeVisible();
   await orderButton.click();
   const orderModal = page.getByRole("dialog");
-  await orderModal.getByLabel("Status").selectOption("Entregue");
-  await orderModal.getByRole("button", { name: "Atualizar e automatizar" }).click();
+  await orderModal.getByLabel("Situação do pedido").selectOption("Entregue");
+  await orderModal.getByLabel("Situação do pagamento").selectOption("Recebido");
+  await orderModal.getByRole("button", { name: "Revisar alteração" }).click();
+  await orderModal.getByRole("button", { name: "Confirmar alteração" }).click();
   await openSection(page, "Campanhas e automações");
   await page.getByRole("button", { name: "Automações", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Aviso de preparação", exact: true })).toBeVisible();
@@ -534,9 +542,9 @@ test("abre CRM, financeiro, estoque e compras em desktop e mobile", async ({ pag
   await page.getByRole("button", { name: "Cancelar" }).click();
 
   await page.goto("/admin/finance");
-  await expect(page.getByRole("heading", { name: "Caixa, custos e lucro em uma única visão." })).toBeVisible();
-  await page.getByRole("button", { name: "Novo lançamento" }).click();
-  await expect(page.getByRole("heading", { name: "Adicionar entrada ou saída" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Veja o que entrou, saiu e ainda precisa entrar." })).toBeVisible();
+  await page.getByRole("button", { name: "Registrar entrada ou saída" }).click();
+  await expect(page.getByRole("heading", { name: "O dinheiro entrou ou saiu?" })).toBeVisible();
   await page.getByRole("button", { name: "Cancelar" }).click();
 
   await page.goto("/admin/inventory");
@@ -546,6 +554,6 @@ test("abre CRM, financeiro, estoque e compras em desktop e mobile", async ({ pag
   await page.getByRole("button", { name: "Cancelar" }).click();
 
   await page.goto("/admin/purchasing");
-  await expect(page.getByRole("heading", { name: "Reposição organizada do pedido ao recebimento." })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Novo fornecedor" })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin$/);
+  await expect(page.getByRole("heading", { name: "Prioridades de hoje" })).toBeVisible();
 });

@@ -1,13 +1,9 @@
-import type { Order, OrderStatus } from "@/types/store";
+import type { Order } from "@/types/store";
 import { orderFinancialTotal } from "@/lib/order-finance";
+import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 
-export const revenueOrderStatuses: ReadonlySet<OrderStatus> = new Set([
-  "Pago",
-  "Entregue",
-]);
-
-export function isRevenueOrder(order: Pick<Order, "status">) {
-  return revenueOrderStatuses.has(order.status);
+export function isRevenueOrder(order: Pick<Order, "status" | "operationalStatus" | "paymentStatus">) {
+  return orderPaymentStatus(order) === "Recebido" && orderOperationalStatus(order) !== "Cancelado";
 }
 
 export function confirmedOrderRevenue(orders: Order[], since: Date) {

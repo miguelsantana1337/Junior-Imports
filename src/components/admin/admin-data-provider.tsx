@@ -33,6 +33,11 @@ import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
 import { normalizeAdminStoreData } from "@/lib/admin-store-data";
 import { canArchiveOrder, orderFinancialTotal } from "@/lib/order-finance";
+import {
+  legacyStatusForLifecycle,
+  lifecycleReasonRequired,
+  orderPaymentStatus,
+} from "@/lib/order-lifecycle";
 import type {
   AdminPermission,
   AdminRole,
@@ -59,6 +64,8 @@ import type {
   MarketingPublicationVersion,
   MessageLog,
   Order,
+  OrderOperationalStatus,
+  OrderPaymentStatus,
   OrderStatus,
   PageBlock,
   Product,
@@ -90,6 +97,11 @@ type PersistedOrder = {
   total: number;
   cashback_total?: number;
   status: OrderStatus;
+  operational_status?: OrderOperationalStatus;
+  payment_status?: OrderPaymentStatus;
+  lifecycle_version?: number;
+  cancelled_at?: string;
+  archive_after?: string;
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
   shipping_status?: Order["shippingStatus"];
@@ -99,6 +111,26 @@ type DatabaseRow = Record<string, unknown>;
 const rowString = (value: unknown) => String(value ?? "");
 const rowNumber = (value: unknown) => Number(value) || 0;
 const rowObject = (value: unknown): Record<string, unknown> => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+
+function financialTransactionFromRow(row: DatabaseRow): FinancialTransaction {
+  return {
+    id: rowString(row.id),
+    type: rowString(row.type) as FinancialTransaction["type"],
+    status: rowString(row.status) as FinancialTransaction["status"],
+    description: rowString(row.description),
+    amount: rowNumber(row.amount),
+    category: rowString(row.category),
+    account: rowString(row.account),
+    costCenter: rowString(row.cost_center),
+    dueDate: rowString(row.due_date),
+    paidAt: rowString(row.paid_at),
+    orderId: rowString(row.order_id),
+    purchaseOrderId: rowString(row.purchase_order_id),
+    recurring: Boolean(row.recurring),
+    notes: rowString(row.notes),
+    createdAt: rowString(row.created_at),
+  };
+}
 
 function marketingPublicationFromRow(row: DatabaseRow): MarketingPublication {
   return {
@@ -194,6 +226,7 @@ interface AdminDataContextValue {
   reorderItem: (key: OrderedKey, id: string, targetIndex: number) => Promise<void>;
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
+  updateOrderLifecycle: (id: string, update: { operationalStatus: OrderOperationalStatus; paymentStatus: OrderPaymentStatus; reason: string }) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
   adjustOrderFinancialTotal: (id: string, adjustment: { total: number; reason: string }) => Promise<void>;
   setOrderArchived: (id: string, archived: boolean) => Promise<void>;
@@ -355,33 +388,56 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
   }, [supabase]);
 
   const refreshOrderInventoryState = useCallback(async (orderId: string, productIds: string[]) => {
-    if (!supabase || productIds.length === 0) return;
+    if (!supabase) return;
     const tenantId = dataRef.current.tenant.id;
-    const [productsResult, orderResult] = await Promise.all([
-      supabase
+    const productsRequest = productIds.length ? supabase
         .from("products")
         .select("id, stock")
         .eq("tenant_id", tenantId)
-        .in("id", productIds),
+        .in("id", productIds) : Promise.resolve({ data: [], error: null });
+    const [productsResult, orderResult, financeResult] = await Promise.all([
+      productsRequest,
       supabase
         .from("orders")
-        .select("id, status")
+        .select("id, status, operational_status, payment_status, lifecycle_version, cancelled_at, archive_after, archived_at, archived_by, internal_notes")
         .eq("tenant_id", tenantId)
         .eq("id", orderId)
         .maybeSingle(),
+      supabase
+        .from("financial_transactions")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .eq("order_id", orderId),
     ]);
-    if (productsResult.error || orderResult.error) return;
+    if (productsResult.error || orderResult.error || financeResult.error) return;
 
     const stocks = new Map((productsResult.data ?? []).map((row) => [String(row.id), Number(row.stock) || 0]));
-    const persistedStatus = orderResult.data?.status as OrderStatus | undefined;
+    const persisted = orderResult.data as DatabaseRow | null;
+    const persistedStatus = persisted?.status as OrderStatus | undefined;
+    const persistedFinance = (financeResult.data ?? []).map((row) => financialTransactionFromRow(row as DatabaseRow));
     const next: StoreData = {
       ...dataRef.current,
       products: dataRef.current.products.map((product) => (
         stocks.has(product.id) ? { ...product, stock: stocks.get(product.id)! } : product
       )),
       orders: dataRef.current.orders.map((order) => (
-        order.id === orderId && persistedStatus ? { ...order, status: persistedStatus } : order
+        order.id === orderId && persistedStatus ? {
+          ...order,
+          status: persistedStatus,
+          operationalStatus: rowString(persisted?.operational_status) as OrderOperationalStatus,
+          paymentStatus: rowString(persisted?.payment_status) as OrderPaymentStatus,
+          lifecycleVersion: rowNumber(persisted?.lifecycle_version) || 1,
+          cancelledAt: rowString(persisted?.cancelled_at),
+          archiveAfter: rowString(persisted?.archive_after),
+          archivedAt: rowString(persisted?.archived_at),
+          archivedBy: rowString(persisted?.archived_by),
+          internalNotes: rowString(persisted?.internal_notes),
+        } : order
       )),
+      financialTransactions: [
+        ...persistedFinance,
+        ...dataRef.current.financialTransactions.filter((transaction) => transaction.orderId !== orderId),
+      ],
     };
     dataRef.current = next;
     setData(next);
@@ -1312,6 +1368,11 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
       orderSource: persisted?.order_source ?? "admin",
       reservationExpiresAt: persisted?.reservation_expires_at ?? "",
       shippingStatus: persisted?.shipping_status ?? calculation.shippingStatus,
+      operationalStatus: persisted?.operational_status ?? "Novo",
+      paymentStatus: persisted?.payment_status ?? "Pendente",
+      lifecycleVersion: persisted?.lifecycle_version ?? 1,
+      cancelledAt: persisted?.cancelled_at ?? "",
+      archiveAfter: persisted?.archive_after ?? "",
     };
     const generatedLogs = createMessageLogs(order, current.messageAutomations);
     const next = applyCreatedOrder(current, order, {
@@ -1456,6 +1517,72 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     }, "Status atualizado.");
   }, [commitMutation, currentUser.email, persist, refreshCashbackEntries, refreshOrderInventoryState, supabase, update]);
 
+  const updateOrderLifecycle = useCallback(async (
+    id: string,
+    lifecycle: { operationalStatus: OrderOperationalStatus; paymentStatus: OrderPaymentStatus; reason: string },
+  ) => {
+    const currentOrder = dataRef.current.orders.find((order) => order.id === id);
+    if (!currentOrder) throw new Error("Pedido não encontrado.");
+
+    let operationalStatus = lifecycle.operationalStatus;
+    let paymentStatus = lifecycle.paymentStatus;
+    const currentPayment = orderPaymentStatus(currentOrder);
+    const reason = lifecycle.reason.trim();
+    if (lifecycleReasonRequired(currentOrder, operationalStatus, paymentStatus) && reason.length < 5) {
+      throw new Error("Explique a alteração em pelo menos 5 caracteres.");
+    }
+    if (["Em preparação", "Enviado", "Entregue"].includes(operationalStatus) && paymentStatus !== "Recebido") {
+      throw new Error("Confirme o pagamento antes de preparar ou entregar.");
+    }
+    if (operationalStatus === "Cancelado") {
+      paymentStatus = ["Recebido", "Parcial"].includes(currentPayment) ? "Estornado" : "Cancelado";
+    } else if (["Estornado", "Cancelado"].includes(paymentStatus)) {
+      throw new Error("Para estornar ou cancelar o pagamento, cancele também o pedido.");
+    }
+    if (paymentStatus === "Recebido" && ["Novo", "Em atendimento", "Confirmado"].includes(operationalStatus)) {
+      operationalStatus = "Em preparação";
+    }
+
+    const legacyStatus = legacyStatusForLifecycle(operationalStatus, paymentStatus);
+    if (demoMode) {
+      if (legacyStatus !== currentOrder.status) await updateOrderStatus(id, legacyStatus);
+      const changedAt = new Date();
+      await commitMutation(
+        (current) => ({
+          ...current,
+          orders: current.orders.map((order) => order.id === id ? {
+            ...order,
+            operationalStatus,
+            paymentStatus,
+            lifecycleVersion: (order.lifecycleVersion ?? 1) + 1,
+            cancelledAt: operationalStatus === "Cancelado" ? changedAt.toISOString() : "",
+            archiveAfter: operationalStatus === "Cancelado" ? new Date(changedAt.getTime() + 7 * 86_400_000).toISOString() : "",
+            internalNotes: operationalStatus === "Cancelado" && reason
+              ? [order.internalNotes, `Cancelamento: ${reason}`].filter(Boolean).join("\n")
+              : order.internalNotes,
+          } : order),
+        }),
+        async () => undefined,
+        "Pedido atualizado.",
+      );
+      return;
+    }
+
+    if (!supabase) throw new Error("Conexão indisponível.");
+    const { error } = await supabase.rpc("update_tenant_order_lifecycle", {
+      p_tenant_id: dataRef.current.tenant.id,
+      p_order_id: id,
+      p_operational_status: operationalStatus,
+      p_payment_status: paymentStatus,
+      p_expected_version: currentOrder.lifecycleVersion ?? 1,
+      p_reason: reason,
+    });
+    if (error) throw new Error(error.message);
+    await refreshOrderInventoryState(id, currentOrder.items.map((item) => item.productId));
+    await refreshCashbackEntries();
+    toast({ message: "Pedido atualizado.", kind: "success" });
+  }, [commitMutation, demoMode, refreshCashbackEntries, refreshOrderInventoryState, supabase, toast, updateOrderStatus]);
+
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
       (current) => ({ ...current, orders: current.orders.map((order) => order.id === id ? { ...order, internalNotes: details.internalNotes, trackingCode: details.trackingCode } : order) }),
@@ -1530,6 +1657,8 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
             ...item,
             archivedAt,
             archivedBy: archived ? currentUser.email : "",
+            archiveAfter: archived ? item.archiveAfter : "",
+            lifecycleVersion: archived ? item.lifecycleVersion : (item.lifecycleVersion ?? 1) + 1,
           } : item),
         };
       },
@@ -1691,6 +1820,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     reorderItem,
     toggleItem,
     updateOrderStatus,
+    updateOrderLifecycle,
     saveOrderDetails,
     adjustOrderFinancialTotal,
     setOrderArchived,
@@ -1703,7 +1833,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, savePageBlock, deletePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, saveOrderDetails, adjustOrderFinancialTotal, setOrderArchived, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, deletePageBlock, savePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, updateOrderLifecycle, saveOrderDetails, adjustOrderFinancialTotal, setOrderArchived, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

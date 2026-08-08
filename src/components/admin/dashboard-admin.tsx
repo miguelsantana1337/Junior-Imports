@@ -25,6 +25,7 @@ import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE
 import { buildCustomerInsights } from "@/lib/crm";
 import { confirmedOrderRevenue } from "@/lib/order-revenue";
 import { officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
+import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 
 const auditEntityLabels: Record<string, string> = {
   products: "Produto",
@@ -57,7 +58,6 @@ export function DashboardAdmin() {
   const activityCategory = data.categories[0];
   const todayKey = formatStoreDateKey(now);
   const activeProducts = data.products.filter((product) => product.active);
-  const activeBanners = data.banners.filter((banner) => banner.active);
   const activeSections = data.sections.filter((section) => section.active);
   const operationOrders = officialOrders(data.orders, data.settings);
   const operationDate = operationStartLabel(data.settings);
@@ -66,8 +66,11 @@ export function DashboardAdmin() {
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
   const ordersToday = operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
-  const newOrders = operationOrders.filter((order) => order.status === "Novo");
-  const paidOrders = operationOrders.filter((order) => order.status === "Pago");
+  const newOrders = operationOrders.filter((order) => orderOperationalStatus(order) === "Novo");
+  const pendingPayments = operationOrders.filter((order) => (
+    !["Cancelado", "Entregue"].includes(orderOperationalStatus(order))
+    && ["Pendente", "Parcial"].includes(orderPaymentStatus(order))
+  ));
   const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
   const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
   const weeklyRevenue = confirmedOrderRevenue(operationOrders, sevenDaysAgo);
@@ -90,13 +93,31 @@ export function DashboardAdmin() {
     year: "numeric",
     timeZone: STORE_TIME_ZONE,
   }).format(now);
+  const priorities = [
+    newOrders.length ? {
+      tone: "info", Icon: IconShoppingBag, title: `${newOrders.length} pedido${newOrders.length === 1 ? " novo precisa" : "s novos precisam"} de atendimento`,
+      description: "Confirme o atendimento para organizar a próxima ação.", href: "/admin/orders?status=Novo", action: "Ver pedidos",
+    } : null,
+    pendingPayments.length ? {
+      tone: "warning", Icon: IconCoin, title: `${pendingPayments.length} pagamento${pendingPayments.length === 1 ? " precisa" : "s precisam"} de confirmação`,
+      description: "Confira o recebimento antes de preparar os produtos.", href: "/admin/orders?payment=Pendente", action: "Conferir pagamentos",
+    } : null,
+    lowStock.length ? {
+      tone: "warning", Icon: IconAlertTriangle, title: `Revise ${lowStock.length} produto${lowStock.length === 1 ? "" : "s"} com estoque baixo`,
+      description: "O saldo está abaixo do nível recomendado.", href: "/admin/inventory", action: "Revisar estoque",
+    } : null,
+    customersNeedingContact.length ? {
+      tone: "info", Icon: IconUsers, title: `${customersNeedingContact.length} cliente${customersNeedingContact.length === 1 ? " está" : "s estão"} perto da recompra`,
+      description: "Prepare o contato no momento certo, sem disparo automático.", href: "/admin/customers", action: "Ver clientes",
+    } : null,
+  ].filter(Boolean).slice(0, 3) as Array<{ tone: string; Icon: typeof IconShoppingBag; title: string; description: string; href: string; action: string }>;
 
   return (
     <div className="admin-dashboard-command">
       <header className="admin-dashboard-hero">
         <div className="admin-dashboard-welcome">
-          <span className="admin-dashboard-kicker">Início</span>
-          <h1><span className="admin-dashboard-title-desktop">{greeting}, {accountName}</span><span className="admin-dashboard-title-mobile">Início</span></h1>
+          <span className="admin-dashboard-kicker">Hoje</span>
+          <h1><span className="admin-dashboard-title-desktop">{greeting}, {accountName}</span><span className="admin-dashboard-title-mobile">Hoje</span></h1>
           <div className="admin-dashboard-subtitle">
             <span>{demoMode ? "Sua loja está pronta para testes" : "Sua loja está pronta para operar"}</span>
             <strong>{demoMode ? <><IconFlask /> Demonstração — não realiza vendas reais</> : <><IconCloudCheck /> Operação conectada — pedidos reais</>}</strong>
@@ -112,7 +133,7 @@ export function DashboardAdmin() {
 
       <section className="admin-workflow-strip" aria-label="Fluxo operacional">
         <Link href="/admin/orders?status=Novo"><span><IconShoppingBag /></span><div><strong>{newOrders.length}</strong><small>Novos pedidos</small></div></Link>
-        <Link href="/admin/orders?status=Pago"><span><IconCoin /></span><div><strong>{paidOrders.length}</strong><small>Pagos para preparar</small></div></Link>
+        <Link href="/admin/orders?payment=Pendente"><span><IconCoin /></span><div><strong>{pendingPayments.length}</strong><small>Pagamentos pendentes</small></div></Link>
         <Link href="/admin/products"><span><IconAlertTriangle /></span><div><strong>{lowStock.length}</strong><small>Estoques para revisar</small></div></Link>
         <Link href="/admin/customers"><span><IconUsers /></span><div><strong>{customersNeedingContact.length}</strong><small>Clientes para contatar</small></div></Link>
       </section>
@@ -127,23 +148,18 @@ export function DashboardAdmin() {
       <div className="admin-command-grid">
         <div className="admin-command-primary">
           <section className="admin-command-panel admin-priorities">
-            <header><h2>Prioridades de hoje</h2></header>
+            <header><h2>Prioridades de hoje</h2><span>No máximo 3</span></header>
             <div className="admin-priority-list">
-              <article>
-                <span className="warning"><IconAlertTriangle /></span><b>1</b>
-                <div><strong>{lowStock.length ? `Revise ${lowStock.length} produtos com estoque baixo` : "Seu estoque está em dia"}</strong><p>{lowStock.length ? "Produtos com estoque ≤ 10 unidades." : "Nenhum produto precisa de atenção imediata."}</p></div>
-                <Link href="/admin/products">Revisar</Link>
-              </article>
-              <article>
-                <span className="danger"><IconPhoto /></span><b>2</b>
-                <div><strong>{activeBanners.length ? `Revise seus ${activeBanners.length} banners ativos` : "Sua vitrine ainda não tem banners ativos"}</strong><p>Banners ajudam a destacar promoções e novidades.</p></div>
-                <Link href="/admin/banners">{activeBanners.length ? "Gerenciar banners" : "Adicionar banner"}</Link>
-              </article>
-              <article>
-                <span className="info"><IconShoppingBag /></span><b>3</b>
-                <div><strong>{customersNeedingContact.length ? `Retome contato com ${customersNeedingContact.length} clientes` : "Relacionamento com clientes em dia"}</strong><p>{customersNeedingContact.length ? "Clientes inativos ou fora da frequência esperada." : "Nenhum cliente precisa de acompanhamento imediato."}</p></div>
-                <Link href="/admin/customers">Abrir CRM</Link>
-              </article>
+              {priorities.map((priority, index) => <article key={priority.title}>
+                <span className={priority.tone}><priority.Icon /></span><b>{index + 1}</b>
+                <div><strong>{priority.title}</strong><p>{priority.description}</p></div>
+                <Link href={priority.href}>{priority.action}</Link>
+              </article>)}
+              {!priorities.length && <article>
+                <span className="info"><IconCloudCheck /></span><b>✓</b>
+                <div><strong>Operação sob controle</strong><p>Nenhuma prioridade crítica precisa de ação agora.</p></div>
+                <Link href="/admin/orders">Ver pedidos</Link>
+              </article>}
             </div>
           </section>
 
