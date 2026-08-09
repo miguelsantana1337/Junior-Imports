@@ -2,11 +2,18 @@
 
 import { LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useCallback, useEffect, useState } from "react";
 import { loginAction } from "@/app/admin/auth-actions";
+import { TurnstileWidget } from "@/components/security/turnstile-widget";
 
 export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "" }: { demoEmail: string; demoPassword: string; demoMode: boolean; notice?: string }) {
-  const [state, action, pending] = useActionState(loginAction, { error: "" });
+  const [state, action, pending] = useActionState(loginAction, { error: "", captchaVersion: 0 });
+  const [captchaToken, setCaptchaToken] = useState("");
+  const captchaEnabled = !demoMode && Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
+  const handleCaptchaToken = useCallback((token: string) => setCaptchaToken(token), []);
+  useEffect(() => {
+    setCaptchaToken("");
+  }, [state.captchaVersion]);
   return (
     <div className="admin-login-page">
       <form className="admin-login-card" action={action}>
@@ -21,10 +28,14 @@ export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "" 
           </span>
           <input name="password" type="password" required defaultValue={demoMode ? demoPassword : ""} autoComplete="current-password" />
         </label>
+        {!demoMode && <>
+          <input type="hidden" name="captchaToken" value={captchaToken} />
+          <TurnstileWidget key={state.captchaVersion} onToken={handleCaptchaToken} description="Verificação automática contra tentativas robotizadas de acesso." />
+        </>}
         {demoMode && <div className="demo-credentials"><strong>Acesso demonstrativo</strong><span>{demoEmail}</span><span>{demoPassword}</span></div>}
         {notice && <p className="admin-data-message" role="status">{notice}</p>}
         {state.error && <p className="admin-form-error" role="alert">{state.error}</p>}
-        <button className="button button-primary button-full button-large" disabled={pending}><LockKeyhole /> {pending ? "Entrando..." : "Entrar"}</button>
+        <button className="button button-primary button-full button-large" disabled={pending || (captchaEnabled && !captchaToken)}><LockKeyhole /> {pending ? "Entrando..." : "Entrar"}</button>
         <Link className="text-button" href="/">Voltar para a loja</Link>
       </form>
     </div>

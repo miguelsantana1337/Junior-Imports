@@ -23,8 +23,8 @@ import Link from "next/link";
 import { useAdminData } from "./admin-data-provider";
 import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
 import { buildCustomerInsights } from "@/lib/crm";
-import { confirmedOrderRevenue } from "@/lib/order-revenue";
-import { officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
+import { orderPaymentsRevenue } from "@/lib/order-payments";
+import { officialFinancialTransactions, officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
 import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 
 const auditEntityLabels: Record<string, string> = {
@@ -60,6 +60,7 @@ export function DashboardAdmin() {
   const activeProducts = data.products.filter((product) => product.active);
   const activeSections = data.sections.filter((section) => section.active);
   const operationOrders = officialOrders(data.orders, data.settings);
+  const operationTransactions = officialFinancialTransactions(data.financialTransactions, data.settings);
   const operationDate = operationStartLabel(data.settings);
   const operationStart = operationStartTime(data.settings);
   const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
@@ -73,7 +74,7 @@ export function DashboardAdmin() {
   ));
   const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
   const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
-  const weeklyRevenue = confirmedOrderRevenue(operationOrders, sevenDaysAgo);
+  const weeklyRevenue = orderPaymentsRevenue(operationTransactions, sevenDaysAgo);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(referenceNow - (6 - index) * 86_400_000);
@@ -100,7 +101,7 @@ export function DashboardAdmin() {
     } : null,
     pendingPayments.length ? {
       tone: "warning", Icon: IconCoin, title: `${pendingPayments.length} pagamento${pendingPayments.length === 1 ? " precisa" : "s precisam"} de confirmação`,
-      description: "Confira o recebimento antes de preparar os produtos.", href: "/admin/orders?payment=Pendente", action: "Conferir pagamentos",
+      description: "Confira os valores recebidos e o saldo de cada pedido.", href: "/admin/orders?payment=open", action: "Conferir pagamentos",
     } : null,
     lowStock.length ? {
       tone: "warning", Icon: IconAlertTriangle, title: `Revise ${lowStock.length} produto${lowStock.length === 1 ? "" : "s"} com estoque baixo`,
@@ -133,14 +134,14 @@ export function DashboardAdmin() {
 
       <section className="admin-workflow-strip" aria-label="Fluxo operacional">
         <Link href="/admin/orders?status=Novo"><span><IconShoppingBag /></span><div><strong>{newOrders.length}</strong><small>Novos pedidos</small></div></Link>
-        <Link href="/admin/orders?payment=Pendente"><span><IconCoin /></span><div><strong>{pendingPayments.length}</strong><small>Pagamentos pendentes</small></div></Link>
+        <Link href="/admin/orders?payment=open"><span><IconCoin /></span><div><strong>{pendingPayments.length}</strong><small>Pagamentos pendentes</small></div></Link>
         <Link href="/admin/products"><span><IconAlertTriangle /></span><div><strong>{lowStock.length}</strong><small>Estoques para revisar</small></div></Link>
         <Link href="/admin/customers"><span><IconUsers /></span><div><strong>{customersNeedingContact.length}</strong><small>Clientes para contatar</small></div></Link>
       </section>
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
         <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
-        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong className="admin-money-value">{formatMoney(weeklyRevenue)}</strong><p>Pedidos pagos · últimos 7 dias</p></div></article>
+        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong className="admin-money-value">{formatMoney(weeklyRevenue)}</strong><p>Pagamentos recebidos · últimos 7 dias</p></div></article>
         <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
         <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
       </section>

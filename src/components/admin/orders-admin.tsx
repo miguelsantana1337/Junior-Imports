@@ -1,17 +1,18 @@
 "use client";
 
-import { Archive, ArchiveRestore, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, MessageCircle, MoreVertical, PackagePlus, Plus, Save, Search, Trash2, Truck, UserRound, X } from "lucide-react";
+import { Archive, ArchiveRestore, CalendarDays, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, MessageCircle, MoreVertical, PackagePlus, Plus, Save, Search, Trash2, Truck, UserRound, WalletCards, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel, StatusTag } from "./admin-ui";
 import { calculateCart } from "@/lib/commerce";
-import { formatDateTime, formatMoney } from "@/lib/format";
+import { formatDateTime, formatMoney, formatStoreDateKey } from "@/lib/format";
 import { manualOrderSchema, type ManualOrderInput } from "@/lib/validation";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import { historicalOrders, officialOrders, operationStartLabel } from "@/lib/operation-scope";
 import { canArchiveOrder, isOrderArchived, orderFinancialAdjustment, orderFinancialTotal } from "@/lib/order-finance";
+import { orderPaymentSummary } from "@/lib/order-payments";
 import {
   lifecycleChangeConsequences,
   lifecycleReasonRequired,
@@ -29,6 +30,11 @@ import { AdminSearchSelect, type AdminSearchOption } from "./admin-search-select
 const statuses = operationalOrderStatuses;
 const paymentStatuses = orderPaymentStatuses;
 const states = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
+
+function parseMoneyInput(value: string) {
+  const normalized = value.includes(",") ? value.replace(/\./g, "").replace(",", ".") : value;
+  return Number(normalized);
+}
 
 function emptyManualOrder(): ManualOrderInput {
   return {
@@ -78,7 +84,9 @@ export function OrdersAdmin() {
     const matches = !normalized || `${order.code} ${order.customer.name} ${order.customer.email} ${order.customer.phone}`.toLocaleLowerCase("pt-BR").includes(normalized);
     const matchesArchive = archiveView === "archived" ? isOrderArchived(order, referenceDate) : !isOrderArchived(order, referenceDate);
     const matchesStatus = status === "all" || orderOperationalStatus(order) === status;
-    const matchesPayment = paymentStatus === "all" || orderPaymentStatus(order) === paymentStatus;
+    const matchesPayment = paymentStatus === "all"
+      || (paymentStatus === "open" && ["Pendente", "Parcial"].includes(orderPaymentStatus(order)))
+      || orderPaymentStatus(order) === paymentStatus;
     return matches && matchesArchive && matchesStatus && matchesPayment;
   }), [archiveView, paymentStatus, query, referenceDate, scopeOrders, status]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
@@ -99,7 +107,7 @@ export function OrdersAdmin() {
         <div className="admin-order-status-strip" aria-label="Etapas dos pedidos">
           <button className={status === "all" && paymentStatus === "all" ? "active" : ""} onClick={() => { setStatus("all"); setPaymentStatus("all"); setPage(1); }}><span>Todos</span><strong>{archiveView === "archived" ? archivedCount : activeCount}</strong></button>
           <button className={status === "Novo" && paymentStatus === "all" ? "active" : ""} onClick={() => { setStatus("Novo"); setPaymentStatus("all"); setPage(1); }}><span>Novos</span><strong>{statusCounts.Novo ?? 0}</strong></button>
-          <button className={status === "all" && paymentStatus === "Pendente" ? "active" : ""} onClick={() => { setStatus("all"); setPaymentStatus("Pendente"); setPage(1); }}><span>Aguardando pagamento</span><strong>{paymentCounts.Pendente ?? 0}</strong></button>
+          <button className={status === "all" && paymentStatus === "open" ? "active" : ""} onClick={() => { setStatus("all"); setPaymentStatus("open"); setPage(1); }}><span>Aguardando pagamento</span><strong>{(paymentCounts.Pendente ?? 0) + (paymentCounts.Parcial ?? 0)}</strong></button>
           <button className={status === "all" && paymentStatus === "Recebido" ? "active" : ""} onClick={() => { setStatus("all"); setPaymentStatus("Recebido"); setPage(1); }}><span>Pagos</span><strong>{paymentCounts.Recebido ?? 0}</strong></button>
           <button className={status === "Em preparação" && paymentStatus === "all" ? "active" : ""} onClick={() => { setStatus("Em preparação"); setPaymentStatus("all"); setPage(1); }}><span>Em preparação</span><strong>{statusCounts["Em preparação"] ?? 0}</strong></button>
           <button className={status === "Entregue" && paymentStatus === "all" ? "active" : ""} onClick={() => { setStatus("Entregue"); setPaymentStatus("all"); setPage(1); }}><span>Entregues</span><strong>{statusCounts.Entregue ?? 0}</strong></button>
@@ -109,21 +117,23 @@ export function OrdersAdmin() {
           <label className="admin-search-field"><Search /><input value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} placeholder="Buscar por pedido, cliente, e-mail ou telefone" aria-label="Buscar pedidos" /></label>
           {operationDate && <label><span>Período</span><select value={scope} onChange={(event) => { setScope(event.target.value as "official" | "history"); setPage(1); }}><option value="official">Desde {operationDate}</option><option value="history">Histórico anterior</option></select></label>}
           <label className="admin-order-status-select"><span>Situação do pedido</span><select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">Todas</option>{statuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
-          <label className="admin-order-status-select"><span>Pagamento</span><select value={paymentStatus} onChange={(event) => { setPaymentStatus(event.target.value); setPage(1); }}><option value="all">Todos</option>{paymentStatuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
+          <label className="admin-order-status-select"><span>Pagamento</span><select value={paymentStatus} onChange={(event) => { setPaymentStatus(event.target.value); setPage(1); }}><option value="all">Todos</option><option value="open">Pendente ou parcial</option>{paymentStatuses.map((item) => <option value={item} key={item}>{item}</option>)}</select></label>
           <strong>{filtered.length} pedido{filtered.length === 1 ? "" : "s"}</strong>
         </div>
         {visible.length ? (
           <>
-            <div className="admin-table-wrap admin-orders-desktop"><table className="admin-table admin-orders-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Pagamento</th><th>Financeiro</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{visible.map((order) => { const financialTotal = orderFinancialTotal(order); const adjusted = financialTotal !== order.total; const operational = orderOperationalStatus(order); const payment = orderPaymentStatus(order); return <tr key={order.id}><td><button className="admin-table-link" onClick={() => setSelected(order)}>{order.code}</button>{isOrderArchived(order, referenceDate) && <small className="table-secondary">Arquivado</small>}</td><td><button className="admin-customer-cell admin-table-link" onClick={() => setSelected(order)}><strong>{order.customer.name}</strong><small>{order.customer.email}</small></button></td><td>{formatDateTime(order.createdAt)}</td><td><div className="admin-payment-cell"><span className={payment === "Pendente" || payment === "Parcial" ? "pending" : payment === "Recebido" ? "received" : "cancelled"}>{payment}</span><small>{order.payment === "Cartao" ? "Cartão" : order.payment}</small></div></td><td><strong>{formatMoney(financialTotal)}</strong>{adjusted && <small className="table-secondary">Pedido: {formatMoney(order.total)}</small>}</td><td><StatusTag active={operational !== "Cancelado"}>{operational}</StatusTag></td><td><div className="admin-actions admin-row-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></td></tr>; })}</tbody></table></div>
+            <div className="admin-table-wrap admin-orders-desktop"><table className="admin-table admin-orders-table"><thead><tr><th>Pedido</th><th>Cliente</th><th>Data</th><th>Pagamento</th><th>Financeiro</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{visible.map((order) => { const financialTotal = orderFinancialTotal(order); const paymentSummary = orderPaymentSummary(order, data.financialTransactions); const adjusted = financialTotal !== order.total; const operational = orderOperationalStatus(order); const payment = orderPaymentStatus(order); return <tr key={order.id}><td><button className="admin-table-link" onClick={() => setSelected(order)}>{order.code}</button>{isOrderArchived(order, referenceDate) && <small className="table-secondary">Arquivado</small>}</td><td><button className="admin-customer-cell admin-table-link" onClick={() => setSelected(order)}><strong>{order.customer.name}</strong><small>{order.customer.email}</small></button></td><td>{formatDateTime(order.createdAt)}</td><td><div className="admin-payment-cell"><span className={payment === "Pendente" || payment === "Parcial" ? "pending" : payment === "Recebido" ? "received" : "cancelled"}>{payment}</span><small>{order.payment === "Cartao" ? "Cartão" : order.payment}</small></div></td><td><strong>{formatMoney(financialTotal)}</strong>{paymentSummary.paid > 0 && paymentSummary.remaining > 0 && <small className="table-secondary">Recebido: {formatMoney(paymentSummary.paid)} · falta {formatMoney(paymentSummary.remaining)}</small>}{adjusted && <small className="table-secondary">Pedido: {formatMoney(order.total)}</small>}</td><td><StatusTag active={operational !== "Cancelado"}>{operational}</StatusTag></td><td><div className="admin-actions admin-row-actions"><button className="admin-button" onClick={() => setAssistantTarget({ order })}><MessageCircle /> WhatsApp</button><button className="admin-button" onClick={() => setSelected(order)}>Abrir <ChevronRight /></button></div></td></tr>; })}</tbody></table></div>
             <div className="admin-mobile-cards admin-orders-mobile-list">{visible.map((order) => {
               const itemCount = order.items.reduce((total, item) => total + item.quantity, 0);
               const paymentLabel = orderPaymentStatus(order);
               const operational = orderOperationalStatus(order);
               const financialTotal = orderFinancialTotal(order);
+              const paymentSummary = orderPaymentSummary(order, data.financialTransactions);
               return <article className="admin-order-mobile-card" key={order.id}>
                 <header><button className="admin-table-link" onClick={() => setSelected(order)}>{order.code}</button><time dateTime={order.createdAt}>{formatDateTime(order.createdAt)}{isOrderArchived(order, referenceDate) ? " · Arquivado" : ""}</time></header>
                 <div className="admin-order-mobile-main"><strong>{order.customer.name}</strong><b>{formatMoney(financialTotal)}</b></div>
                 {financialTotal !== order.total && <small className="table-secondary">Pedido: {formatMoney(order.total)}</small>}
+                {paymentSummary.paid > 0 && paymentSummary.remaining > 0 && <small className="table-secondary">Recebido {formatMoney(paymentSummary.paid)} · falta {formatMoney(paymentSummary.remaining)}</small>}
                 <button className="admin-order-mobile-items" type="button" onClick={() => setSelected(order)}>{itemCount} {itemCount === 1 ? "unidade" : "unidades"} <ChevronDown /></button>
                 <footer>
                   <div className="admin-order-mobile-statuses"><span className={`admin-payment-pill ${paymentLabel === "Pendente" || paymentLabel === "Parcial" ? "pending" : paymentLabel === "Recebido" ? "received" : "cancelled"}`}>{paymentLabel}</span><StatusTag active={operational !== "Cancelado"}>{operational}</StatusTag></div>
@@ -296,6 +306,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
     currentUser,
     referenceNow,
     updateOrderLifecycle,
+    registerOrderPayment,
     saveOrderDetails,
     adjustOrderFinancialTotal,
     setOrderArchived,
@@ -314,12 +325,19 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
   const [trackingCode, setTrackingCode] = useState(order.trackingCode);
   const [financialTotal, setFinancialTotal] = useState(String(orderFinancialTotal(order).toFixed(2)));
   const [financialReason, setFinancialReason] = useState("");
+  const [paymentFormOpen, setPaymentFormOpen] = useState(false);
+  const [paymentMode, setPaymentMode] = useState<"full" | "partial">("full");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentDate, setPaymentDate] = useState(() => formatStoreDateKey(referenceNow));
+  const [paymentNote, setPaymentNote] = useState("");
+  const [savingPayment, setSavingPayment] = useState(false);
   const [error, setError] = useState("");
   const panelRef = useAdminDialog(onClose);
   const archived = isOrderArchived(order, new Date(referenceNow));
   const currentFinancialTotal = orderFinancialTotal(order);
+  const paymentSummary = orderPaymentSummary(order, data.financialTransactions);
   const adjustment = orderFinancialAdjustment(order);
-  const typedFinancialTotal = Number(financialTotal.replace(",", "."));
+  const typedFinancialTotal = parseMoneyInput(financialTotal);
   const financialChanged = Number.isFinite(typedFinancialTotal) && Math.abs(typedFinancialTotal - currentFinancialTotal) >= 0.01;
   const canManageFinance = currentUser.role === "owner" || currentUser.permissions.includes("finance");
   const lifecycleChanged = operationalStatus !== currentOperationalStatus || paymentStatus !== currentPaymentStatus;
@@ -327,9 +345,45 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
   const consequences = lifecycleChangeConsequences(order, operationalStatus, paymentStatus);
   const nextAction = archived ? null : nextOrderAction(order);
   const terminalOrder = currentOperationalStatus === "Cancelado";
-  const allowedPaymentStatuses = operationalStatus === "Cancelado"
-    ? ([currentPaymentStatus === "Recebido" || currentPaymentStatus === "Parcial" ? "Estornado" : "Cancelado"] as OrderPaymentStatus[])
-    : (["Pendente", "Parcial", "Recebido"] as OrderPaymentStatus[]);
+
+  useEffect(() => {
+    setOperationalStatus(currentOperationalStatus);
+    setPaymentStatus(currentPaymentStatus);
+  }, [currentOperationalStatus, currentPaymentStatus]);
+
+  useEffect(() => {
+    if (!paymentFormOpen || paymentMode !== "full") return;
+    setPaymentAmount(paymentSummary.remaining.toFixed(2));
+  }, [paymentFormOpen, paymentMode, paymentSummary.remaining]);
+
+  function openPaymentForm(mode: "full" | "partial") {
+    setPaymentMode(mode);
+    setPaymentAmount(mode === "full" ? paymentSummary.remaining.toFixed(2) : "");
+    setPaymentDate(formatStoreDateKey(referenceNow));
+    setPaymentNote("");
+    setError("");
+    setPaymentFormOpen(true);
+  }
+
+  async function submitPayment(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const amount = parseMoneyInput(paymentAmount);
+    const today = formatStoreDateKey(referenceNow);
+    const paidAt = paymentDate === today
+      ? new Date(referenceNow).toISOString()
+      : new Date(`${paymentDate}T12:00:00-03:00`).toISOString();
+    setSavingPayment(true);
+    setError("");
+    try {
+      await registerOrderPayment(order.id, { amount, paidAt, note: paymentNote });
+      setPaymentFormOpen(false);
+      setPaymentNote("");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Não foi possível registrar o pagamento.");
+    } finally {
+      setSavingPayment(false);
+    }
+  }
 
   function selectOperationalStatus(value: OrderOperationalStatus) {
     setOperationalStatus(value);
@@ -388,6 +442,10 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
       await toggleArchive();
       return;
     }
+    if (nextAction.paymentStatus === "Recebido") {
+      openPaymentForm("full");
+      return;
+    }
     setOperationalStatus(nextAction.operationalStatus ?? currentOperationalStatus);
     setPaymentStatus(nextAction.paymentStatus ?? currentPaymentStatus);
     setLifecycleReason("");
@@ -423,6 +481,51 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
           </section>
         </div>
 
+        <section className="order-payment-card">
+          <div className="order-payment-heading">
+            <WalletCards />
+            <div><span>RECEBIMENTOS</span><h3>Pagamento integral ou em partes</h3><p>Registre cada valor no dia em que ele entrar. O pedido só fica quitado quando o saldo chegar a zero.</p></div>
+            <strong className={`order-payment-state ${currentPaymentStatus === "Recebido" ? "received" : currentPaymentStatus === "Parcial" ? "partial" : ["Estornado", "Cancelado"].includes(currentPaymentStatus) ? "cancelled" : "pending"}`}>{currentPaymentStatus}</strong>
+          </div>
+          <div className="order-payment-summary">
+            <div><span>Total a receber</span><strong>{formatMoney(paymentSummary.total)}</strong></div>
+            <div className="received"><span>Já recebido</span><strong>{formatMoney(paymentSummary.paid)}</strong></div>
+            <div className={paymentSummary.remaining > 0 ? "remaining" : "settled"}><span>Falta receber</span><strong>{formatMoney(paymentSummary.remaining)}</strong></div>
+          </div>
+
+          {paymentSummary.history.length > 0 && <div className="order-payment-history">
+            <header><strong>Histórico de recebimentos</strong><span>{paymentSummary.history.length} lançamento{paymentSummary.history.length === 1 ? "" : "s"}</span></header>
+            {paymentSummary.history.map((payment, index) => <div className="order-payment-history-row" key={payment.id}>
+              <span className={payment.status === "paid" ? "paid" : "cancelled"}>{payment.status === "paid" ? <CheckCircle2 /> : <X />}</span>
+              <div><strong>{payment.status === "paid" ? `Pagamento ${paymentSummary.history.length - index}` : "Pagamento cancelado"}</strong><small>{formatDateTime(payment.paidAt || payment.createdAt)}{payment.notes ? ` · ${payment.notes}` : ""}</small></div>
+              <b>{formatMoney(payment.amount)}</b>
+            </div>)}
+          </div>}
+
+          {!paymentFormOpen && paymentSummary.remaining > 0 && !archived && !["Cancelado", "Entregue"].includes(currentOperationalStatus) && <div className="order-payment-actions">
+            <div><strong>Entrou algum valor?</strong><span>Você pode quitar o saldo ou registrar somente a parcela recebida.</span></div>
+            <button className="admin-button primary" type="button" disabled={!canManageFinance} onClick={() => openPaymentForm("full")}><Plus /> Registrar pagamento</button>
+          </div>}
+
+          {paymentFormOpen && <form className="order-payment-form" onSubmit={submitPayment}>
+            <div className="order-payment-mode" role="radiogroup" aria-label="Tipo de pagamento">
+              <button type="button" role="radio" aria-checked={paymentMode === "full"} className={paymentMode === "full" ? "active" : ""} onClick={() => { setPaymentMode("full"); setPaymentAmount(paymentSummary.remaining.toFixed(2)); }}><CheckCircle2 /><span><strong>Pagamento integral</strong><small>Quitar {formatMoney(paymentSummary.remaining)}</small></span></button>
+              <button type="button" role="radio" aria-checked={paymentMode === "partial"} className={paymentMode === "partial" ? "active" : ""} onClick={() => { setPaymentMode("partial"); setPaymentAmount(""); }}><WalletCards /><span><strong>Pagamento em partes</strong><small>Informar somente o que entrou</small></span></button>
+            </div>
+            <div className="order-payment-fields">
+              <label>Valor recebido<input aria-label="Valor recebido" inputMode="decimal" required value={paymentAmount} readOnly={paymentMode === "full"} onChange={(event) => setPaymentAmount(event.target.value)} placeholder="0,00" /></label>
+              <label>Data do recebimento<div className="order-payment-date"><CalendarDays /><input aria-label="Data do recebimento" type="date" required max={formatStoreDateKey(referenceNow)} value={paymentDate} onChange={(event) => setPaymentDate(event.target.value)} /></div></label>
+              <label>Observação (opcional)<input aria-label="Observação do pagamento" maxLength={300} value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Ex.: primeira parcela via Pix" /></label>
+            </div>
+            <div className="order-payment-form-footer">
+              <p>{paymentMode === "full" ? "Ao confirmar, o pedido ficará pago e seguirá para preparação." : "O pedido continuará com pagamento parcial até que todo o saldo seja recebido."}</p>
+              <div><button className="admin-button" type="button" onClick={() => setPaymentFormOpen(false)}>Cancelar</button><button className="admin-button primary" disabled={savingPayment || !paymentAmount || parseMoneyInput(paymentAmount) <= 0}>{savingPayment ? "Registrando..." : "Confirmar recebimento"}</button></div>
+            </div>
+          </form>}
+          {!canManageFinance && <small className="order-financial-help">Seu usuário precisa da permissão Financeiro para registrar recebimentos.</small>}
+          {currentPaymentStatus === "Recebido" && <div className="order-payment-settled"><CheckCircle2 /><div><strong>Pedido quitado</strong><span>O valor integral já foi recebido e o saldo está zerado.</span></div></div>}
+        </section>
+
         <section className="order-financial-card">
           <div className="order-financial-heading"><CircleDollarSign /><div><h3>Controle financeiro</h3><p>Corrija o valor reconhecido no caixa sem mudar o pedido, o cashback ou o estoque.</p></div></div>
           <div className="order-financial-summary">
@@ -432,12 +535,14 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
           </div>
           {order.financialAdjustmentReason && <div className="order-financial-history"><strong>Último ajuste</strong><span>{order.financialAdjustmentReason}</span><small>{order.financialAdjustedAt ? formatDateTime(order.financialAdjustedAt) : ""}{order.financialAdjustedBy ? ` · ${order.financialAdjustedBy}` : ""}</small></div>}
           <div className="order-financial-form">
-            <label>Valor financeiro confirmado<input aria-label="Valor financeiro confirmado" inputMode="decimal" value={financialTotal} disabled={!canManageFinance || currentOperationalStatus === "Cancelado"} onChange={(event) => setFinancialTotal(event.target.value)} /></label>
-            <label>Motivo da alteração<input aria-label="Motivo da alteração financeira" maxLength={300} value={financialReason} disabled={!canManageFinance || currentOperationalStatus === "Cancelado"} onChange={(event) => setFinancialReason(event.target.value)} placeholder="Ex.: valor renegociado no atendimento" /></label>
-            <button className="admin-button primary" disabled={!canManageFinance || currentOperationalStatus === "Cancelado" || savingFinancial || !financialChanged || financialReason.trim().length < 5} onClick={() => void saveFinancialAdjustment()}><Save /> {savingFinancial ? "Salvando..." : "Registrar ajuste"}</button>
+            <label>Valor financeiro confirmado<input aria-label="Valor financeiro confirmado" inputMode="decimal" value={financialTotal} disabled={!canManageFinance || currentOperationalStatus === "Cancelado" || currentPaymentStatus === "Recebido"} onChange={(event) => setFinancialTotal(event.target.value)} /></label>
+            <label>Motivo da alteração<input aria-label="Motivo da alteração financeira" maxLength={300} value={financialReason} disabled={!canManageFinance || currentOperationalStatus === "Cancelado" || currentPaymentStatus === "Recebido"} onChange={(event) => setFinancialReason(event.target.value)} placeholder="Ex.: valor renegociado no atendimento" /></label>
+            <button className="admin-button primary" disabled={!canManageFinance || currentOperationalStatus === "Cancelado" || currentPaymentStatus === "Recebido" || savingFinancial || !financialChanged || financialReason.trim().length < 5 || typedFinancialTotal < paymentSummary.paid} onClick={() => void saveFinancialAdjustment()}><Save /> {savingFinancial ? "Salvando..." : "Registrar ajuste"}</button>
           </div>
           {!canManageFinance && <small className="order-financial-help">Seu usuário precisa da permissão Financeiro para fazer este ajuste.</small>}
           {currentOperationalStatus === "Cancelado" && <small className="order-financial-help">Pedidos cancelados não entram na receita.</small>}
+          {currentPaymentStatus === "Recebido" && <small className="order-financial-help">O total fica bloqueado após a quitação para preservar o histórico das parcelas.</small>}
+          {typedFinancialTotal < paymentSummary.paid && <small className="order-financial-help">O total não pode ser menor que {formatMoney(paymentSummary.paid)}, que já foi recebido.</small>}
         </section>
 
         <div className="order-management-fields">
@@ -457,10 +562,10 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
           <div className="order-lifecycle-heading"><div><span>CONTROLE DO PEDIDO</span><h3>Andamento e pagamento</h3><p>O pedido pode avançar sem que o dinheiro tenha entrado. Por isso, os dois controles ficam separados.</p></div></div>
           <div className="order-status-editor order-lifecycle-editor">
             <label>Situação do pedido<select aria-label="Situação do pedido" value={operationalStatus} disabled={archived || terminalOrder} onChange={(event) => selectOperationalStatus(event.target.value as OrderOperationalStatus)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
-            <label>Situação do pagamento<select aria-label="Situação do pagamento" value={paymentStatus} disabled={archived || terminalOrder || !canManageFinance} onChange={(event) => { setPaymentStatus(event.target.value as OrderPaymentStatus); setReviewingLifecycle(false); }}>{allowedPaymentStatuses.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <div className="order-payment-status-display" aria-label={`Situação do pagamento: ${paymentStatus}`}><span>Situação do pagamento</span><strong>{paymentStatus}</strong><small>Atualizada pelos recebimentos registrados acima.</small></div>
             <button className="admin-button primary" disabled={archived || terminalOrder || saving || !lifecycleChanged || (paymentStatus !== currentPaymentStatus && !canManageFinance)} onClick={() => setReviewingLifecycle(true)}>Revisar alteração</button>
           </div>
-          {!canManageFinance && <small className="order-financial-help">Seu usuário pode atualizar o andamento, mas precisa da permissão Financeiro para alterar o pagamento.</small>}
+          {!canManageFinance && <small className="order-financial-help">Seu usuário pode atualizar o andamento, mas precisa da permissão Financeiro para registrar pagamentos.</small>}
           {terminalOrder && <small className="order-financial-help">Pedidos cancelados ficam preservados para auditoria e não podem voltar à operação.</small>}
           {reviewingLifecycle && lifecycleChanged && <div className="order-lifecycle-confirmation" role="region" aria-label="Confirmar alteração do pedido">
             <div><span>CONFIRME ANTES DE SALVAR</span><h3>O que vai acontecer</h3></div>

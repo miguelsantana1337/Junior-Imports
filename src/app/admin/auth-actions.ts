@@ -19,17 +19,30 @@ import { demoAdminCredentials } from "@/lib/supabase/demo-credentials";
 import { createClient } from "@/lib/supabase/server";
 import { isDemoAdminAllowed } from "@/lib/demo-admin-runtime";
 
-export async function loginAction(_previous: { error: string }, formData: FormData) {
+export interface LoginActionState {
+  error: string;
+  captchaVersion: number;
+}
+
+export async function loginAction(previous: LoginActionState, formData: FormData) {
+  const fail = (error: string): LoginActionState => ({
+    error,
+    captchaVersion: previous.captchaVersion + 1,
+  });
+  const captchaToken = String(formData.get("captchaToken") ?? "").trim();
   const parsed = adminLoginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Dados inválidos." };
+  if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Dados inválidos.");
+  if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() && !captchaToken) {
+    return fail("Conclua a verificação de segurança para entrar.");
+  }
 
   if (!isSupabaseConfigured()) {
-    if (!isDemoAdminAllowed()) return { error: "Acesso administrativo indisponível: configure o Supabase neste ambiente." };
+    if (!isDemoAdminAllowed()) return fail("Acesso administrativo indisponível: configure o Supabase neste ambiente.");
     if (parsed.data.email !== demoAdminCredentials.email || parsed.data.password !== demoAdminCredentials.password) {
-      return { error: "Credenciais demonstrativas incorretas." };
+      return fail("Credenciais demonstrativas incorretas.");
     }
     const cookieStore = await cookies();
     cookieStore.set(platformRuntimeKeys.adminCookie, "1", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
@@ -37,16 +50,19 @@ export async function loginAction(_previous: { error: string }, formData: FormDa
   }
 
   const supabase = await createClient();
-  if (!supabase) return { error: "Supabase não configurado." };
+  if (!supabase) return fail("Supabase não configurado.");
   const loginLimit = await enforceAdminLoginRateLimit(parsed.data.email);
-  if (!loginLimit.allowed) return { error: loginLimit.error };
-  const { data, error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error || !data.user) return { error: "E-mail ou senha inválidos." };
+  if (!loginLimit.allowed) return fail(loginLimit.error);
+  const { data, error } = await supabase.auth.signInWithPassword({
+    ...parsed.data,
+    options: captchaToken ? { captchaToken } : undefined,
+  });
+  if (error || !data.user) return fail("E-mail ou senha inválidos.");
   await clearAdminLoginRateLimit(loginLimit.context);
   const { data: profile } = await supabase.from("profiles").select("role, active, permissions, must_change_password").eq("id", data.user.id).maybeSingle();
   if (!profile?.active || !["owner", "manager", "editor", "support", "viewer", "admin"].includes(profile.role)) {
     await supabase.auth.signOut();
-    return { error: "Este usuário não possui permissão administrativa." };
+    return fail("Este usuário não possui permissão administrativa.");
   }
   const { data: membership } = await supabase.from("tenant_members").select("tenant_id").eq("user_id", data.user.id).eq("active", true).limit(1).maybeSingle();
   if (membership?.tenant_id) {

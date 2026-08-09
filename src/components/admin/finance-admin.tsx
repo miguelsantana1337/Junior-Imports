@@ -6,8 +6,9 @@ import { formatMoney, formatStoreDateKey } from "@/lib/format";
 import { financialSummary } from "@/lib/operations";
 import { financialTransactionSchema } from "@/lib/validation";
 import { historicalFinancialTransactions, officialFinancialTransactions, officialOrders, operationStartLabel } from "@/lib/operation-scope";
-import { isOrderArchived, orderFinancialTotal } from "@/lib/order-finance";
+import { isOrderArchived } from "@/lib/order-finance";
 import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
+import { orderPaymentSummary } from "@/lib/order-payments";
 import type { FinancialTransaction } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel } from "./admin-ui";
@@ -28,7 +29,7 @@ export function FinanceAdmin() {
   const receivable = useMemo(() => officialOrders(data.orders, data.settings)
     .filter((order) => !isOrderArchived(order, new Date(referenceNow)))
     .filter((order) => orderOperationalStatus(order) !== "Cancelado" && ["Pendente", "Parcial"].includes(orderPaymentStatus(order)))
-    .reduce((total, order) => total + orderFinancialTotal(order), 0), [data.orders, data.settings, referenceNow]);
+    .reduce((total, order) => total + orderPaymentSummary(order, data.financialTransactions).remaining, 0), [data.financialTransactions, data.orders, data.settings, referenceNow]);
   const transactions = (scope === "official" ? operationTransactions : historyTransactions).filter((item) => filter === "all" || item.type === filter);
   const operationDate = operationStartLabel(data.settings);
 
@@ -47,7 +48,7 @@ export function FinanceAdmin() {
     {operationDate && <div className="operation-baseline-note"><IconCalendarEvent /><div><strong>Financeiro oficial desde {operationDate}</strong><span>Os indicadores e os relatórios não somam lançamentos anteriores. Use “Histórico anterior” apenas para consulta.</span></div></div>}
     <section className="ops-metric-grid finance">
       <article><span className="green"><IconTrendingUp /></span><div><small>Entrou</small><strong className="admin-money-value">{formatMoney(summary.income)}</strong><p>pagamentos confirmados</p></div></article>
-      <article><span className="blue"><IconWallet /></span><div><small>Ainda vai entrar</small><strong className="admin-money-value">{formatMoney(receivable)}</strong><p>pedidos ativos com pagamento pendente</p></div></article>
+      <article><span className="blue"><IconWallet /></span><div><small>Ainda vai entrar</small><strong className="admin-money-value">{formatMoney(receivable)}</strong><p>saldos pendentes dos pedidos ativos</p></div></article>
       <article><span className="danger"><IconReceipt2 /></span><div><small>Saiu</small><strong className="admin-money-value">{formatMoney(summary.expenses)}</strong><p>custos, despesas e taxas</p></div></article>
       <article><span className={summary.netProfit >= 0 ? "blue" : "danger"}><IconCash /></span><div><small>Sobrou</small><strong className="admin-money-value">{formatMoney(summary.netProfit)}</strong><p>{summary.marginPercent.toFixed(1)}% do que entrou</p></div></article>
     </section>

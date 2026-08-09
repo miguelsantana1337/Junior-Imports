@@ -225,8 +225,10 @@ test("ajusta o financeiro e arquiva um pedido sem apagar o histórico", async ({
   await expect(page.getByRole("status").filter({ hasText: "Valor financeiro atualizado" })).toBeVisible();
   await expect(detail.getByText("R$ 111,50", { exact: true }).first()).toBeVisible();
 
+  await detail.getByRole("button", { name: "Registrar pagamento" }).click();
+  await detail.getByRole("button", { name: "Confirmar recebimento" }).click();
+  await expect(detail.getByText("Pedido quitado", { exact: true })).toBeVisible();
   await detail.getByLabel("Situação do pedido").selectOption("Entregue");
-  await detail.getByLabel("Situação do pagamento").selectOption("Recebido");
   await detail.getByRole("button", { name: "Revisar alteração" }).click();
   await detail.getByRole("button", { name: "Confirmar alteração" }).click();
   await expect(detail).toBeHidden();
@@ -253,6 +255,38 @@ test("ajusta o financeiro e arquiva um pedido sem apagar o histórico", async ({
   await expect(detail.getByText("Fora da fila operacional", { exact: true })).toBeVisible();
   await detail.getByRole("button", { name: "Restaurar", exact: true }).click();
   await expect(detail).toBeHidden();
+});
+
+test("registra um pedido pago em duas partes e quita somente no saldo final", async ({ page }) => {
+  await login(page);
+  await openSection(page, "Pedidos");
+  await page.getByRole("button", { name: "Criar pedido", exact: true }).click();
+
+  const creation = page.getByRole("dialog", { name: "Criar pedido" });
+  await creation.getByLabel("Nome completo do cliente").fill("Cliente Pagamento Parcelado");
+  await creation.getByLabel("WhatsApp do cliente").fill("(31) 99999-7788");
+  await creation.getByLabel("E-mail do cliente").fill("parcelado@exemplo.com");
+  const productSearch = creation.getByRole("combobox", { name: "Produto 1", exact: true });
+  await productSearch.fill("Organizador semanal premium");
+  await creation.getByRole("option", { name: /Organizador semanal premium/ }).click();
+  await creation.getByRole("button", { name: "Criar pedido e reservar estoque" }).click();
+
+  const detail = page.getByRole("dialog", { name: /Pedido / });
+  await detail.getByRole("button", { name: "Registrar pagamento" }).click();
+  await detail.getByRole("radio", { name: /Pagamento em partes/ }).click();
+  await detail.getByLabel("Valor recebido").fill("25");
+  await detail.getByLabel("Observação do pagamento").fill("Primeira parcela via Pix");
+  await detail.getByRole("button", { name: "Confirmar recebimento" }).click();
+
+  await expect(page.getByRole("status").filter({ hasText: "Pagamento parcial registrado" })).toBeVisible();
+  await expect(detail.getByLabel("Situação do pagamento: Parcial")).toBeVisible();
+  await expect(detail.getByText("Primeira parcela via Pix", { exact: false })).toBeVisible();
+
+  await detail.getByRole("button", { name: "Registrar pagamento" }).click();
+  await detail.getByRole("button", { name: "Confirmar recebimento" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "Pagamento integral registrado" })).toBeVisible();
+  await expect(detail.getByText("Pedido quitado", { exact: true })).toBeVisible();
+  await expect(detail.getByLabel("Situação do pagamento: Recebido")).toBeVisible();
 });
 
 test("oferece busca rápida no pedido manual e monitora carrinhos abandonados", async ({ page }) => {
@@ -456,8 +490,12 @@ test("configura mensagem automatica e registra o disparo", async ({ page }) => {
   await expect(orderButton).toBeVisible();
   await orderButton.click();
   const orderModal = page.getByRole("dialog");
+  const registerPayment = orderModal.getByRole("button", { name: "Registrar pagamento" });
+  if (await registerPayment.isVisible()) {
+    await registerPayment.click();
+    await orderModal.getByRole("button", { name: "Confirmar recebimento" }).click();
+  }
   await orderModal.getByLabel("Situação do pedido").selectOption("Entregue");
-  await orderModal.getByLabel("Situação do pagamento").selectOption("Recebido");
   await orderModal.getByRole("button", { name: "Revisar alteração" }).click();
   await orderModal.getByRole("button", { name: "Confirmar alteração" }).click();
   await openSection(page, "Campanhas e automações");

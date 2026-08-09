@@ -1,4 +1,4 @@
-import type { Order, Product, StoreData, StorefrontData, StorefrontProduct } from "@/types/store";
+import type { FinancialTransaction, Order, Product, StoreData, StorefrontData, StorefrontProduct } from "@/types/store";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -42,12 +42,16 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
       financialAdjustmentReason: order.financialAdjustmentReason || "",
       financialAdjustedAt: order.financialAdjustedAt || "",
       financialAdjustedBy: order.financialAdjustedBy || "",
+      amountPaid: Number(order.amountPaid) || 0,
       archivedAt: order.archivedAt || "",
       archivedBy: order.archivedBy || "",
       cashbackTotal: Number(order.cashbackTotal) || 0,
       items: order.items.map((item) => ({ ...item, unitCashback: Number(item.unitCashback) || 0 })),
     })),
-    financialTransactions: arrayOrFallback(candidate.financialTransactions, fallback.financialTransactions),
+    financialTransactions: arrayOrFallback<FinancialTransaction>(candidate.financialTransactions, fallback.financialTransactions).map((transaction) => ({
+      ...transaction,
+      externalKey: transaction.externalKey || "",
+    })),
     inventoryMovements: arrayOrFallback(candidate.inventoryMovements, fallback.inventoryMovements),
     productLots: arrayOrFallback(candidate.productLots, fallback.productLots),
     suppliers: arrayOrFallback(candidate.suppliers, fallback.suppliers),

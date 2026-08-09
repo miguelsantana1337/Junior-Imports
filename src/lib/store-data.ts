@@ -2,6 +2,7 @@ import "server-only";
 
 import { cloneSeedData } from "@/data/seed";
 import { isProductVisibleInCatalog } from "@/lib/product-compliance";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   AdminPermission,
   AdminRole,
@@ -339,6 +340,7 @@ function mapFinancialTransaction(row: Row): FinancialTransaction {
     purchaseOrderId: str(row.purchase_order_id),
     recurring: Boolean(row.recurring),
     notes: str(row.notes),
+    externalKey: str(row.external_key),
     createdAt: str(row.created_at),
   };
 }
@@ -661,6 +663,7 @@ function mapOrder(row: Row): Order {
     status: str(row.status) as Order["status"],
     operationalStatus: (str(row.operational_status) || undefined) as Order["operationalStatus"],
     paymentStatus: (str(row.payment_status) || undefined) as Order["paymentStatus"],
+    amountPaid: num(row.amount_paid),
     lifecycleVersion: num(row.lifecycle_version) || 1,
     cancelledAt: str(row.cancelled_at),
     archiveAfter: str(row.archive_after),
@@ -786,7 +789,10 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
   const canReadAny = (...permissions: AdminPermission[]) => permissions.some(canRead);
 
   if (!options.admin && tenantId) {
-    await supabase.rpc("process_public_marketing_schedule", { p_tenant_id: tenantId });
+    const admin = createAdminClient();
+    if (admin) {
+      await admin.rpc("process_public_marketing_schedule", { p_tenant_id: tenantId });
+    }
   }
 
   const queries = await Promise.all([

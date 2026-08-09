@@ -456,6 +456,8 @@ export interface Order {
   status: OrderStatus;
   operationalStatus?: OrderOperationalStatus;
   paymentStatus?: OrderPaymentStatus;
+  /** Total recebido e ainda não estornado para este pedido. */
+  amountPaid?: number;
   lifecycleVersion?: number;
   cancelledAt?: string;
   archiveAfter?: string;
@@ -487,6 +489,7 @@ export interface FinancialTransaction {
   purchaseOrderId: string;
   recurring: boolean;
   notes: string;
+  externalKey?: string;
   createdAt: string;
 }
 

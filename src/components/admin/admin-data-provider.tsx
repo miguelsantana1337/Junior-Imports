@@ -12,7 +12,7 @@ import {
 } from "react";
 import { useStore } from "@/components/providers/store-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { slugify } from "@/lib/format";
+import { formatStoreDateKey, slugify } from "@/lib/format";
 import { createMessageLogs } from "@/lib/message-automation";
 import {
   createUniqueProductSlug,
@@ -33,6 +33,7 @@ import { normalizeCustomerEmail, normalizeCustomerPhone } from "@/lib/crm";
 import { applyCreatedOrder } from "@/lib/order-state";
 import { normalizeAdminStoreData } from "@/lib/admin-store-data";
 import { canArchiveOrder, orderFinancialTotal } from "@/lib/order-finance";
+import { orderPaymentSummary } from "@/lib/order-payments";
 import {
   legacyStatusForLifecycle,
   lifecycleReasonRequired,
@@ -99,6 +100,7 @@ type PersistedOrder = {
   status: OrderStatus;
   operational_status?: OrderOperationalStatus;
   payment_status?: OrderPaymentStatus;
+  amount_paid?: number;
   lifecycle_version?: number;
   cancelled_at?: string;
   archive_after?: string;
@@ -128,6 +130,7 @@ function financialTransactionFromRow(row: DatabaseRow): FinancialTransaction {
     purchaseOrderId: rowString(row.purchase_order_id),
     recurring: Boolean(row.recurring),
     notes: rowString(row.notes),
+    externalKey: rowString(row.external_key),
     createdAt: rowString(row.created_at),
   };
 }
@@ -227,6 +230,7 @@ interface AdminDataContextValue {
   toggleItem: (key: OrderedKey, id: string) => Promise<void>;
   updateOrderStatus: (id: string, status: OrderStatus) => Promise<void>;
   updateOrderLifecycle: (id: string, update: { operationalStatus: OrderOperationalStatus; paymentStatus: OrderPaymentStatus; reason: string }) => Promise<void>;
+  registerOrderPayment: (id: string, payment: { amount: number; paidAt: string; note: string }) => Promise<void>;
   saveOrderDetails: (id: string, details: { internalNotes: string; trackingCode: string }) => Promise<void>;
   adjustOrderFinancialTotal: (id: string, adjustment: { total: number; reason: string }) => Promise<void>;
   setOrderArchived: (id: string, archived: boolean) => Promise<void>;
@@ -399,7 +403,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
       productsRequest,
       supabase
         .from("orders")
-        .select("id, status, operational_status, payment_status, lifecycle_version, cancelled_at, archive_after, archived_at, archived_by, internal_notes")
+        .select("id, status, operational_status, payment_status, amount_paid, lifecycle_version, cancelled_at, archive_after, archived_at, archived_by, internal_notes")
         .eq("tenant_id", tenantId)
         .eq("id", orderId)
         .maybeSingle(),
@@ -426,6 +430,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
           status: persistedStatus,
           operationalStatus: rowString(persisted?.operational_status) as OrderOperationalStatus,
           paymentStatus: rowString(persisted?.payment_status) as OrderPaymentStatus,
+          amountPaid: rowNumber(persisted?.amount_paid),
           lifecycleVersion: rowNumber(persisted?.lifecycle_version) || 1,
           cancelledAt: rowString(persisted?.cancelled_at),
           archiveAfter: rowString(persisted?.archive_after),
@@ -1068,7 +1073,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
   const saveFinancialTransaction = useCallback(async (transaction: FinancialTransaction) => {
     await commitMutation(
       (current) => ({ ...current, financialTransactions: current.financialTransactions.some((item) => item.id === transaction.id) ? current.financialTransactions.map((item) => item.id === transaction.id ? transaction : item) : [transaction, ...current.financialTransactions] }),
-      () => persist("financial_transactions", { id: transaction.id, type: transaction.type, status: transaction.status, description: transaction.description, amount: transaction.amount, category: transaction.category, account: transaction.account, cost_center: transaction.costCenter, due_date: transaction.dueDate || null, paid_at: transaction.paidAt || null, order_id: transaction.orderId || null, purchase_order_id: transaction.purchaseOrderId || null, recurring: transaction.recurring, notes: transaction.notes, created_at: transaction.createdAt }),
+      () => persist("financial_transactions", { id: transaction.id, type: transaction.type, status: transaction.status, description: transaction.description, amount: transaction.amount, category: transaction.category, account: transaction.account, cost_center: transaction.costCenter, due_date: transaction.dueDate || null, paid_at: transaction.paidAt || null, order_id: transaction.orderId || null, purchase_order_id: transaction.purchaseOrderId || null, recurring: transaction.recurring, notes: transaction.notes, external_key: transaction.externalKey || "", created_at: transaction.createdAt }),
       "Lançamento financeiro salvo.",
     );
   }, [commitMutation, persist]);
@@ -1370,6 +1375,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
       shippingStatus: persisted?.shipping_status ?? calculation.shippingStatus,
       operationalStatus: persisted?.operational_status ?? "Novo",
       paymentStatus: persisted?.payment_status ?? "Pendente",
+      amountPaid: persisted?.amount_paid ?? 0,
       lifecycleVersion: persisted?.lifecycle_version ?? 1,
       cancelledAt: persisted?.cancelled_at ?? "",
       archiveAfter: persisted?.archive_after ?? "",
@@ -1528,6 +1534,9 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     let paymentStatus = lifecycle.paymentStatus;
     const currentPayment = orderPaymentStatus(currentOrder);
     const reason = lifecycle.reason.trim();
+    if (paymentStatus === "Recebido" && currentPayment !== "Recebido" && (currentOrder.amountPaid ?? 0) < orderFinancialTotal(currentOrder)) {
+      throw new Error("Registre o pagamento integral ou as parcelas antes de confirmar o recebimento.");
+    }
     if (lifecycleReasonRequired(currentOrder, operationalStatus, paymentStatus) && reason.length < 5) {
       throw new Error("Explique a alteração em pelo menos 5 caracteres.");
     }
@@ -1583,6 +1592,85 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     toast({ message: "Pedido atualizado.", kind: "success" });
   }, [commitMutation, demoMode, refreshCashbackEntries, refreshOrderInventoryState, supabase, toast, updateOrderStatus]);
 
+  const registerOrderPayment = useCallback(async (
+    id: string,
+    payment: { amount: number; paidAt: string; note: string },
+  ) => {
+    const currentOrder = dataRef.current.orders.find((order) => order.id === id);
+    if (!currentOrder) throw new Error("Pedido não encontrado.");
+    if (!(currentUser.role === "owner" || currentUser.permissions.includes("finance"))) {
+      throw new Error("Seu usuário precisa da permissão Financeiro.");
+    }
+    if (["Cancelado", "Entregue"].includes(currentOrder.operationalStatus ?? currentOrder.status)) {
+      throw new Error("Este pedido não aceita novos pagamentos.");
+    }
+    const summary = orderPaymentSummary(currentOrder, dataRef.current.financialTransactions);
+    const amount = Math.round(Number(payment.amount) * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) throw new Error("Informe um valor maior que zero.");
+    if (amount > summary.remaining) throw new Error(`O valor não pode ultrapassar o saldo de ${summary.remaining.toFixed(2)}.`);
+    const paidAt = new Date(payment.paidAt);
+    if (!Number.isFinite(paidAt.getTime()) || paidAt.getTime() > Date.now() + 5 * 60_000) throw new Error("Informe uma data de pagamento válida.");
+    const nextPaid = Math.round((summary.paid + amount) * 100) / 100;
+    const completed = nextPaid >= summary.total;
+    const transactionId = `order-payment-${id}-${crypto.randomUUID()}`;
+    const transaction: FinancialTransaction = {
+      id: transactionId,
+      type: "income",
+      status: "paid",
+      description: `Pagamento ${currentOrder.code}`,
+      amount,
+      category: "Vendas",
+      account: "Conta principal",
+      costCenter: "Comercial",
+      dueDate: formatStoreDateKey(paidAt),
+      paidAt: paidAt.toISOString(),
+      orderId: id,
+      purchaseOrderId: "",
+      recurring: false,
+      notes: payment.note.trim(),
+      externalKey: `order-payment:${id}:${transactionId}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    if (demoMode) {
+      if (completed && currentOrder.status !== "Pago") await updateOrderStatus(id, "Pago");
+      await commitMutation(
+        (current) => ({
+          ...current,
+          orders: current.orders.map((order) => order.id === id ? {
+            ...order,
+            status: completed ? "Pago" : order.status,
+            operationalStatus: completed && ["Novo", "Em atendimento", "Confirmado"].includes(order.operationalStatus ?? "Novo") ? "Em preparação" : order.operationalStatus,
+            paymentStatus: completed ? "Recebido" : "Parcial",
+            amountPaid: nextPaid,
+            lifecycleVersion: (order.lifecycleVersion ?? 1) + 1,
+          } : order),
+          financialTransactions: [
+            transaction,
+            ...current.financialTransactions.filter((item) => item.id !== `order-income-${id}` && item.externalKey !== `order-income:${id}`),
+          ],
+        }),
+        async () => undefined,
+        completed ? "Pagamento integral registrado." : "Pagamento parcial registrado.",
+      );
+      return;
+    }
+
+    if (!supabase) throw new Error("Conexão indisponível.");
+    const { error } = await supabase.rpc("register_tenant_order_payment", {
+      p_tenant_id: dataRef.current.tenant.id,
+      p_order_id: id,
+      p_amount: amount,
+      p_paid_at: paidAt.toISOString(),
+      p_expected_version: currentOrder.lifecycleVersion ?? 1,
+      p_note: payment.note.trim(),
+    });
+    if (error) throw new Error(error.message);
+    await refreshOrderInventoryState(id, currentOrder.items.map((item) => item.productId));
+    await refreshCashbackEntries();
+    toast({ message: completed ? "Pagamento integral registrado." : "Pagamento parcial registrado.", kind: "success" });
+  }, [commitMutation, currentUser, demoMode, refreshCashbackEntries, refreshOrderInventoryState, supabase, toast, updateOrderStatus]);
+
   const saveOrderDetails = useCallback(async (id: string, details: { internalNotes: string; trackingCode: string }) => {
     await commitMutation(
       (current) => ({ ...current, orders: current.orders.map((order) => order.id === id ? { ...order, internalNotes: details.internalNotes, trackingCode: details.trackingCode } : order) }),
@@ -1603,20 +1691,12 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
         const order = current.orders.find((item) => item.id === id);
         if (!order) throw new Error("Pedido não encontrado.");
         if (order.status === "Cancelado") throw new Error("Pedidos cancelados não geram receita e não podem ter o valor financeiro ajustado.");
-        const adjustedAt = new Date().toISOString();
-        let financialTransactions = current.financialTransactions.map((transaction) => (
-          transaction.orderId === id && transaction.type === "income"
-            ? { ...transaction, amount: total, status: "paid" as const, notes: `Valor financeiro ajustado no pedido. Motivo: ${reason}` }
-            : transaction
-        ));
-        if (["Pago", "Entregue"].includes(order.status) && !financialTransactions.some((transaction) => transaction.orderId === id && transaction.type === "income")) {
-          financialTransactions = [{
-            id: `order-income-${id}`, type: "income", status: "paid", description: `Venda ${order.code}`, amount: total,
-            category: "Vendas", account: "Conta principal", costCenter: "Comercial", dueDate: order.createdAt.slice(0, 10),
-            paidAt: adjustedAt, orderId: id, purchaseOrderId: "", recurring: false,
-            notes: `Valor financeiro ajustado no pedido. Motivo: ${reason}`, createdAt: order.createdAt,
-          }, ...financialTransactions];
+        const paymentSummary = orderPaymentSummary(order, current.financialTransactions);
+        if (total < paymentSummary.paid) throw new Error("O novo total não pode ser menor que o valor já recebido.");
+        if (orderPaymentStatus(order) === "Recebido" && total !== paymentSummary.paid) {
+          throw new Error("O pedido já foi quitado. O total fica bloqueado para preservar o histórico dos pagamentos.");
         }
+        const adjustedAt = new Date().toISOString();
         return {
           ...current,
           orders: current.orders.map((item) => item.id === id ? {
@@ -1627,7 +1707,6 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
             financialAdjustedAt: adjustedAt,
             financialAdjustedBy: currentUser.email,
           } : item),
-          financialTransactions,
         };
       },
       async () => {
@@ -1821,6 +1900,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     toggleItem,
     updateOrderStatus,
     updateOrderLifecycle,
+    registerOrderPayment,
     saveOrderDetails,
     adjustOrderFinancialTotal,
     setOrderArchived,
@@ -1833,7 +1913,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     deleteAdminUser,
     resetData,
     importData,
-  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, deletePageBlock, savePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, updateOrderLifecycle, saveOrderDetails, adjustOrderFinancialTotal, setOrderArchived, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
+  }), [data, demoMode, referenceNow, currentUser, saveProduct, deleteProduct, saveBanner, deleteBanner, saveCategory, deleteCategory, saveSection, savePage, deletePage, deletePageBlock, savePageBlock, movePageBlock, saveFeaturedProducts, saveBannerVisibility, saveCategoryVisibility, saveTrustItems, saveBenefits, saveFaqs, saveMessageAutomation, deleteMessageAutomation, saveCoupon, deleteCoupon, saveCustomer, saveCustomerTask, deleteCustomerTask, saveCustomerContact, saveCashbackCampaign, adjustCustomerCashback, saveMarketingPublication, transitionMarketingPublication, rollbackMarketingPublication, processDueMarketingPublications, testMessageAutomation, retryAutomationRun, createOrder, saveFinancialTransaction, deleteFinancialTransaction, recordInventoryMovement, saveProductLot, saveSupplier, savePurchaseOrder, receivePurchaseOrder, saveReport, deleteReport, recordExportRun, importProducts, importStock, moveItem, reorderItem, toggleItem, updateOrderStatus, updateOrderLifecycle, registerOrderPayment, saveOrderDetails, adjustOrderFinancialTotal, setOrderArchived, saveSettings, uploadMedia, clearOrders, refreshTeamMembers, createAdminUser, updateAdminUser, deleteAdminUser, resetData, importData]);
 
   return <AdminDataContext.Provider value={value}>{children}</AdminDataContext.Provider>;
 }

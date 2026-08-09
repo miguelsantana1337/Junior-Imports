@@ -20,7 +20,13 @@ declare global {
   }
 }
 
-export function TurnstileWidget({ onToken }: { onToken: (token: string) => void }) {
+export function TurnstileWidget({
+  onToken,
+  description = "Verificação automática contra abuso e pedidos robotizados.",
+}: {
+  onToken: (token: string) => void;
+  description?: string;
+}) {
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef("");
@@ -54,7 +60,7 @@ export function TurnstileWidget({ onToken }: { onToken: (token: string) => void 
         onLoad={renderWidget}
       />
       <div ref={containerRef} />
-      <small>Verificação automática contra abuso e pedidos robotizados.</small>
+      <small>{description}</small>
     </div>
   );
 }
