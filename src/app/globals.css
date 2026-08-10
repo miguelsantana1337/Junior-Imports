@@ -103,6 +103,9 @@
 .admin31-mini-list > div > span, .admin31-mini-list > div:not(.movement-list div) { min-width: 0; }
 .admin31-mini-list strong { font-size: 9px; }
 .admin31-mini-list small { color: var(--muted); font-size: 8px; }
+.admin31-referral-code > span:first-child { min-width: 0; display: grid; gap: 3px; }
+.admin31-referral-link-actions { display: flex; align-items: center; gap: 7px; }
+.admin31-referral-link-actions .admin-button { min-height: 36px; padding: 0 10px; }
 .movement-list > div > span { display: grid; gap: 3px; }
 .admin31-funnel { overflow-x: auto; display: flex; gap: 8px; padding: 4px 1px 10px; scroll-snap-type: x mandatory; }
 .admin31-funnel article { min-width: 150px; flex: 1; padding: 13px; display: flex; gap: 10px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); scroll-snap-align: start; }
@@ -225,6 +228,7 @@ html[data-admin-theme="dark"] .admin31-module-nav button.active { background: li
   .admin31-voice { grid-template-columns: 1fr; }
   .admin31-mini-list > div { align-items: stretch; flex-direction: column; }
   .admin31-mini-list > div .admin-button { width: 100%; }
+  .admin31-referral-link-actions { display: grid; grid-template-columns: 1fr 1fr; }
 }
 
 * { box-sizing: border-box; }

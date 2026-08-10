@@ -16,6 +16,10 @@ import {
   writeSensitiveSessionValue,
 } from "@/lib/browser-storage";
 import { canAddProductToCart } from "@/lib/product-compliance";
+import {
+  referralCodeFromSearch,
+  referralStorageKey,
+} from "@/lib/referral-link";
 import type { CartLine, Coupon, PaymentMethod, ShippingDestination } from "@/types/store";
 import type { FunnelStage } from "@/types/admin31";
 import type { CartRecoveryContact } from "@/types/abandoned-cart";
@@ -48,6 +52,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const cartKey = `${data.tenant.id}:cart:v1`;
   const favoritesKey = `${data.tenant.id}:favorites:v1`;
   const cartSessionKey = `${data.tenant.id}:cart-session:v1`;
+  const referralKey = referralStorageKey(data.tenant.id);
   const [lines, setLines] = useState<CartLine[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [coupon, setCoupon] = useState<Coupon | null>(null);
@@ -70,13 +75,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     setHydrated(true);
     const params = new URLSearchParams(window.location.search);
+    const referralCode = referralCodeFromSearch(window.location.search);
+    if (referralCode) writeSensitiveSessionValue(referralKey, referralCode);
     const nextSource = Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"].flatMap((key) => {
       const value = params.get(key)?.trim();
       return value ? [[key, value]] : [];
     }));
+    if (referralCode) nextSource.ref = referralCode;
     if (document.referrer) nextSource.referrer = document.referrer.slice(0, 500);
     setSource(nextSource);
-  }, [cartKey, cartSessionKey, favoritesKey]);
+  }, [cartKey, cartSessionKey, favoritesKey, referralKey]);
 
   useEffect(() => {
     if (hydrated) writeSensitiveSessionValue(cartKey, JSON.stringify(lines));

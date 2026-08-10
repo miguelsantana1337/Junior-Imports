@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Activity, AlertTriangle, Barcode, Boxes, CheckCircle2, ChevronRight, CircleDollarSign,
+  Activity, AlertTriangle, Barcode, Boxes, CheckCircle2, ChevronRight, CircleDollarSign, Copy,
   ExternalLink, Flag, Gift, HeartPulse, Loader2, Megaphone, MessageCircle, Mic,
   PackageCheck, RefreshCw, RotateCcw, Save, ShieldCheck, Sparkles, UsersRound,
 } from "lucide-react";
@@ -10,6 +10,7 @@ import { useConfirm } from "@/components/providers/confirm-provider";
 import { parseMobileOperationDraft } from "@/lib/admin31";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
 import { AdminEmpty, AdminPanel, StatusTag } from "@/components/admin/admin-ui";
+import { buildReferralSharePath, buildReferralShareUrl } from "@/lib/referral-link";
 
 type Row = Record<string, unknown>;
 type ModuleKey = "divergences" | "guardian" | "continuity" | "referrals" | "bundles" | "funnel" | "flags" | "mobile";
@@ -203,6 +204,7 @@ function Referrals({ payload, busy, run }: ModuleProps) {
   const rewards = rows(payload, "rewards");
   const [customerId, setCustomerId] = useState("");
   const [customCode, setCustomCode] = useState("");
+  const [copiedCode, setCopiedCode] = useState("");
   const [bonusAmount, setBonusAmount] = useState(50);
   const [bonusReason, setBonusReason] = useState("Bônus adicional por indicação validada pelo atendimento.");
   const [form, setForm] = useState({ name: "Indique e ganhe", rewardType: "percent", rewardValue: 5, rewardCap: 100, minimum: 0, validDays: 90, maxTotal: 0, maxMonth: 0 });
@@ -223,15 +225,21 @@ function Referrals({ payload, busy, run }: ModuleProps) {
     if (!accepted) return;
     await apiPost("referral_bonus_apply", { customerId, amount: bonusAmount, validDays: 90, confirmationId: confirmation.id, reason: bonusReason });
   }
+  async function copyReferralLink(code: string) {
+    const link = buildReferralShareUrl(window.location.origin, text(payload?.storefrontPath), code);
+    if (!link) throw new Error("Não foi possível montar o link de indicação.");
+    await navigator.clipboard.writeText(link);
+    setCopiedCode(code);
+  }
   return <div className="admin31-two-columns"><AdminPanel title="Campanha de indicação" description="O indicador recebe cashback somente após a primeira compra do indicado ser quitada.">
     <div className="admin31-form-grid"><label className="wide">Nome<input value={form.name} onChange={(event) => update("name", event.target.value)} /></label><label>Tipo<select value={form.rewardType} onChange={(event) => update("rewardType", event.target.value)}><option value="percent">Percentual</option><option value="fixed">Valor fixo</option></select></label><label>Recompensa<input type="number" min={0.01} value={form.rewardValue} onChange={(event) => update("rewardValue", Number(event.target.value))} /></label><label>Limite por bônus (R$)<input type="number" min={0} value={form.rewardCap} onChange={(event) => update("rewardCap", Number(event.target.value))} /></label><label>Pedido mínimo (R$)<input type="number" min={0} value={form.minimum} onChange={(event) => update("minimum", Number(event.target.value))} /></label><label>Validade do crédito (dias)<input type="number" min={1} value={form.validDays} onChange={(event) => update("validDays", Number(event.target.value))} /></label><label>Máximo por mês<input type="number" min={0} value={form.maxMonth} onChange={(event) => update("maxMonth", Number(event.target.value))} /></label></div>
     <div className="admin31-actions"><button className="admin-button primary" disabled={busy === "campaign"} onClick={() => void run("campaign", saveCampaign, "Campanha de indicação ativada.")}><Megaphone /> Ativar campanha</button></div>
     {campaigns.length > 0 && <p className="admin31-note">Campanha atual: <strong>{text(campaigns[0].name)}</strong> · {text(campaigns[0].status)}</p>}
-  </AdminPanel><AdminPanel title="Código do cliente" description="Crie um link compartilhável. O envio continua sendo uma ação humana.">
+  </AdminPanel><AdminPanel title="Código e link do cliente" description="Crie o código e copie um link que o aplica automaticamente no checkout. O compartilhamento continua sendo uma ação humana.">
     <div className="admin31-form-grid"><label className="wide">Cliente<select value={customerId} onChange={(event) => setCustomerId(event.target.value)}><option value="">Selecione...</option>{customers.map((customer) => <option value={text(customer.id)} key={text(customer.id)}>{text(customer.name)} · {text(customer.phone)}</option>)}</select></label><label className="wide">Código personalizado (opcional)<input value={customCode} onChange={(event) => setCustomCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))} placeholder="Ex.: JUNIOR10" /></label></div>
     <div className="admin31-actions"><button className="admin-button primary" disabled={!customerId || busy === "code"} onClick={() => void run("code", () => apiPost("referral_code_save", { customerId, code: customCode || undefined }), "Código criado e pronto para compartilhar.")}><Gift /> Gerar código</button></div>
     <div className="admin31-form-grid admin31-subform"><label>Prêmio manual (R$)<input type="number" min={0.01} max={100000} value={bonusAmount} onChange={(event) => setBonusAmount(Number(event.target.value))} /></label><label className="wide">Motivo auditável<input value={bonusReason} onChange={(event) => setBonusReason(event.target.value)} maxLength={300} /></label></div><div className="admin31-actions"><button className="admin-button" disabled={!customerId || bonusAmount <= 0 || bonusReason.trim().length < 5 || busy === "bonus"} onClick={() => void run("bonus", grantBonus, "Bônus manual liberado e registrado no extrato.")}><CircleDollarSign /> Liberar prêmio manual</button></div>
-    <div className="admin31-mini-list">{codes.slice(0, 8).map((code) => <div key={text(code.id)}><strong>{text(code.code)}</strong><small>{text(customers.find((customer) => text(customer.id) === text(code.customer_id))?.name) || "Cliente"}</small></div>)}</div>
+    <div className="admin31-mini-list">{codes.slice(0, 8).map((code) => { const value = text(code.code); return <div className="admin31-referral-code" key={text(code.id)}><span><strong>{value}</strong><small>{text(customers.find((customer) => text(customer.id) === text(code.customer_id))?.name) || "Cliente"}</small></span><span className="admin31-referral-link-actions"><button className="admin-button" type="button" onClick={() => void run(`copy-${value}`, () => copyReferralLink(value), "Link copiado e pronto para compartilhar.")} disabled={busy === `copy-${value}`}><Copy /> {copiedCode === value ? "Copiado" : "Copiar link"}</button><a className="admin-button" href={buildReferralSharePath(text(payload?.storefrontPath), value)} target="_blank" rel="noreferrer"><ExternalLink /> Testar</a></span></div>; })}</div>
   </AdminPanel><AdminPanel title="Resultado do programa" description="Rastreamento, bloqueios e créditos confirmados." ><div className="admin31-stat-grid compact"><article><UsersRound /><span><small>Indicações</small><strong>{links.length}</strong></span></article><article><Gift /><span><small>Créditos liberados</small><strong>{rewards.filter((item) => text(item.status) === "available").length}</strong></span></article><article><CircleDollarSign /><span><small>Valor premiado</small><strong>{formatMoney(rewards.filter((item) => text(item.status) === "available").reduce((sum, item) => sum + number(item.reward_amount), 0))}</strong></span></article></div></AdminPanel></div>;
 }
 

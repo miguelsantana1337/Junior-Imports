@@ -15,6 +15,16 @@ import { checkoutWhatsappUrl } from "@/lib/whatsapp-order";
 import { CHECKOUT_TERMS_VERSION, checkoutTerms } from "@/lib/checkout-terms";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { normalizePostalCode, type PostalCodeAddress } from "@/lib/postal-code";
+import {
+  normalizeReferralCode,
+  referralCodeFromSearch,
+  referralStorageKey,
+} from "@/lib/referral-link";
+import {
+  readSensitiveSessionValue,
+  removeSensitiveBrowserValue,
+  writeSensitiveSessionValue,
+} from "@/lib/browser-storage";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import type { Order } from "@/types/store";
 
@@ -85,6 +95,7 @@ export function CheckoutScreen() {
   const email = useWatch({ control, name: "email" });
   const calculation = calculate(payment, { city, state, deliveryMethod });
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
+  const referralKey = referralStorageKey(data.tenant.id);
   const cartProducts = useMemo(
     () => lines.map((line) => ({ line, product: data.products.find((item) => item.id === line.productId) })).filter((entry) => entry.product),
     [data.products, lines],
@@ -92,13 +103,33 @@ export function CheckoutScreen() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const linkedCode = referralCodeFromSearch(window.location.search);
+    const savedCode = normalizeReferralCode(readSensitiveSessionValue(referralKey));
+    const nextReferralCode = linkedCode || savedCode;
     const source = Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"].flatMap((key) => {
       const value = params.get(key)?.trim();
       return value ? [[key, value]] : [];
     }));
+    if (nextReferralCode) source.ref = nextReferralCode;
     setAttribution(source);
-    if (source.ref) setReferralCode(source.ref);
-  }, []);
+    if (nextReferralCode) {
+      setReferralCode(nextReferralCode);
+      writeSensitiveSessionValue(referralKey, nextReferralCode);
+    }
+  }, [referralKey]);
+
+  function updateReferralCode(value: string) {
+    const normalized = normalizeReferralCode(value);
+    setReferralCode(normalized);
+    setAttribution((current) => {
+      const next = { ...current };
+      if (normalized) next.ref = normalized;
+      else delete next.ref;
+      return next;
+    });
+    if (normalized) writeSensitiveSessionValue(referralKey, normalized);
+    else removeSensitiveBrowserValue(referralKey);
+  }
 
   useEffect(() => {
     if (deliveryMethod === "pickup") {
@@ -219,6 +250,7 @@ export function CheckoutScreen() {
       }
       persisted = payload.order;
       setIdempotencyKey("");
+      removeSensitiveBrowserValue(referralKey);
     }
 
     const code = persisted?.code ?? `${data.settings.orderPrefix || "PED"}-${nextNumber}`;
@@ -259,7 +291,7 @@ export function CheckoutScreen() {
       <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR COMPRA</span><h1>Revise e envie seu pedido.</h1><p>Ao finalizar, o pedido será registrado e o WhatsApp configurado pela loja abrirá com todos os dados para a equipe confirmar pagamento e entrega ou retirada.</p></div>
       <div className="checkout-grid">
         <form className="checkout-form" onSubmit={handleSubmit(submit)} noValidate>
-          <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field><Field label="Código de indicação (opcional)" full><input value={referralCode} onChange={(event) => setReferralCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 24))} placeholder="Ex.: JUNIORVIP" autoComplete="off" /><small className="field-hint">Se você recebeu um código de um cliente, informe antes de finalizar.</small></Field></div></fieldset>
+          <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field><Field label="Código de indicação (opcional)" full><input value={referralCode} onChange={(event) => updateReferralCode(event.target.value)} placeholder="Ex.: JUNIORVIP" autoComplete="off" /><small className="field-hint">Links de indicação preenchem este código automaticamente. Você também pode digitá-lo.</small></Field></div></fieldset>
           <fieldset>
             <legend>2. Entrega ou retirada</legend>
             <div className="payment-options delivery-options">

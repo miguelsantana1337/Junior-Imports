@@ -89,14 +89,19 @@ async function loadReferrals(actor: AdminSessionUser) {
   requirePermission(actor, "customers");
   const supabase = createAdminClient();
   if (!supabase) return { campaigns: [], codes: [], links: [], rewards: [], customers: [] };
-  const [campaigns, codes, links, rewards, customers] = await Promise.all([
+  const [campaigns, codes, links, rewards, customers, tenant] = await Promise.all([
     supabase.from("referral_campaigns").select("*").eq("tenant_id", actor.tenantId).order("created_at", { ascending: false }),
     supabase.from("referral_codes").select("*").eq("tenant_id", actor.tenantId).order("created_at", { ascending: false }),
     supabase.from("referral_links").select("*").eq("tenant_id", actor.tenantId).order("created_at", { ascending: false }).limit(200),
     supabase.from("referral_rewards").select("*").eq("tenant_id", actor.tenantId).order("created_at", { ascending: false }).limit(200),
     supabase.from("customers").select("id,name,email,phone").eq("tenant_id", actor.tenantId).order("name").limit(1000),
+    supabase.from("tenants").select("slug").eq("id", actor.tenantId).maybeSingle(),
   ]);
-  return { campaigns: campaigns.data ?? [], codes: codes.data ?? [], links: links.data ?? [], rewards: rewards.data ?? [], customers: customers.data ?? [] };
+  return {
+    campaigns: campaigns.data ?? [], codes: codes.data ?? [], links: links.data ?? [],
+    rewards: rewards.data ?? [], customers: customers.data ?? [],
+    storefrontPath: tenant.data?.slug ? `/loja/${tenant.data.slug}` : "",
+  };
 }
 
 async function loadBundles(actor: AdminSessionUser) {

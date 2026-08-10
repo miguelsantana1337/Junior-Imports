@@ -38,8 +38,8 @@ Criar um programa rastreável de indicação, com regras antifraude, recompensa 
 
 ### Cliente
 
-1. Indicador copia seu link ou código.
-2. Indicado acessa a loja ou informa o código no checkout.
+1. Indicador copia seu link ou código no painel; o compartilhamento permanece manual.
+2. Indicado acessa a loja pelo link, que preserva o código durante a navegação e o preenche no checkout, ou informa o código manualmente.
 3. Sistema valida o vínculo sem prometer recompensa definitiva.
 4. Pedido é registrado e o WhatsApp é aberto para continuidade humana.
 5. Depois da quitação, o sistema libera as recompensas elegíveis.
