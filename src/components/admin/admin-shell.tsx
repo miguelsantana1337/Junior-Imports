@@ -24,6 +24,7 @@ import {
   IconSearch,
   IconSettings,
   IconShieldLock,
+  IconBrandOpenai,
   IconSun,
   IconTag,
   IconTicket,
@@ -98,6 +99,7 @@ const navigationGroups = [
     items: [
       { href: "/admin/users", label: "Acessos e permissões", icon: IconUsers, permission: "users" },
       { href: "/admin/security", label: "Segurança e MFA", icon: IconShieldLock, permission: null },
+      { href: "/admin/integrations/chatgpt", label: "ChatGPT", icon: IconBrandOpenai, permission: "settings" },
       { href: "/admin/settings", label: "Loja, frete e atendimento", icon: IconSettings, permission: "settings" },
       { href: "/admin/data", label: "Backup e auditoria", icon: IconDatabase, permission: "data" },
     ],
@@ -130,6 +132,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/settings": ["ADMINISTRAÇÃO", "Loja, frete e atendimento"],
   "/admin/users": ["ADMINISTRAÇÃO", "Acessos e permissões"],
   "/admin/security": ["ADMINISTRAÇÃO", "Segurança e MFA"],
+  "/admin/integrations/chatgpt": ["INTEGRAÇÕES", "ChatGPT"],
   "/admin/data": ["ADMINISTRAÇÃO", "Backup e auditoria"],
 };
 

@@ -1,0 +1,96 @@
+# Junior Imports no ChatGPT
+
+## Visão geral
+
+A integração transforma o ChatGPT em uma interface conversacional privada para a rotina da Junior Imports. Ela não substitui o painel: usa as mesmas permissões, regras de negócio e trilha de auditoria.
+
+O canal técnico é um servidor MCP hospedado junto da aplicação em `https://junior-imports.vercel.app/mcp`. O acesso é feito por OAuth 2.1 com PKCE, exige login administrativo e MFA e pode ser revogado em **Administração → ChatGPT**.
+
+## O que o ChatGPT pode consultar
+
+- prioridades do dia, pedidos novos e pagamentos pendentes;
+- pedidos, produtos, estoque e clientes;
+- resumo financeiro;
+- oportunidades de recompra;
+- mensagens de WhatsApp preparadas para revisão humana.
+
+## O que pode alterar
+
+- avançar a próxima etapa segura de um pedido;
+- registrar pagamento integral ou parcial;
+- cancelar um pedido;
+- arquivar ou restaurar um pedido;
+- ajustar o valor financeiro de um pedido sem alterar o checkout original;
+- registrar entrada ou saída de caixa;
+- registrar movimentação de estoque.
+
+Toda alteração segue duas etapas:
+
+1. o ChatGPT prepara a ação e mostra o resumo exato do impacto;
+2. somente após a confirmação explícita do usuário ele utiliza um código temporário, válido por cinco minutos e uma única vez.
+
+## Regras de segurança
+
+- o ChatGPT nunca recebe a senha nem o código do aplicativo autenticador;
+- os tokens OAuth são opacos e ficam armazenados somente como SHA-256;
+- tabelas e funções da integração não são acessíveis aos papéis públicos do Supabase;
+- cada ferramenta verifica o usuário, a loja, o escopo e a permissão administrativa;
+- os limites são de 60 consultas ou 20 tentativas de alteração por minuto e usuário;
+- confirmações ficam vinculadas ao usuário, à loja, à ferramenta e ao conteúdo exato da ação;
+- o histórico técnico grava hashes e metadados mínimos, sem copiar o conteúdo consultado;
+- mensagens de WhatsApp são apenas preparadas: o envio continua sendo humano;
+- a conexão pode ser removida pelo próprio usuário em **Administração → ChatGPT**.
+
+## Como conectar
+
+1. Abra o ChatGPT e escolha o plugin **Junior Imports**.
+2. Clique em **Conectar** quando solicitado.
+3. Entre no painel administrativo da Junior Imports.
+4. Confirme o código do aplicativo autenticador.
+5. Revise os acessos e clique em **Autorizar com MFA**.
+6. Volte ao ChatGPT e peça, por exemplo: “Mostre as prioridades de hoje”.
+
+Cada administrador deve conectar a própria conta. O plugin respeitará o perfil de acesso individual.
+
+## Exemplos de uso
+
+- “Quais pedidos precisam de atenção hoje?”
+- “Consulte o pedido JI-1052.”
+- “Quanto ainda falta pagar no pedido do Thayrone?”
+- “Prepare uma mensagem de cobrança para o pedido JI-1052.”
+- “Registre R$ 500,00 de pagamento parcial via Pix no pedido JI-1052.”
+- “Quais produtos estão com estoque baixo?”
+- “Registre uma perda de uma unidade do produto JI-070.”
+- “Mostre oportunidades de recompra com mais de 35 dias.”
+
+## Como desconectar
+
+No painel, abra **Administração → ChatGPT** e clique em **Desconectar ChatGPT**. Todas as sessões OAuth ativas daquele usuário são revogadas imediatamente. Para usar novamente, será necessário repetir login, MFA e autorização.
+
+## Operação técnica
+
+### Endpoints
+
+- MCP: `/mcp`
+- metadados do recurso: `/.well-known/oauth-protected-resource`
+- metadados do servidor de autorização: `/.well-known/oauth-authorization-server`
+- autorização: `/api/mcp/oauth/authorize`
+- token: `/api/mcp/oauth/token`
+- registro dinâmico: `/api/mcp/oauth/register`
+- revogação: `/api/mcp/oauth/revoke`
+
+### Validação de uma publicação
+
+1. confirmar que a migration `202608090003_chatgpt_mcp_plugin.sql` consta no histórico remoto;
+2. executar `pnpm typecheck`, `pnpm lint`, `pnpm test:run` e `pnpm build`;
+3. verificar os dois documentos `/.well-known/` no domínio de produção;
+4. chamar `/mcp` sem token e confirmar resposta `401` com `WWW-Authenticate`;
+5. conectar uma conta com MFA;
+6. testar uma consulta;
+7. preparar uma escrita e confirmar que nada muda antes da aprovação explícita;
+8. concluir uma escrita controlada e conferir a auditoria;
+9. revogar a conexão e confirmar que o token anterior deixa de funcionar.
+
+## Recuperação
+
+Se houver comportamento inesperado, use **Administração → ChatGPT → Desconectar ChatGPT**. Essa ação interrompe o acesso sem afetar pedidos, clientes, estoque ou financeiro. A integração pode ser reconectada depois.

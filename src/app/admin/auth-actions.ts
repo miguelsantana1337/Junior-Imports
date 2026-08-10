@@ -24,12 +24,18 @@ export interface LoginActionState {
   captchaVersion: number;
 }
 
+function safeAdminReturnTo(value: FormDataEntryValue | null) {
+  const path = String(value ?? "").trim();
+  return path.startsWith("/admin/") && !path.startsWith("//") ? path : "/admin";
+}
+
 export async function loginAction(previous: LoginActionState, formData: FormData) {
   const fail = (error: string): LoginActionState => ({
     error,
     captchaVersion: previous.captchaVersion + 1,
   });
   const captchaToken = String(formData.get("captchaToken") ?? "").trim();
+  const returnTo = safeAdminReturnTo(formData.get("returnTo"));
   const parsed = adminLoginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -46,7 +52,7 @@ export async function loginAction(previous: LoginActionState, formData: FormData
     }
     const cookieStore = await cookies();
     cookieStore.set(platformRuntimeKeys.adminCookie, "1", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 8 });
-    redirect("/admin");
+    redirect(returnTo);
   }
 
   const supabase = await createClient();
@@ -76,7 +82,9 @@ export async function loginAction(previous: LoginActionState, formData: FormData
     redirect("/admin/change-password");
   }
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  redirect(assurance.data?.currentLevel === "aal2" ? "/admin" : "/admin/mfa");
+  redirect(assurance.data?.currentLevel === "aal2"
+    ? returnTo
+    : `/admin/mfa?returnTo=${encodeURIComponent(returnTo)}`);
 }
 
 export async function changeTemporaryPasswordAction(_previous: { error: string }, formData: FormData) {

@@ -6,7 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Verificação de segurança" };
 
-export default async function AdminMfaPage() {
+export default async function AdminMfaPage({ searchParams }: { searchParams: Promise<{ returnTo?: string }> }) {
+  const requested = (await searchParams).returnTo;
+  const returnTo = requested?.startsWith("/admin/") && !requested.startsWith("//") ? requested : "/admin";
   if (!isSupabaseConfigured()) redirect("/admin");
   const supabase = await createClient();
   if (!supabase) redirect("/admin/login");
@@ -25,6 +27,6 @@ export default async function AdminMfaPage() {
     redirect("/admin/change-password");
   }
   const assurance = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (assurance.data?.currentLevel === "aal2") redirect("/admin");
+  if (assurance.data?.currentLevel === "aal2") redirect(returnTo);
   return <AdminMfaForm />;
 }

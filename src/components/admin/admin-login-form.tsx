@@ -6,7 +6,7 @@ import { useActionState, useCallback, useEffect, useState } from "react";
 import { loginAction } from "@/app/admin/auth-actions";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
 
-export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "" }: { demoEmail: string; demoPassword: string; demoMode: boolean; notice?: string }) {
+export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "", returnTo = "/admin" }: { demoEmail: string; demoPassword: string; demoMode: boolean; notice?: string; returnTo?: string }) {
   const [state, action, pending] = useActionState(loginAction, { error: "", captchaVersion: 0 });
   const [captchaToken, setCaptchaToken] = useState("");
   const captchaEnabled = !demoMode && Boolean(process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim());
@@ -17,6 +17,7 @@ export function AdminLoginForm({ demoEmail, demoPassword, demoMode, notice = "" 
   return (
     <div className="admin-login-page">
       <form className="admin-login-card" action={action}>
+        <input type="hidden" name="returnTo" value={returnTo} />
         <span className="admin-badge">PAINEL NEXT</span>
         <h1>Administracao da loja</h1>
         <p>{demoMode ? "Use as credenciais abaixo para testar o painel local." : "Entre com o administrador cadastrado no Supabase Auth."}</p>

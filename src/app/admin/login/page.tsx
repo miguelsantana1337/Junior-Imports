@@ -11,9 +11,11 @@ export const metadata: Metadata = { title: "Acesso administrativo" };
 export default async function AdminLoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ password?: string }>;
+  searchParams: Promise<{ password?: string; returnTo?: string }>;
 }) {
-  const passwordStatus = (await searchParams).password;
+  const params = await searchParams;
+  const passwordStatus = params.password;
+  const returnTo = params.returnTo?.startsWith("/admin/") && !params.returnTo.startsWith("//") ? params.returnTo : "/admin";
   const notice = passwordStatus === "updated"
     ? "Senha alterada com sucesso. Entre novamente para confirmar sua identidade."
     : passwordStatus === "recovered"
@@ -23,5 +25,5 @@ export default async function AdminLoginPage({
   if (demoMode && !isDemoAdminAllowed()) {
     return <div className="admin-login-page"><section className="admin-login-card admin-configuration-error"><ShieldAlert /><span className="admin-badge">AMBIENTE PROTEGIDO</span><h1>Painel indisponível</h1><p>O modo demonstrativo é bloqueado em produção. Configure as variáveis do Supabase para liberar o acesso administrativo com autenticação real.</p><Link className="button button-primary button-full button-large" href="/">Voltar para a loja</Link></section></div>;
   }
-  return <AdminLoginForm demoEmail={demoMode ? demoAdminCredentials.email : ""} demoPassword={demoMode ? demoAdminCredentials.password : ""} demoMode={demoMode} notice={notice} />;
+  return <AdminLoginForm demoEmail={demoMode ? demoAdminCredentials.email : ""} demoPassword={demoMode ? demoAdminCredentials.password : ""} demoMode={demoMode} notice={notice} returnTo={returnTo} />;
 }
