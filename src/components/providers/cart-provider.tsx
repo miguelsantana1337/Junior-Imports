@@ -17,6 +17,7 @@ import {
 } from "@/lib/browser-storage";
 import { canAddProductToCart } from "@/lib/product-compliance";
 import type { CartLine, Coupon, PaymentMethod, ShippingDestination } from "@/types/store";
+import type { FunnelStage } from "@/types/admin31";
 import type { CartRecoveryContact } from "@/types/abandoned-cart";
 import { useStore } from "./store-provider";
 
@@ -28,13 +29,14 @@ interface CartContextValue {
   ready: boolean;
   cartSessionId: string;
   itemCount: number;
-  addItem: (productId: string, quantity?: number) => void;
+  addItem: (productId: string, quantity?: number, components?: string[]) => void;
   updateItem: (productId: string, quantity: number) => void;
   removeItem: (productId: string) => void;
   clearCart: () => void;
   toggleFavorite: (productId: string) => void;
   applyCoupon: (code: string) => Promise<{ ok: boolean; message: string }>;
   trackCheckout: (input: { contactAllowed: boolean; customer?: CartRecoveryContact }) => void;
+  trackEvent: (stage: FunnelStage, eventKey: string, properties?: Record<string, string | number | boolean | null>, productId?: string) => void;
   setDrawerOpen: (open: boolean) => void;
   calculate: (payment?: PaymentMethod, destination?: ShippingDestination) => ReturnType<typeof calculateCart>;
 }
@@ -52,6 +54,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [cartSessionId, setCartSessionId] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const [source, setSource] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -66,6 +69,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
       removeSensitiveBrowserValue(favoritesKey);
     }
     setHydrated(true);
+    const params = new URLSearchParams(window.location.search);
+    const nextSource = Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"].flatMap((key) => {
+      const value = params.get(key)?.trim();
+      return value ? [[key, value]] : [];
+    }));
+    if (document.referrer) nextSource.referrer = document.referrer.slice(0, 500);
+    setSource(nextSource);
   }, [cartKey, cartSessionKey, favoritesKey]);
 
   useEffect(() => {
@@ -90,10 +100,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
     await fetch("/api/storefront/carts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tenantId: data.tenant.id, sessionId: trackedSessionId, items: trackedLines, ...details }),
+      body: JSON.stringify({ tenantId: data.tenant.id, sessionId: trackedSessionId, items: trackedLines, source, ...details }),
       keepalive: true,
     }).catch(() => undefined);
-  }, [data.tenant.id, demoMode]);
+  }, [data.tenant.id, demoMode, source]);
+
+  const trackEvent = useCallback((stage: FunnelStage, eventKey: string, properties: Record<string, string | number | boolean | null> = {}, productId?: string) => {
+    if (demoMode || !cartSessionId) return;
+    void fetch("/api/storefront/events", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tenantId: data.tenant.id, sessionId: cartSessionId, eventKey, stage, productId, source, properties }),
+      keepalive: true,
+    }).catch(() => undefined);
+  }, [cartSessionId, data.tenant.id, demoMode, source]);
 
   useEffect(() => {
     if (!hydrated || !cartSessionId) return;
@@ -107,7 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [drawerOpen]);
 
   const addItem = useCallback(
-    (productId: string, quantity = 1) => {
+    (productId: string, quantity = 1, components: string[] = []) => {
       const product = data.products.find((item) => item.id === productId);
       if (!product || !canAddProductToCart(product, data.settings.checkoutMode)) return;
       setCoupon(null);
@@ -116,17 +136,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
         if (existing) {
           return current.map((line) =>
             line.productId === productId
-              ? { ...line, quantity: Math.min(product.stock, line.quantity + quantity) }
+              ? components.length
+                ? { ...line, quantity: Math.min(product.stock, Math.max(quantity, 1)), components }
+                : { ...line, quantity: Math.min(product.stock, line.quantity + quantity) }
               : line,
           );
         }
         return [
           ...current,
-          { productId, quantity: Math.min(product.stock, Math.max(quantity, 1)) },
+          { productId, quantity: Math.min(product.stock, Math.max(quantity, 1)), components: components.length ? components : undefined },
         ];
       });
+      trackEvent("added_to_cart", `added_to_cart:${productId}`, { quantity }, productId);
     },
-    [data.products, data.settings.checkoutMode],
+    [data.products, data.settings.checkoutMode, trackEvent],
   );
 
   const updateItem = useCallback(
@@ -167,7 +190,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const trackCheckout = useCallback((input: { contactAllowed: boolean; customer?: CartRecoveryContact }) => {
     void syncTrackedCart(cartSessionId, lines, { checkoutStarted: true, ...input });
-  }, [cartSessionId, lines, syncTrackedCart]);
+    trackEvent("checkout_started", "checkout_started", { items: lines.reduce((sum, line) => sum + line.quantity, 0) });
+  }, [cartSessionId, lines, syncTrackedCart, trackEvent]);
 
   const toggleFavorite = useCallback((productId: string) => {
     setFavorites((current) =>
@@ -241,6 +265,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       applyCoupon,
       trackCheckout,
+      trackEvent,
       setDrawerOpen,
       calculate,
     }),
@@ -258,6 +283,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       toggleFavorite,
       applyCoupon,
       trackCheckout,
+      trackEvent,
       calculate,
     ],
   );

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { friendlyOrderError, requestHash } from "@/lib/storefront-security";
 import { manualOrderSchema } from "@/lib/validation";
+import { featureEnabled } from "@/lib/feature-flags";
 
 export async function POST(request: Request) {
   const actor = await requireAdmin("orders");
@@ -23,6 +24,9 @@ export async function POST(request: Request) {
   const supabase = createAdminClient();
   if (!supabase) return NextResponse.json({ error: "Supabase indisponível." }, { status: 503 });
   const input = parsed.data;
+  if (input.items.some((item) => Boolean(item.components?.length)) && !await featureEnabled(supabase, { tenantId: actor.tenantId, key: "configurable_bundles", subject: actor.id, role: actor.role })) {
+    return NextResponse.json({ error: "A montagem de kits está temporariamente indisponível." }, { status: 503 });
+  }
   const customer = {
     name: input.name,
     phone: input.phone,
@@ -44,10 +48,10 @@ export async function POST(request: Request) {
     couponCode: input.couponCode,
     actorId: actor.id,
   });
-  const { data, error } = await supabase.rpc("create_tenant_order_secure", {
+  const { data, error } = await supabase.rpc("create_tenant_order_with_bundles_secure", {
     p_tenant_id: actor.tenantId,
     p_customer: customer,
-    p_items: input.items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
+    p_items: input.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, components: item.components ?? [] })),
     p_payment: input.payment,
     p_coupon_code: input.couponCode,
     p_idempotency_key: idempotencyKey,

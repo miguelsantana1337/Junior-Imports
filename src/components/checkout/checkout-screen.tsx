@@ -41,12 +41,14 @@ type PersistedOrder = {
 
 export function CheckoutScreen() {
   const { data, addOrder, demoMode } = useStore();
-  const { lines, coupon, calculate, clearCart, cartSessionId, trackCheckout } = useCart();
+  const { lines, coupon, calculate, clearCart, cartSessionId, trackCheckout, trackEvent } = useCart();
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const [startedAt] = useState(() => Date.now());
   const [postalCodeStatus, setPostalCodeStatus] = useState<"idle" | "loading" | "success" | "not-found" | "error">("idle");
+  const [referralCode, setReferralCode] = useState("");
+  const [attribution, setAttribution] = useState<Record<string, string>>({});
   const handleTurnstileToken = useCallback((token: string) => setTurnstileToken(token), []);
   const {
     register,
@@ -87,6 +89,16 @@ export function CheckoutScreen() {
     () => lines.map((line) => ({ line, product: data.products.find((item) => item.id === line.productId) })).filter((entry) => entry.product),
     [data.products, lines],
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const source = Object.fromEntries(["utm_source", "utm_medium", "utm_campaign", "utm_content", "ref"].flatMap((key) => {
+      const value = params.get(key)?.trim();
+      return value ? [[key, value]] : [];
+    }));
+    setAttribution(source);
+    if (source.ref) setReferralCode(source.ref);
+  }, []);
 
   useEffect(() => {
     if (deliveryMethod === "pickup") {
@@ -160,11 +172,25 @@ export function CheckoutScreen() {
       unitPrice: product!.price,
       unitCost: 0,
       unitCashback: (calculation.cashbackByProduct[product!.id] ?? 0) / line.quantity,
+      components: (line.components ?? []).reduce<Array<{ productId: string; name: string; quantity: number }>>((list, productId) => {
+        const existing = list.find((item) => item.productId === productId);
+        if (existing) existing.quantity += line.quantity;
+        else list.push({ productId, name: data.products.find((item) => item.id === productId)?.name ?? "Componente", quantity: line.quantity });
+        return list;
+      }, []),
     }));
     const nextNumber = data.orders.reduce((max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000), 1000) + 1;
     let persisted: PersistedOrder | null = null;
 
     if (!demoMode) {
+      if (referralCode.trim()) {
+        const referralResponse = await fetch(`/api/storefront/referrals?tenantId=${encodeURIComponent(data.tenant.id)}&code=${encodeURIComponent(referralCode.trim())}`, { cache: "no-store" });
+        const referral = await referralResponse.json().catch(() => null) as { valid?: boolean } | null;
+        if (!referralResponse.ok || !referral?.valid) {
+          setSubmitError("O código de indicação é inválido, expirou ou não possui campanha ativa.");
+          return;
+        }
+      }
       const requestId = idempotencyKey || crypto.randomUUID();
       if (!idempotencyKey) setIdempotencyKey(requestId);
       const response = await fetch("/api/storefront/orders", {
@@ -173,7 +199,7 @@ export function CheckoutScreen() {
         body: JSON.stringify({
           tenantId: data.tenant.id,
           customer,
-          items: items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
+          items: items.map((item) => ({ productId: item.productId, quantity: item.quantity, components: item.components.flatMap((component) => Array.from({ length: component.quantity / item.quantity }, () => component.productId)) })),
           payment: values.payment,
           termsAccepted: values.termsAccepted,
           couponCode: coupon?.code ?? "",
@@ -182,6 +208,8 @@ export function CheckoutScreen() {
           startedAt: values.startedAt,
           turnstileToken,
           cartSessionId,
+          referralCode: referralCode.trim().toUpperCase(),
+          attribution,
         }),
       });
       const payload = await response.json().catch(() => null) as { order?: PersistedOrder; error?: string } | null;
@@ -216,6 +244,7 @@ export function CheckoutScreen() {
       shippingStatus: persisted?.shipping_status ?? calculation.shippingStatus,
     };
     addOrder(order);
+    trackEvent("whatsapp_opened", `whatsapp_opened:${order.id}`, { orderCode: order.code, total: order.total });
     clearCart();
     window.location.assign(checkoutWhatsappUrl(order, data.settings));
   }
@@ -230,7 +259,7 @@ export function CheckoutScreen() {
       <div className="checkout-page-heading"><span className="section-kicker">FINALIZAR COMPRA</span><h1>Revise e envie seu pedido.</h1><p>Ao finalizar, o pedido será registrado e o WhatsApp configurado pela loja abrirá com todos os dados para a equipe confirmar pagamento e entrega ou retirada.</p></div>
       <div className="checkout-grid">
         <form className="checkout-form" onSubmit={handleSubmit(submit)} noValidate>
-          <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field></div></fieldset>
+          <fieldset><legend>1. Dados pessoais</legend><div className="form-grid"><Field label="Nome completo" error={errors.name?.message}><input autoComplete="name" {...register("name")} /></Field><Field label="WhatsApp" error={errors.phone?.message}><input inputMode="tel" autoComplete="tel" {...register("phone")} /></Field><Field label="E-mail" error={errors.email?.message} full><input type="email" autoComplete="email" {...register("email")} /></Field><Field label="Código de indicação (opcional)" full><input value={referralCode} onChange={(event) => setReferralCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 24))} placeholder="Ex.: JUNIORVIP" autoComplete="off" /><small className="field-hint">Se você recebeu um código de um cliente, informe antes de finalizar.</small></Field></div></fieldset>
           <fieldset>
             <legend>2. Entrega ou retirada</legend>
             <div className="payment-options delivery-options">
@@ -252,7 +281,7 @@ export function CheckoutScreen() {
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {isSubmitting ? "Registrando pedido..." : "Finalizar pedido no WhatsApp"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => { const lineCashback = calculation.cashbackByProduct[product!.id] ?? 0; return <div className="summary-item" key={line.productId}><i><ProductArt product={product!} /></i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{lineCashback > 0 ? ` · ${formatMoney(lineCashback)} de cashback` : ""}</small></div><b>{formatMoney(product!.price * line.quantity)}</b></div>; })}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div><div className="grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Calculado sobre o valor pago pelos produtos, após descontos e sem frete.</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => { const lineCashback = calculation.cashbackByProduct[product!.id] ?? 0; const componentNames = (line.components ?? []).map((id) => data.products.find((item) => item.id === id)?.name).filter(Boolean); return <div className="summary-item" key={line.productId}><i><ProductArt product={product!} /></i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{lineCashback > 0 ? ` · ${formatMoney(lineCashback)} de cashback` : ""}</small>{componentNames.length ? <small className="summary-components">Kit: {componentNames.join(" · ")}</small> : null}</div><b>{formatMoney(product!.price * line.quantity)}</b></div>; })}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div><div className="grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Calculado sobre o valor pago pelos produtos, após descontos e sem frete.</p></aside>
       </div>
     </section>
   );

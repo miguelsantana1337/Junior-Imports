@@ -43,6 +43,7 @@ export const adminRolePermissions: Record<AdminRole, AdminPermission[]> = {
 };
 
 export const sectionPermissions: Record<string, AdminPermission> = {
+  operations: "dashboard",
   customers: "customers",
   crm: "crm",
   orders: "orders",

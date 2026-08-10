@@ -46,6 +46,7 @@ function normalizeData(candidate: StorefrontData, fallback: StorefrontData): Sto
     orders: candidate.orders ?? fallback.orders,
     cashbackCampaigns: candidate.cashbackCampaigns ?? fallback.cashbackCampaigns.filter((campaign) => campaign.status === "active"),
     productReviews: candidate.productReviews ?? fallback.productReviews,
+    bundles: candidate.bundles ?? fallback.bundles ?? [],
   };
 }
 

@@ -64,6 +64,7 @@ export const manualOrderSchema = z.object({
   items: z.array(z.object({
     productId: z.string().min(1, "Selecione um produto."),
     quantity: z.coerce.number().int().min(1, "A quantidade deve ser maior que zero.").max(100),
+    components: z.array(z.string().min(1)).max(50).optional(),
   })).min(1, "Adicione pelo menos um produto.").max(50, "Adicione no máximo 50 produtos."),
 }).superRefine((order, context) => {
   const productIds = order.items.map((item) => item.productId);

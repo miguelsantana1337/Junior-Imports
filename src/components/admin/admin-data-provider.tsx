@@ -1297,7 +1297,9 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
       const product = current.products.find((candidate) => candidate.id === item.productId);
       if (!product || !product.active) throw new Error("Um dos produtos selecionados não está disponível.");
       if (item.quantity > product.stock) throw new Error(`${product.name} possui apenas ${product.stock} unidade${product.stock === 1 ? "" : "s"} em estoque.`);
-      return { product, quantity: item.quantity };
+      const bundle = current.bundles.find((candidate) => candidate.productId === item.productId);
+      if (bundle && (item.components?.length ?? 0) !== bundle.componentCount) throw new Error(`${product.name} exige exatamente ${bundle.componentCount} componentes.`);
+      return { product, quantity: item.quantity, components: item.components ?? [] };
     });
     const customer = {
       name: input.name,
@@ -1328,13 +1330,19 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     }
 
     const calculation = calculateCart(lines, current.products, current.settings, coupon, input.payment, current.cashbackCampaigns, destination);
-    const items = selectedProducts.map(({ product, quantity }) => ({
+    const items = selectedProducts.map(({ product, quantity, components }) => ({
       productId: product.id,
       name: product.name,
       quantity,
       unitPrice: product.price,
       unitCost: product.costPrice,
       unitCashback: (calculation.cashbackByProduct[product.id] ?? 0) / quantity,
+      components: components.reduce<Array<{ productId: string; name: string; quantity: number }>>((list, componentId) => {
+        const existing = list.find((component) => component.productId === componentId);
+        if (existing) existing.quantity += quantity;
+        else list.push({ productId: componentId, name: current.products.find((candidate) => candidate.id === componentId)?.name ?? "Componente", quantity });
+        return list;
+      }, []),
     }));
     const nextNumber = current.orders.reduce(
       (max, order) => Math.max(max, Number(order.code.replace(/\D/g, "")) || 1000),

@@ -66,6 +66,7 @@ export function normalizeAdminStoreData(candidate: unknown, fallback: StoreData)
     teamMembers: arrayOrFallback(candidate.teamMembers, fallback.teamMembers),
     auditLogs: arrayOrFallback(candidate.auditLogs, fallback.auditLogs),
     productReviews: arrayOrFallback(candidate.productReviews, fallback.productReviews),
+    bundles: arrayOrFallback(candidate.bundles, fallback.bundles),
   };
 }
 

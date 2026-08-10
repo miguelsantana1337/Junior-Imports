@@ -38,6 +38,7 @@ import type {
   SavedReport,
   StoreData,
   StorefrontData,
+  StorefrontBundle,
   StorefrontProduct,
   StorePage,
   StoreSettings,
@@ -635,19 +636,23 @@ function mapSimpleOrdered<T extends TrustItem | Benefit | Faq>(row: Row) {
 
 function mapOrder(row: Row): Order {
   const items = Array.isArray(row.order_items) ? row.order_items : [];
+  const components = Array.isArray(row.order_item_components) ? row.order_item_components as Row[] : [];
   return {
     id: str(row.id),
     customerId: str(row.customer_id),
     code: str(row.code),
     createdAt: str(row.created_at),
     customer: row.customer as Order["customer"],
-    items: (items as Row[]).map((item) => ({
+    items: (items as Row[]).filter((item) => !Boolean(item.is_component)).map((item) => ({
       productId: str(item.product_id),
       name: str(item.product_name),
       quantity: num(item.quantity),
       unitPrice: num(item.unit_price),
       unitCost: num(item.unit_cost),
       unitCashback: num(item.unit_cashback),
+      components: components
+        .filter((component) => str(component.bundle_product_id) === str(item.product_id))
+        .map((component) => ({ productId: str(component.component_product_id), name: str(component.component_name), quantity: num(component.quantity) })),
     })),
     subtotal: num(row.subtotal),
     discount: num(row.discount),
@@ -767,6 +772,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
         orders: [],
         cashbackCampaigns: fallback.cashbackCampaigns.filter((c) => c.status === "active"),
         productReviews: [],
+        bundles: [],
       };
     }
     return {
@@ -812,7 +818,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     scopeTenant(supabase.from("benefits").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("faqs").select("*"), tenantId).order("order_index"),
     options.admin && canRead("orders")
-      ? scopeTenant(supabase.from("orders").select("*, order_items(*)"), tenantId).order("created_at", { ascending: false })
+      ? scopeTenant(supabase.from("orders").select("*, order_items(*), order_item_components(*)"), tenantId).order("created_at", { ascending: false })
       : emptyQuery(),
     scopeTenant(supabase.from("store_pages").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("page_blocks").select("*"), tenantId).order("order_index"),
@@ -882,6 +888,16 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     options.admin
       ? scopeTenant(supabase.from("product_reviews").select("*"), tenantId).order("created_at", { ascending: false })
       : emptyQuery(),
+    options.admin && !canRead("catalog")
+      ? emptyQuery()
+      : options.admin
+        ? scopeTenant(supabase.from("product_bundles").select("*"), tenantId).order("created_at")
+        : scopeTenant(supabase.from("product_bundles").select("*"), tenantId).eq("active", true).order("created_at"),
+    options.admin && !canRead("catalog")
+      ? emptyQuery()
+      : options.admin
+        ? scopeTenant(supabase.from("bundle_options").select("*"), tenantId).order("order_index")
+        : scopeTenant(supabase.from("bundle_options").select("*"), tenantId).eq("active", true).order("order_index"),
   ]);
 
   if (resolution.persisted) {
@@ -954,6 +970,21 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       pageBlocks: queries[11].error || (!resolution.persisted && !queries[11].data?.length) ? fallback.pageBlocks : ((queries[11].data ?? []) as Row[]).map(mapPageBlock),
       cashbackCampaigns: !queries[26].error ? ((queries[26].data ?? []) as Row[]).map(mapCashbackCampaign) : fallback.cashbackCampaigns.filter((c) => c.status === "active"),
       productReviews: !queries[33].error ? ((queries[33].data ?? []) as Row[]).map(mapProductReview) : [],
+      bundles: !queries[34].error && !queries[35].error
+        ? ((queries[34].data ?? []) as Row[]).map((bundle): StorefrontBundle => ({
+            id: str(bundle.id),
+            productId: str(bundle.product_id),
+            name: str(bundle.name),
+            selectionLabel: str(bundle.selection_label),
+            componentCount: num(bundle.component_count),
+            allowRepetition: Boolean(bundle.allow_repetition),
+            maxPerComponent: num(bundle.max_per_component) || 1,
+            version: num(bundle.version) || 1,
+            options: ((queries[35].data ?? []) as Row[])
+              .filter((option) => str(option.bundle_id) === str(bundle.id))
+              .map((option) => ({ productId: str(option.product_id), maxQuantity: num(option.max_quantity) || 1, order: num(option.order_index) })),
+          }))
+        : [],
     };
   }
 
@@ -995,6 +1026,21 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     teamMembers: options.admin && !queries[14].error ? ((queries[14].data ?? []) as Row[]).map(mapAdminUser) : [],
     auditLogs: options.includeAudit && !queries[15].error ? ((queries[15].data ?? []) as Row[]).map(mapAuditLog) : [],
     productReviews: !queries[33].error ? ((queries[33].data ?? []) as Row[]).map(mapProductReview) : [],
+    bundles: !queries[34].error && !queries[35].error
+      ? ((queries[34].data ?? []) as Row[]).map((bundle): StorefrontBundle => ({
+          id: str(bundle.id),
+          productId: str(bundle.product_id),
+          name: str(bundle.name),
+          selectionLabel: str(bundle.selection_label),
+          componentCount: num(bundle.component_count),
+          allowRepetition: Boolean(bundle.allow_repetition),
+          maxPerComponent: num(bundle.max_per_component) || 1,
+          version: num(bundle.version) || 1,
+          options: ((queries[35].data ?? []) as Row[])
+            .filter((option) => str(option.bundle_id) === str(bundle.id))
+            .map((option) => ({ productId: str(option.product_id), maxQuantity: num(option.max_quantity) || 1, order: num(option.order_index) })),
+        }))
+      : fallback.bundles,
   };
 }
 

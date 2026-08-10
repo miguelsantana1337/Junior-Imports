@@ -1,54 +1,62 @@
 # SPEC-003 — Pedidos com ciclo operacional e financeiro
 
-## 1. Objetivo
+## 1. Contexto e problema
 
-Permitir que Junior acompanhe o andamento de um pedido sem confundir isso com a entrada do dinheiro.
+O Junior precisa acompanhar pedidos, receber em uma ou mais partes e manter caixa e estoque corretos sem lidar com estados técnicos demais.
 
-## 2. Dimensões independentes
+## 2. Objetivo
 
-### Situação do pedido
+Oferecer um ciclo simples e seguro, com quatro estados visíveis, pagamentos detalhados e arquivamento independente.
 
-`Novo`, `Em atendimento`, `Confirmado`, `Em preparação`, `Enviado`, `Entregue`, `Cancelado`.
+## 3. Estados visíveis
 
-### Situação do pagamento
+- `Novo`: pedido registrado e ainda não pago integralmente.
+- `Pago`: soma dos pagamentos válidos atingiu o total vigente do pedido.
+- `Entregue`: operação concluída após pagamento integral.
+- `Cancelado`: pedido encerrado mediante motivo, com os efeitos necessários de liberação, estorno e reversão.
+- `Arquivado`: atributo de visibilidade separado; não é status e não apaga o pedido.
 
-`Pendente`, `Recebido`, `Parcial`, `Estornado`, `Cancelado`.
+## 4. Pagamentos integrais e parciais
 
-### Visibilidade
+- Cada pagamento registra valor, método, data, responsável, observação e chave de idempotência.
+- O detalhe sempre mostra total vigente, total recebido, saldo restante e histórico.
+- Um pagamento parcial mantém o pedido como `Novo` e atualiza apenas o saldo.
+- Ao atingir exatamente o total, o pedido passa a `Pago` uma única vez.
+- O sistema bloqueia pagamento acima do saldo, duplicado ou com valor não positivo.
+- Ajustar o total do pedido exige motivo e mostra antes o efeito sobre saldo, receita, margem, cashback e estoque.
+- Reduzir o total abaixo do que já foi recebido exige fluxo explícito de estorno ou crédito; nunca há correção silenciosa.
 
-`Ativo` ou `Arquivado`. Cancelamentos recebem arquivamento programado para sete dias; o registro não é apagado.
+## 5. Estoque, caixa e cashback
 
-## 3. Regras de negócio
+- A confirmação integral reconhece receita e efetiva as rotinas de estoque e cashback uma única vez.
+- Pagamento parcial reconhece somente o valor efetivamente recebido no caixa; não libera cashback definitivo.
+- O cashback é calculado sobre o valor final pago pelos produtos, após descontos e sem frete.
+- Campanha ativa substitui o cashback do produto; ajuste manual autorizado no pedido substitui ambos.
+- Cancelamento antes do pagamento integral libera a reserva e remove cashback previsto.
+- Cancelamento depois do pagamento integral executa estorno financeiro, devolução de estoque aplicável e reversão do cashback.
+- Toda transição usa idempotência e transação para impedir baixa dupla ou receita duplicada.
 
-- Preparar, enviar ou entregar exige pagamento recebido.
-- Confirmar pagamento efetiva a entrada financeira, cashback e baixa física de estoque pelas rotinas existentes.
-- Cancelar exige motivo.
-- Cancelar antes do recebimento libera reserva e cashback previsto.
-- Cancelar depois do recebimento devolve estoque, estorna financeiro e reverte cashback.
-- Pedido cancelado não pode ser reaberto; deve-se criar outro pedido.
-- Atualizações concorrentes são rejeitadas pela versão do ciclo.
+## 6. Experiência de uso
 
-## 4. Experiência de uso
-
-- A lista possui filtros independentes de andamento e pagamento.
-- O detalhe destaca um único próximo passo recomendado.
+- A lista filtra por `Novo`, `Pago`, `Entregue`, `Cancelado` e `Arquivado`.
+- O detalhe destaca um próximo passo: registrar pagamento, quitar saldo, marcar como entregue, cancelar ou arquivar.
 - Antes de salvar, o painel descreve os efeitos sobre caixa, estoque e cashback.
-- Usuário sem permissão financeira pode atualizar o andamento, mas não o pagamento.
+- Usuário sem permissão financeira pode consultar, mas não lançar pagamento, estorno ou ajuste de total.
+- A interface funciona em desktop e mobile sem listas suspensas gigantes; busca de cliente e produto é incremental.
 
-## 5. Compatibilidade e migração
+## 7. Arquivamento e concorrência
 
-- Pedidos `Novo` passam a `Novo/Pendente`.
-- Pedidos `Pago` passam a `Em preparação/Recebido`.
-- Pedidos `Entregue` passam a `Entregue/Recebido`.
-- Pedidos `Cancelado` passam a `Cancelado/Cancelado` ou `Cancelado/Estornado` quando houver entrada financeira.
-- O status legado permanece sincronizado para proteger integrações já existentes.
+- Arquivar e desarquivar preserva valores, pagamentos, itens, auditoria e status.
+- Pedido cancelado pode ser arquivado imediatamente ou por rotina configurável.
+- Atualizações concorrentes são rejeitadas pela versão do ciclo e a tela exige recarregar os dados atuais.
 
-## 6. Testes obrigatórios
+## 8. Testes obrigatórios
 
-- Mapeamento de dados antigos.
-- Próximo passo por etapa.
-- Reconhecimento de receita somente para pagamento recebido.
-- Cancelamento com e sem pagamento.
-- Bloqueio de preparação sem recebimento.
-- Motivo obrigatório e controle de concorrência.
-- Fluxo de pedido em desktop e mobile.
+- Pagamento integral único e em várias parcelas.
+- Tentativa de pagamento duplicado, negativo, zero e acima do saldo.
+- Ajuste de total maior e menor, inclusive abaixo do já recebido.
+- Reconhecimento único de receita, estoque e cashback.
+- Cancelamento com reserva, pagamento parcial e pagamento integral.
+- Arquivar e desarquivar sem alterar o financeiro.
+- Controle de concorrência e repetição idempotente.
+- Fluxo completo em desktop e mobile.

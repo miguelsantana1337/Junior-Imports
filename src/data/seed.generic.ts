@@ -227,6 +227,7 @@ export const seedData: StoreData = {
   automationRuns: [],
   auditLogs: [],
   productReviews: [],
+  bundles: [],
   teamMembers: [
     { id: "00000000-0000-4000-8000-000000000001", fullName: platformConfig.demoAdmin.fullName, email: platformConfig.demoAdmin.email, role: "owner", permissions: ["dashboard", "crm", "customers", "orders", "finance", "inventory", "purchasing", "reports", "collaboration", "copilot", "catalog", "store", "marketing", "settings", "data", "users"], active: true, createdAt: new Date().toISOString(), lastSignInAt: "", isCurrent: true },
   ],

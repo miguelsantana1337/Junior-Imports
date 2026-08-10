@@ -96,6 +96,7 @@ export function CartDrawer() {
                   <div>
                     <h3>{product.name}</h3>
                     <strong>{formatMoney(product.price * line.quantity)}</strong>
+                    {line.components?.length ? <small className="cart-item-components">{line.components.map((id) => data.products.find((item) => item.id === id)?.name).filter(Boolean).join(" · ")}</small> : null}
                     {product.cashback > 0 && <small className="cart-item-cashback">+ {formatMoney(product.cashback * line.quantity)} de cashback</small>}
                     <div className="quantity-control">
                       <button onClick={() => updateItem(product.id, line.quantity - 1)} aria-label={`Diminuir ${product.name}`}><Minus /></button>

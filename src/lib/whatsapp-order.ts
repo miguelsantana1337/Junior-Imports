@@ -77,7 +77,12 @@ function resolveMessageTemplate(message: string) {
 
 export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings) {
   const items = order.items
-    .map((item) => `- ${item.quantity}x ${item.name} - ${formatMoney(item.quantity * item.unitPrice)}`)
+    .map((item) => {
+      const composition = item.components?.length
+        ? `\n  Composição: ${item.components.map((component) => `${component.quantity}x ${component.name}`).join("; ")}`
+        : "";
+      return `- ${item.quantity}x ${item.name} - ${formatMoney(item.quantity * item.unitPrice)}${composition}`;
+    })
     .join("\n");
 
   const template = resolveMessageTemplate(settings.whatsappMessage);

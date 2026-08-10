@@ -417,6 +417,25 @@ export interface OrderItem {
   unitPrice: number;
   unitCost: number;
   unitCashback: number;
+  components?: Array<{ productId: string; name: string; quantity: number }>;
+}
+
+export interface StorefrontBundleOption {
+  productId: string;
+  maxQuantity: number;
+  order: number;
+}
+
+export interface StorefrontBundle {
+  id: string;
+  productId: string;
+  name: string;
+  selectionLabel: string;
+  componentCount: number;
+  allowRepetition: boolean;
+  maxPerComponent: number;
+  version: number;
+  options: StorefrontBundleOption[];
 }
 
 export interface OrderCustomer {
@@ -789,6 +808,7 @@ export interface StoreData {
   teamMembers: AdminUser[];
   auditLogs: AuditLog[];
   productReviews: ProductReview[];
+  bundles: StorefrontBundle[];
 }
 
 export interface StorefrontData {
@@ -806,11 +826,13 @@ export interface StorefrontData {
   orders: Order[];
   cashbackCampaigns: CashbackCampaign[];
   productReviews: ProductReview[];
+  bundles: StorefrontBundle[];
 }
 
 export interface CartLine {
   productId: string;
   quantity: number;
+  components?: string[];
 }
 
 export interface CartCalculation {

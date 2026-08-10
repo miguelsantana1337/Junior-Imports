@@ -14,6 +14,7 @@ const requestSchema = z.object({
   items: z.array(z.object({
     productId: z.string().min(1).max(160),
     quantity: z.coerce.number().int().min(1).max(100),
+    components: z.array(z.string().min(1).max(160)).max(50).optional(),
   })).max(50),
   checkoutStarted: z.boolean().optional(),
   contactAllowed: z.boolean().optional(),
@@ -22,6 +23,7 @@ const requestSchema = z.object({
     phone: z.string().trim().max(30),
     email: z.union([z.literal(""), z.string().trim().email()]),
   }).optional(),
+  source: z.record(z.string(), z.string().max(500)).optional(),
 }).superRefine((value, context) => {
   if (value.contactAllowed && (!value.customer || !/^\D*(?:\d\D*){10,13}$/.test(value.customer.phone))) {
     context.addIssue({ code: "custom", path: ["customer", "phone"], message: "Contato inválido." });
@@ -71,11 +73,14 @@ export async function POST(request: Request) {
         name: String(product.name),
         quantity: item.quantity,
         unit_price: Number(product.price) || 0,
+        components: item.components ?? [],
       }] : [];
     });
     if (!items.length) throw new StorefrontRequestError("O carrinho não possui produtos disponíveis.", 400);
 
     const now = new Date().toISOString();
+    const { data: existing } = await supabase.from("storefront_cart_sessions").select("first_source,contact_count")
+      .eq("tenant_id", input.tenantId).eq("session_id", input.sessionId).maybeSingle();
     const row: Record<string, unknown> = {
       tenant_id: input.tenantId,
       session_id: input.sessionId,
@@ -85,6 +90,9 @@ export async function POST(request: Request) {
       subtotal: items.reduce((sum, item) => sum + item.quantity * item.unit_price, 0),
       last_activity_at: now,
       updated_at: now,
+      funnel_stage: input.checkoutStarted ? "checkout_started" : "cart_active",
+      first_source: existing?.first_source && Object.keys(existing.first_source as Record<string, unknown>).length ? existing.first_source : input.source ?? {},
+      last_source: input.source ?? {},
     };
     if (input.checkoutStarted) row.checkout_started_at = now;
     if (input.contactAllowed !== undefined) {

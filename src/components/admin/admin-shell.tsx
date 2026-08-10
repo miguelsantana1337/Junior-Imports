@@ -55,6 +55,7 @@ const navigationGroups = [
     label: "Hoje",
     items: [
       { href: "/admin", label: "Prioridades do dia", icon: IconHome, permission: "dashboard" },
+      { href: "/admin/operations", label: "Central operacional", icon: IconCloudCheck, permission: "dashboard" },
     ],
   },
   {
@@ -115,6 +116,7 @@ const utilityNavigation = [
 
 const titles: Record<string, [string, string]> = {
   "/admin": ["HOJE", "Prioridades do dia"],
+  "/admin/operations": ["ADMIN 3.1", "Central operacional"],
   "/admin/products": ["CATÁLOGO", "Produtos"],
   "/admin/banners": ["EDITOR DA LOJA", "Biblioteca de banners"],
   "/admin/categories": ["CATÁLOGO", "Categorias"],

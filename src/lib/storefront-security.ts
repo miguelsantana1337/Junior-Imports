@@ -66,7 +66,7 @@ export async function consumeStorefrontRateLimit(
   input: {
     tenantId: string;
     fingerprint: string;
-    action: "order" | "coupon" | "cart" | "password_reset" | "password_verify" | "login";
+    action: "order" | "coupon" | "cart" | "funnel_event" | "password_reset" | "password_verify" | "login";
     limit: number;
     windowSeconds: number;
   },
@@ -95,7 +95,7 @@ export async function clearStorefrontRateLimit(
   input: {
     tenantId: string;
     fingerprint: string;
-    action: "order" | "coupon" | "cart" | "password_reset" | "password_verify" | "login";
+    action: "order" | "coupon" | "cart" | "funnel_event" | "password_reset" | "password_verify" | "login";
   },
 ) {
   const { error } = await supabase.rpc("clear_storefront_rate_limit", {

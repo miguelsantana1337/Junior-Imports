@@ -205,6 +205,21 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
     }));
   }
 
+  function adjustBundleComponent(index: number, productId: string, delta: number) {
+    setForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        const selected = item.components ?? [];
+        if (delta < 0) {
+          const removeAt = selected.lastIndexOf(productId);
+          return { ...item, components: removeAt >= 0 ? selected.filter((_, selectedIndex) => selectedIndex !== removeAt) : selected };
+        }
+        return { ...item, components: [...selected, productId] };
+      }),
+    }));
+  }
+
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
@@ -248,6 +263,7 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
             <div className="manual-order-lines">
               {form.items.map((item, index) => {
                 const product = data.products.find((candidate) => candidate.id === item.productId);
+                const bundle = data.bundles.find((candidate) => candidate.productId === item.productId);
                 const selectedElsewhere = new Set(form.items.filter((_, itemIndex) => itemIndex !== index).map((candidate) => candidate.productId));
                 const productOptions: AdminSearchOption[] = availableProducts.map((candidate) => ({
                   value: candidate.id,
@@ -256,11 +272,14 @@ function ManualOrderDialog({ onClose, onCreated }: { onClose: () => void; onCrea
                   disabled: selectedElsewhere.has(candidate.id),
                 }));
                 return (
-                  <div className="manual-order-line" key={index}>
-                    <AdminSearchSelect label={`Produto ${index + 1}`} value={item.productId} options={productOptions} placeholder="Busque por produto ou SKU" onChange={(productId) => updateItem(index, { productId, quantity: 1 })} />
+                  <div className="manual-order-line-group" key={index}>
+                  <div className="manual-order-line">
+                    <AdminSearchSelect label={`Produto ${index + 1}`} value={item.productId} options={productOptions} placeholder="Busque por produto ou SKU" onChange={(productId) => updateItem(index, { productId, quantity: 1, components: [] })} />
                     <label>Quantidade<input aria-label={`Quantidade do produto ${index + 1}`} type="number" min={1} max={product?.stock ?? 100} value={item.quantity} onChange={(event) => updateItem(index, { quantity: Number(event.target.value) })} /></label>
                     <div className="manual-order-line-total"><span>Subtotal</span><strong>{formatMoney((product?.price ?? 0) * item.quantity)}</strong><small>{product ? `${formatMoney(product.price)} cada${product.cashback > 0 ? ` · +${formatMoney(product.cashback * item.quantity)} cashback` : ""}` : "Selecione o produto"}</small></div>
                     <button type="button" className="admin-icon-button" disabled={form.items.length === 1} onClick={() => setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }))} aria-label={`Remover produto ${index + 1}`}><Trash2 /></button>
+                  </div>
+                  {bundle && <div className="manual-order-bundle"><header><div><strong>{bundle.selectionLabel}</strong><small>Selecione exatamente {bundle.componentCount} opções para cada kit.</small></div><b>{item.components?.length ?? 0}/{bundle.componentCount}</b></header><div>{bundle.options.map((option) => { const component = data.products.find((candidate) => candidate.id === option.productId); const selected = (item.components ?? []).filter((id) => id === option.productId).length; const maximum = Math.min(bundle.maxPerComponent, option.maxQuantity, component?.stock ?? 0); return <article className={selected ? "selected" : ""} key={option.productId}><span><strong>{component?.name ?? "Produto indisponível"}</strong><small>Estoque {component?.stock ?? 0}</small></span><div><button type="button" disabled={!selected} onClick={() => adjustBundleComponent(index, option.productId, -1)}>−</button><b>{selected}</b><button type="button" disabled={!component || item.components?.length === bundle.componentCount || selected >= maximum || (!bundle.allowRepetition && selected > 0)} onClick={() => adjustBundleComponent(index, option.productId, 1)}>+</button></div></article>; })}</div></div>}
                   </div>
                 );
               })}
@@ -473,7 +492,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
           </section>
           <section>
             <h3>Resumo comercial</h3>
-            {order.items.map((item) => <div className="order-item" key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}{item.unitCashback > 0 ? ` · +${formatMoney(item.unitCashback * item.quantity)} cashback` : ""}</span><strong>{formatMoney(item.unitPrice * item.quantity)}</strong></div>)}
+            {order.items.map((item) => <div className="order-item" key={`${item.productId}-${item.name}`}><span>{item.quantity}x {item.name}{item.unitCashback > 0 ? ` · +${formatMoney(item.unitCashback * item.quantity)} cashback` : ""}{item.components?.length ? <small>Composição: {item.components.map((component) => `${component.quantity}x ${component.name}`).join(" · ")}</small> : null}</span><strong>{formatMoney(item.unitPrice * item.quantity)}</strong></div>)}
             <div className="order-item"><span>Desconto</span><strong>- {formatMoney(order.discount)}</strong></div>
             <div className="order-item"><span>Frete</span><strong>{shippingPriceLabel(order.shippingStatus, order.shipping)}</strong></div>
             <div className="order-item total"><span>{orderTotalLabel(order.shippingStatus)}</span><strong>{formatMoney(order.total)}</strong></div>

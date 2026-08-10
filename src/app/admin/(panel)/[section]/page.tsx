@@ -19,6 +19,7 @@ import { ReportsAdmin } from "@/components/admin/reports-admin";
 import { SecurityMfaAdmin } from "@/components/admin/security-mfa-admin";
 import { SettingsAdmin } from "@/components/admin/settings-admin";
 import { UsersAdmin } from "@/components/admin/users-admin";
+import { Admin31Operations } from "@/components/admin/admin31-operations";
 import { sectionPermissions } from "@/lib/admin-permissions";
 import { requireAdmin } from "@/lib/require-admin";
 
@@ -43,6 +44,7 @@ const sections = {
   settings: SettingsAdmin,
   users: UsersAdmin,
   data: DataAdmin,
+  operations: Admin31Operations,
 };
 
 export default async function AdminSectionPage({ params }: { params: Promise<{ section: string }> }) {

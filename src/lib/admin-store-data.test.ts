@@ -53,6 +53,7 @@ describe("compatibilidade dos dados administrativos locais", () => {
       orders: seedData.orders,
       cashbackCampaigns: seedData.cashbackCampaigns,
       productReviews: seedData.productReviews,
+      bundles: [],
     };
 
     const merged = mergeStorefrontIntoStoredData(seedData, storefront);

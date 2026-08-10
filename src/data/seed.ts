@@ -557,6 +557,7 @@ export const seedData: StoreData = {
   ],
   auditLogs: [],
   productReviews: [],
+  bundles: [],
 };
 
 export function cloneSeedData(): StoreData {
