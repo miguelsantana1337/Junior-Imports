@@ -91,6 +91,7 @@ const navigationGroups = [
     label: "Marketing",
     items: [
       { href: "/admin/coupons", label: "Cupons", icon: IconTicket, permission: "marketing" },
+      { href: "/admin/referrals", label: "Programa de indicações", icon: IconUsers, permission: "customers" },
       { href: "/admin/messages", label: "Campanhas e automações", icon: IconMessageCircle, permission: "marketing" },
     ],
   },
@@ -123,6 +124,7 @@ const titles: Record<string, [string, string]> = {
   "/admin/import": ["PRODUTOS", "Importação por planilha"],
   "/admin/layout": ["LOJA VIRTUAL", "Editor da loja"],
   "/admin/coupons": ["MARKETING", "Cupons"],
+  "/admin/referrals": ["MARKETING", "Programa de indicações"],
   "/admin/messages": ["MARKETING", "Campanhas e automações"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos"],
   "/admin/abandoned-carts": ["OPERAÇÃO", "Carrinhos abandonados"],

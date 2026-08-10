@@ -60,6 +60,7 @@ export const sectionPermissions: Record<string, AdminPermission> = {
   sections: "store",
   banners: "store",
   coupons: "marketing",
+  referrals: "customers",
   messages: "marketing",
   settings: "settings",
   data: "data",

@@ -48,8 +48,8 @@ async function apiPost(action: string, input: Record<string, unknown> = {}) {
   return payload ?? {};
 }
 
-export function Admin31Operations() {
-  const [active, setActive] = useState<ModuleKey>("divergences");
+export function Admin31Operations({ initialModule = "divergences" }: { initialModule?: ModuleKey }) {
+  const [active, setActive] = useState<ModuleKey>(initialModule);
   const [payload, setPayload] = useState<ModulePayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");

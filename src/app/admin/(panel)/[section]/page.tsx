@@ -23,6 +23,10 @@ import { Admin31Operations } from "@/components/admin/admin31-operations";
 import { sectionPermissions } from "@/lib/admin-permissions";
 import { requireAdmin } from "@/lib/require-admin";
 
+function ReferralsAdmin() {
+  return <Admin31Operations initialModule="referrals" />;
+}
+
 const sections = {
   products: ProductsAdmin,
   banners: BannersAdmin,
@@ -45,6 +49,7 @@ const sections = {
   users: UsersAdmin,
   data: DataAdmin,
   operations: Admin31Operations,
+  referrals: ReferralsAdmin,
 };
 
 export default async function AdminSectionPage({ params }: { params: Promise<{ section: string }> }) {
