@@ -19,6 +19,21 @@ const contentSecurityPolicy = [
   "media-src 'self' blob: https:",
 ].join("; ");
 
+const oauthConsentSecurityPolicy = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'",
+  "form-action 'self' https://chatgpt.com https://platform.openai.com",
+  "object-src 'none'",
+  scriptSecurityPolicy,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  "connect-src 'self' https: wss: https://challenges.cloudflare.com",
+  "frame-src https://challenges.cloudflare.com",
+  "media-src 'self' blob: https:",
+].join("; ");
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async rewrites() {
@@ -51,6 +66,13 @@ const nextConfig: NextConfig = {
         source: "/admin/:path*",
         headers: [
           { key: "Cache-Control", value: "private, no-store, max-age=0, must-revalidate" },
+        ],
+      },
+      {
+        source: "/admin/mcp/authorize",
+        headers: [
+          { key: "Content-Security-Policy", value: oauthConsentSecurityPolicy },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
         ],
       },
       {

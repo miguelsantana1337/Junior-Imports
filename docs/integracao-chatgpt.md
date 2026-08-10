@@ -6,6 +6,8 @@ A integração transforma o ChatGPT em uma interface conversacional privada para
 
 O canal técnico é um servidor MCP hospedado junto da aplicação em `https://junior-imports.vercel.app/mcp`. O acesso é feito por OAuth 2.1 com PKCE, exige login administrativo e MFA e pode ser revogado em **Administração → ChatGPT**.
 
+O plugin privado atualmente cadastrado no ChatGPT usa o ID `plugin_asdk_app_6a791aabfe5081918c1990d6a492880d`. No Codex, o pacote pessoal correspondente se chama `junior-imports@personal`.
+
 ## O que o ChatGPT pode consultar
 
 - prioridades do dia, pedidos novos e pagamentos pendentes;
@@ -51,6 +53,7 @@ Toda alteração segue duas etapas:
 6. Volte ao ChatGPT e peça, por exemplo: “Mostre as prioridades de hoje”.
 
 Cada administrador deve conectar a própria conta. O plugin respeitará o perfil de acesso individual.
+Na primeira autorização, confirme que o consentimento mostra **Consultar a operação** e **Preparar alterações**. Se apenas a consulta aparecer, use **Ações do plugin → Reconectar** para conceder também `junior.write`.
 
 ## Exemplos de uso
 
@@ -90,6 +93,8 @@ No painel, abra **Administração → ChatGPT** e clique em **Desconectar ChatGP
 7. preparar uma escrita e confirmar que nada muda antes da aprovação explícita;
 8. concluir uma escrita controlada e conferir a auditoria;
 9. revogar a conexão e confirmar que o token anterior deixa de funcionar.
+
+Em 09/08/2026, o fluxo real foi validado no ChatGPT com os escopos `junior.read` e `junior.write`. A consulta **“visão operacional de hoje”** chamou a ferramenta do plugin e retornou dados do painel sem produzir nenhuma alteração.
 
 ## Recuperação
 
