@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHash, createHmac } from "node:crypto";
 import type { createAdminClient } from "@/lib/supabase/admin";
+import { hasAllowedStorefrontSource } from "@/lib/storefront-request-origin";
 
 type AdminClient = NonNullable<ReturnType<typeof createAdminClient>>;
 
@@ -12,12 +13,9 @@ export class StorefrontRequestError extends Error {
 }
 
 export function guardStorefrontRequest(request: Request, maxBytes = 24_000) {
-  const url = new URL(request.url);
-  const origin = request.headers.get("origin");
-  const fetchSite = request.headers.get("sec-fetch-site");
   const contentLength = Number(request.headers.get("content-length") || 0);
 
-  if (!origin || origin !== url.origin || fetchSite === "cross-site") {
+  if (!hasAllowedStorefrontSource(request)) {
     throw new StorefrontRequestError("Origem da solicitação não permitida.", 403);
   }
   if (contentLength > maxBytes) {

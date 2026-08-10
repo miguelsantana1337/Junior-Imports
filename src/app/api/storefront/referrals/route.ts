@@ -24,6 +24,10 @@ export async function GET(request: Request) {
       .or(`ends_at.is.null,ends_at.gte.${now}`).limit(1).maybeSingle();
     return Response.json({ valid: Boolean(code && campaign), campaignName: campaign?.name ?? "" }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
+    console.warn("[storefront/referrals] validation failed", {
+      status: error instanceof StorefrontRequestError ? error.status : 500,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
     return storefrontErrorResponse(error);
   }
 }

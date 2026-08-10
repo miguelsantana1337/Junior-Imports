@@ -216,8 +216,14 @@ export function CheckoutScreen() {
     if (!demoMode) {
       if (referralCode.trim()) {
         const referralResponse = await fetch(`/api/storefront/referrals?tenantId=${encodeURIComponent(data.tenant.id)}&code=${encodeURIComponent(referralCode.trim())}`, { cache: "no-store" });
-        const referral = await referralResponse.json().catch(() => null) as { valid?: boolean } | null;
-        if (!referralResponse.ok || !referral?.valid) {
+        const referral = await referralResponse.json().catch(() => null) as { valid?: boolean; error?: string } | null;
+        if (!referralResponse.ok) {
+          setSubmitError(referralResponse.status === 429
+            ? "Muitas tentativas para validar a indicação. Aguarde um momento e tente novamente."
+            : "Não foi possível validar o código de indicação agora. Atualize a página e tente novamente.");
+          return;
+        }
+        if (!referral?.valid) {
           setSubmitError("O código de indicação é inválido, expirou ou não possui campanha ativa.");
           return;
         }
