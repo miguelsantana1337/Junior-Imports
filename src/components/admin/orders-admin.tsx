@@ -503,7 +503,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
         <section className="order-payment-card">
           <div className="order-payment-heading">
             <WalletCards />
-            <div><span>RECEBIMENTOS</span><h3>Pagamento integral ou em partes</h3><p>Registre cada valor no dia em que ele entrar. O pedido só fica quitado quando o saldo chegar a zero.</p></div>
+            <div><span>RECEBIMENTOS</span><h3>Pagamento integral ou em partes</h3><p>Registre cada valor no dia em que ele entrar. O primeiro pagamento já baixa o pedido inteiro do estoque; a quitação acontece quando o saldo chega a zero.</p></div>
             <strong className={`order-payment-state ${currentPaymentStatus === "Recebido" ? "received" : currentPaymentStatus === "Parcial" ? "partial" : ["Estornado", "Cancelado"].includes(currentPaymentStatus) ? "cancelled" : "pending"}`}>{currentPaymentStatus}</strong>
           </div>
           <div className="order-payment-summary">
@@ -537,7 +537,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
               <label>Observação (opcional)<input aria-label="Observação do pagamento" maxLength={300} value={paymentNote} onChange={(event) => setPaymentNote(event.target.value)} placeholder="Ex.: primeira parcela via Pix" /></label>
             </div>
             <div className="order-payment-form-footer">
-              <p>{paymentMode === "full" ? "Ao confirmar, o pedido ficará pago e seguirá para preparação." : "O pedido continuará com pagamento parcial até que todo o saldo seja recebido."}</p>
+              <p>{paymentMode === "full" ? "Ao confirmar, o pedido ficará pago, terá o estoque baixado e seguirá para preparação." : "A primeira parcela baixa o pedido inteiro do estoque. As próximas parcelas apenas atualizam o saldo financeiro."}</p>
               <div><button className="admin-button" type="button" onClick={() => setPaymentFormOpen(false)}>Cancelar</button><button className="admin-button primary" disabled={savingPayment || !paymentAmount || parseMoneyInput(paymentAmount) <= 0}>{savingPayment ? "Registrando..." : "Confirmar recebimento"}</button></div>
             </div>
           </form>}
