@@ -89,7 +89,7 @@ test("conclui o carrinho e envia o pedido para o WhatsApp oficial", async ({ pag
   await expect(page.getByRole("textbox", { name: "Número", exact: true })).toHaveValue("");
   await expect(page.getByRole("textbox", { name: "Complemento", exact: true })).toHaveValue("");
   await expect(page.getByText("Dados do CEP preenchidos.")).toBeVisible();
-  await expect(page.getByRole("radio", { name: /Cartão 2x sem juros/ })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /Cartão Condição confirmada pelo WhatsApp/ })).toBeVisible();
   await expect(page.getByRole("radio", { name: /Dinheiro Pagamento combinado/ })).toBeVisible();
   await expect(page.getByText("Boleto", { exact: true })).toHaveCount(0);
   await page.getByLabel("Número").fill("100");
