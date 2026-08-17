@@ -177,7 +177,7 @@ function salesReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "c
 
 function financeReport(data: StoreData, query: ReportQuery): Omit<ReportResult, "comparison"> {
   const primary = query.filters.primary || "all";
-  const transactions = officialFinancialTransactions(data.financialTransactions, data.settings).filter((item) => inRange(item.createdAt, query.dateFrom, query.dateTo))
+  const transactions = officialFinancialTransactions(data.financialTransactions, data.settings).filter((item) => inRange(item.paidAt || item.createdAt, query.dateFrom, query.dateTo))
     .filter((item) => primary === "all" || (primary.startsWith("status:") && item.status === primary.slice(7)) || (primary.startsWith("type:") && item.type === primary.slice(5)));
   const summary = financialSummary(transactions, new Date(`${query.dateTo}T23:59:59`));
   return {
@@ -188,14 +188,14 @@ function financeReport(data: StoreData, query: ReportQuery): Omit<ReportResult, 
       { key: "category", label: "Categoria", format: "text" }, { key: "account", label: "Conta", format: "text" },
       { key: "amount", label: "Valor", format: "money" },
     ],
-    rows: transactions.map((item) => ({ date: item.createdAt.slice(0, 10), description: item.description, type: item.type === "income" ? "Entrada" : "Saída", status: item.status, category: item.category, account: item.account, amount: item.amount })),
+    rows: transactions.map((item) => ({ date: (item.paidAt || item.createdAt).slice(0, 10), description: item.description, type: item.type === "income" ? "Entrada" : "Saída", status: item.status, category: item.category, account: item.account, amount: item.amount })),
     metrics: [
       { key: "income", label: "Receita realizada", value: summary.income, format: "money" },
       { key: "expenses", label: "Custos e despesas", value: summary.expenses, format: "money" },
       { key: "netProfit", label: "Lucro líquido", value: summary.netProfit, format: "money" },
       { key: "margin", label: "Margem líquida", value: summary.marginPercent, format: "percent" },
     ],
-    series: dailySeries(transactions.map((item) => ({ date: item.createdAt, value: item.type === "income" ? item.amount : -item.amount }))),
+    series: dailySeries(transactions.map((item) => ({ date: item.paidAt || item.createdAt, value: item.type === "income" ? item.amount : -item.amount }))),
   };
 }
 

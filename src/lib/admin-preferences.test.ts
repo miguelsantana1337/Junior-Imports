@@ -21,8 +21,15 @@ describe("preferências do painel", () => {
     expect(preferences.tableDensity).toBe("comfortable");
     expect(preferences.productViews).toHaveLength(1);
     expect(preferences.productViews[0]?.name).toBe("Ativos");
+    expect(preferences.globalPeriod).toBe("30d");
     expect(preferences.mutedNotificationCategories).toEqual([]);
     expect(preferences.includeInformativeNotifications).toBe(false);
+  });
+
+  it("normaliza e persiste o período global", () => {
+    writeAdminPreferences("junior", { ...defaultAdminPreferences, globalPeriod: "week" });
+    expect(readAdminPreferences("junior").globalPeriod).toBe("week");
+    expect(normalizeAdminPreferences({ globalPeriod: "invalid" }).globalPeriod).toBe("30d");
   });
 
   it("persiste preferências separadamente por usuário", () => {

@@ -7,6 +7,8 @@ import { AdminEmpty, AdminPanel, StatusTag } from "./admin-ui";
 import { ABANDONED_CART_AFTER_MINUTES, cartRecoveryMessage, trackedCartStatus } from "@/lib/abandoned-cart";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
 import type { TrackedCart, TrackedCartStatus } from "@/types/abandoned-cart";
+import { filterByAdminPeriod } from "@/lib/admin-period";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
 
 const statusLabels: Record<TrackedCartStatus, string> = {
   abandoned: "Abandonado",
@@ -17,6 +19,7 @@ const statusLabels: Record<TrackedCartStatus, string> = {
 
 export function AbandonedCartsAdmin() {
   const { data, demoMode } = useAdminData();
+  const { range } = useAdminPeriod();
   const [carts, setCarts] = useState<TrackedCart[]>([]);
   const [view, setView] = useState<TrackedCartStatus>("abandoned");
   const [query, setQuery] = useState("");
@@ -42,18 +45,19 @@ export function AbandonedCartsAdmin() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const monitored = useMemo(() => carts.map((cart) => ({ ...cart, status: trackedCartStatus(cart) })), [carts]);
+  const periodCarts = useMemo(() => filterByAdminPeriod(monitored, (cart) => cart.status === "recovered" ? cart.recoveredAt || cart.updatedAt : cart.lastActivityAt, range), [monitored, range]);
   const counts = useMemo(() => ({
-    abandoned: monitored.filter((cart) => cart.status === "abandoned").length,
-    active: monitored.filter((cart) => cart.status === "active").length,
-    recovered: monitored.filter((cart) => cart.status === "recovered").length,
-    dismissed: monitored.filter((cart) => cart.status === "dismissed").length,
-  }), [monitored]);
-  const abandonedValue = monitored.filter((cart) => cart.status === "abandoned").reduce((sum, cart) => sum + cart.subtotal, 0);
-  const recoverable = monitored.filter((cart) => cart.status === "abandoned" && cart.contactAllowed && cart.customerPhone).length;
+    abandoned: periodCarts.filter((cart) => cart.status === "abandoned").length,
+    active: periodCarts.filter((cart) => cart.status === "active").length,
+    recovered: periodCarts.filter((cart) => cart.status === "recovered").length,
+    dismissed: periodCarts.filter((cart) => cart.status === "dismissed").length,
+  }), [periodCarts]);
+  const abandonedValue = periodCarts.filter((cart) => cart.status === "abandoned").reduce((sum, cart) => sum + cart.subtotal, 0);
+  const recoverable = periodCarts.filter((cart) => cart.status === "abandoned" && cart.contactAllowed && cart.customerPhone).length;
   const filtered = useMemo(() => {
     const term = query.trim().toLocaleLowerCase("pt-BR");
-    return monitored.filter((cart) => cart.status === view && (!term || `${cart.customerName} ${cart.customerPhone} ${cart.customerEmail} ${cart.items.map((item) => item.name).join(" ")}`.toLocaleLowerCase("pt-BR").includes(term)));
-  }, [monitored, query, view]);
+    return periodCarts.filter((cart) => cart.status === view && (!term || `${cart.customerName} ${cart.customerPhone} ${cart.customerEmail} ${cart.items.map((item) => item.name).join(" ")}`.toLocaleLowerCase("pt-BR").includes(term)));
+  }, [periodCarts, query, view]);
 
   async function updateStatus(cart: TrackedCart, action: "dismiss" | "restore") {
     setBusyId(cart.id);
@@ -77,7 +81,7 @@ export function AbandonedCartsAdmin() {
   return (
     <AdminPanel title="Carrinhos abandonados" description={`Detecta checkouts sem atividade há ${ABANDONED_CART_AFTER_MINUTES} minutos e permite recuperação manual pelo WhatsApp.`} action={<button className="admin-button" onClick={() => void refresh()} disabled={loading}><RefreshCw className={loading ? "spin" : ""} /> Atualizar</button>}>
       <div className="abandoned-cart-summary">
-        <article><ShoppingCart /><span><small>Abandonados</small><strong>{counts.abandoned}</strong><p>{formatMoney(abandonedValue)} em potencial</p></span></article>
+        <article><ShoppingCart /><span><small>Abandonados</small><strong>{counts.abandoned}</strong><p>{formatMoney(abandonedValue)} · {range.shortLabel.toLocaleLowerCase("pt-BR")}</p></span></article>
         <article><UserRound /><span><small>Com WhatsApp informado</small><strong>{recoverable}</strong><p>Prontos para atendimento</p></span></article>
         <article><RotateCcw /><span><small>Convertidos</small><strong>{counts.recovered}</strong><p>Viraram pedidos</p></span></article>
       </div>
@@ -89,7 +93,7 @@ export function AbandonedCartsAdmin() {
       {loading ? <div className="abandoned-cart-loading"><RefreshCw className="spin" /> Carregando carrinhos...</div> : filtered.length ? <>
         <div className="admin-table-wrap abandoned-cart-desktop"><table className="admin-table"><thead><tr><th>Cliente</th><th>Última atividade</th><th>Produtos</th><th>Valor estimado</th><th>Situação</th><th>Ações</th></tr></thead><tbody>{filtered.map((cart) => <tr key={cart.id}><td><div className="admin-customer-cell"><strong>{cart.contactAllowed && cart.customerName ? cart.customerName : "Visitante sem contato"}</strong><small>{cart.contactAllowed ? cart.customerPhone || cart.customerEmail : "WhatsApp ainda não informado"}</small></div></td><td>{formatDateTime(cart.lastActivityAt)}</td><td><div className="abandoned-cart-items"><strong>{cart.itemCount} item{cart.itemCount === 1 ? "" : "s"}</strong><small>{cart.items.map((item) => `${item.quantity}x ${item.name}`).join(" · ")}</small></div></td><td><strong>{formatMoney(cart.subtotal)}</strong></td><td><StatusTag active={cart.status === "active" || cart.status === "recovered"}>{statusLabels[cart.status]}</StatusTag></td><td><CartActions cart={cart} storeName={data.settings.storeName} busy={busyId === cart.id} onUpdate={updateStatus} /></td></tr>)}</tbody></table></div>
         <div className="admin-mobile-cards abandoned-cart-mobile">{filtered.map((cart) => <article key={cart.id}><header><div><strong>{cart.contactAllowed && cart.customerName ? cart.customerName : "Visitante sem contato"}</strong><small>{formatDateTime(cart.lastActivityAt)}</small></div><StatusTag active={cart.status === "active" || cart.status === "recovered"}>{statusLabels[cart.status]}</StatusTag></header><div><strong>{formatMoney(cart.subtotal)} · {cart.itemCount} item{cart.itemCount === 1 ? "" : "s"}</strong><small>{cart.items.map((item) => `${item.quantity}x ${item.name}`).join(" · ")}</small></div><footer><CartActions cart={cart} storeName={data.settings.storeName} busy={busyId === cart.id} onUpdate={updateStatus} /></footer></article>)}</div>
-      </> : <AdminEmpty><ShoppingCart /><strong>{demoMode ? "Nenhum carrinho no ambiente local." : `Nenhum carrinho ${statusLabels[view].toLocaleLowerCase("pt-BR")}.`}</strong><span>{view === "abandoned" ? "Os checkouts sem atividade aparecerão automaticamente aqui." : "Altere a visualização para consultar outras situações."}</span></AdminEmpty>}
+      </> : <AdminEmpty><ShoppingCart /><strong>{demoMode ? "Nenhum carrinho no ambiente local." : `Nenhum carrinho ${statusLabels[view].toLocaleLowerCase("pt-BR")} em ${range.label.toLocaleLowerCase("pt-BR")}.`}</strong><span>{view === "abandoned" ? "Os checkouts sem atividade aparecerão automaticamente aqui." : "Altere a situação ou o período global para ampliar a consulta."}</span></AdminEmpty>}
     </AdminPanel>
   );
 }

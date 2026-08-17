@@ -5544,6 +5544,25 @@ body:has(.admin-modal) .admin-mobile-tabbar { opacity: 0; pointer-events: none; 
 .admin-global-search { text-align: left; cursor: pointer; }
 .admin-global-search > span { min-width: 0; flex: 1; overflow: hidden; color: #8290a4; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .admin-global-search kbd { min-width: 37px; height: 23px; display: grid; place-items: center; border: 1px solid rgb(101 126 159 / 20%); border-radius: 7px; background: rgb(117 143 174 / 7%); color: #8190a4; font-family: inherit; font-size: 8px; font-weight: 750; box-shadow: inset 0 1px rgb(255 255 255 / 42%); }
+.admin-period-selector {
+  min-width: 172px;
+  height: 42px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+  border: 1px solid var(--admin-card-border);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 72%);
+  color: #657892;
+  box-shadow: inset 0 1px rgb(255 255 255 / 72%);
+}
+.admin-period-selector > svg { width: 17px; flex: none; color: #277cd8; }
+.admin-period-selector > span { font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.admin-period-selector > b { display: none; font-size: 9px; white-space: nowrap; }
+.admin-period-selector > select { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #26374e; font: inherit; font-size: 9px; font-weight: 780; cursor: pointer; }
+.admin-period-selector:focus-within { border-color: rgb(56 132 230 / 52%); box-shadow: 0 0 0 3px rgb(39 124 230 / 10%), inset 0 1px rgb(255 255 255 / 72%); }
 .admin-brand-mark { isolation: isolate; }
 .admin-brand-mark::after { content: ""; position: absolute; z-index: -1; inset: -7px; border-radius: 18px; background: rgb(39 127 255 / 24%); filter: blur(14px); opacity: .7; }
 .admin-nav-group a.active { position: relative; }
@@ -5600,6 +5619,8 @@ body:has(.admin-modal) .admin-mobile-tabbar { opacity: 0; pointer-events: none; 
 html[data-admin-theme="dark"] .sortable-row.is-drop-target { border-color: #5ca7ff !important; background: #12243b !important; box-shadow: 0 0 0 3px rgb(62 150 255 / 14%), 0 18px 45px rgb(0 0 0 / 28%); }
 html[data-admin-theme="dark"] .admin-drag-handle { color: #7189a6; }
 html[data-admin-theme="dark"] .admin-global-search kbd { border-color: rgb(128 158 195 / 19%); background: rgb(126 158 197 / 9%); color: #8196b2; box-shadow: inset 0 1px rgb(255 255 255 / 5%); }
+html[data-admin-theme="dark"] .admin-period-selector { border-color: rgb(128 158 195 / 19%); background: rgb(17 28 46 / 72%); color: #8296af; box-shadow: inset 0 1px rgb(255 255 255 / 5%); }
+html[data-admin-theme="dark"] .admin-period-selector > select { color: #d9e6f5; color-scheme: dark; }
 
 .admin-command-dialog { position: fixed; z-index: 7000; inset: 0; display: grid; place-items: start center; padding: min(12vh, 110px) 18px 24px; }
 .admin-command-backdrop { position: absolute; inset: 0; border: 0; background: rgb(5 14 27 / 58%); backdrop-filter: blur(10px) saturate(1.1); animation: admin-command-fade-in 180ms ease both; }
@@ -5992,6 +6013,11 @@ html[data-admin-theme="dark"] .customer-wallet-mode button.active { background: 
   .banner-admin-list .sortable-row.has-drag-handle .sortable-main { grid-column: 2; }
   .sortable-row.has-drag-handle .admin-actions { grid-column: 3; grid-row: 1 / span 2; }
   .admin-global-search kbd { display: none; }
+  .admin-topbar-actions > .admin-theme-toggle { display: none; }
+  .admin-period-selector { min-width: 80px; width: 80px; position: relative; justify-content: center; padding-inline: 8px; }
+  .admin-period-selector > span { display: none; }
+  .admin-period-selector > b { display: block; }
+  .admin-period-selector > select { position: absolute; inset: 0; width: 100%; opacity: 0; }
   .admin-command-dialog { padding: 12px; align-items: start; }
   .admin-command-palette { max-height: calc(100dvh - 24px); border-radius: 20px; }
   .admin-command-palette > header { min-height: 68px; padding-inline: 14px; gap: 9px; }

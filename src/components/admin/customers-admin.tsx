@@ -4,7 +4,7 @@ import { CalendarClock, ChevronRight, MessageCircle, Search, ShoppingBag, UserRo
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { useSearchParams } from "next/navigation";
-import { buildCustomerInsights, customerMatchesOrder, customerRecurrenceRate } from "@/lib/crm";
+import { buildCustomerInsights, customerMatchesOrder } from "@/lib/crm";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
 import { customerSchema } from "@/lib/validation";
 import type { Customer, CustomerInsight, CustomerSegment } from "@/types/store";
@@ -14,6 +14,11 @@ import { useAdminDialog } from "./use-admin-dialog";
 import { CashbackCenter } from "./cashback-center";
 import { CustomerCashbackPanel } from "./customer-cashback-panel";
 import { cashbackWalletSummary } from "@/lib/cashback";
+import { officialOrders } from "@/lib/operation-scope";
+import { isRevenueOrder } from "@/lib/order-revenue";
+import { orderFinancialTotal } from "@/lib/order-finance";
+import { filterByAdminPeriod } from "@/lib/admin-period";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
 
 const segmentLabels: Record<CustomerSegment, string> = {
   new: "Novo",
@@ -33,6 +38,7 @@ const sourceLabels: Record<Customer["source"], string> = {
 
 export function CustomersAdmin() {
   const { data, referenceNow } = useAdminData();
+  const { range } = useAdminPeriod();
   const searchParams = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [segment, setSegment] = useState<CustomerSegment | "all">("all");
@@ -40,21 +46,24 @@ export function CustomersAdmin() {
   const now = referenceNow;
   useEffect(() => { const externalQuery = searchParams.get("q"); if (externalQuery !== null) setQuery(externalQuery); }, [searchParams]);
   const insights = useMemo(() => buildCustomerInsights(data.customers, data.orders, new Date(referenceNow)), [data.customers, data.orders, referenceNow]);
+  const periodOrders = useMemo(
+    () => filterByAdminPeriod(officialOrders(data.orders, data.settings).filter(isRevenueOrder), (order) => order.createdAt, range),
+    [data.orders, data.settings, range],
+  );
+  const periodBuyers = useMemo(() => insights.filter((customer) => periodOrders.some((order) => customerMatchesOrder(customer, order))), [insights, periodOrders]);
+  const periodRevenue = periodOrders.reduce((sum, order) => sum + orderFinancialTotal(order), 0);
   const filtered = useMemo(() => insights.filter((customer) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matchesQuery = !normalized || `${customer.name} ${customer.email} ${customer.phone} ${customer.tags.join(" ")}`.toLocaleLowerCase("pt-BR").includes(normalized);
     return matchesQuery && (segment === "all" || customer.segment === segment);
   }), [insights, query, segment]);
-  const recurring = insights.filter((customer) => customer.orderCount > 1).length;
-  const atRisk = insights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment)).length;
-  const totalRevenue = insights.reduce((sum, customer) => sum + customer.totalSpent, 0);
 
   return <>
     <section className="crm-summary-grid" aria-label="Resumo do CRM">
-      <article><UsersRound /><div><span>Clientes</span><strong>{insights.length}</strong><small>cadastros identificados</small></div></article>
-      <article><ShoppingBag /><div><span>Recorrentes</span><strong>{recurring}</strong><small>{customerRecurrenceRate(insights).toFixed(0)}% de recompra</small></div></article>
-      <article><CalendarClock /><div><span>Precisam de contato</span><strong>{atRisk}</strong><small>em risco ou inativos</small></div></article>
-      <article><UserRound /><div><span>Valor por cliente</span><strong>{formatMoney(insights.length ? totalRevenue / insights.length : 0)}</strong><small>média acumulada</small></div></article>
+      <article><UsersRound /><div><span>Compradores no período</span><strong>{periodBuyers.length}</strong><small>{range.label.toLocaleLowerCase("pt-BR")}</small></div></article>
+      <article><ShoppingBag /><div><span>Pedidos quitados</span><strong>{periodOrders.length}</strong><small>no período selecionado</small></div></article>
+      <article><CalendarClock /><div><span>Receita dos pedidos</span><strong>{formatMoney(periodRevenue)}</strong><small>vendas quitadas no período</small></div></article>
+      <article><UserRound /><div><span>Ticket médio</span><strong>{formatMoney(periodOrders.length ? periodRevenue / periodOrders.length : 0)}</strong><small>{insights.length} clientes no cadastro total</small></div></article>
     </section>
 
     <CashbackCenter />

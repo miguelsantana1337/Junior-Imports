@@ -26,6 +26,8 @@ import type { Order, OrderOperationalStatus, OrderPaymentStatus } from "@/types/
 import { useAdminDialog } from "./use-admin-dialog";
 import { WhatsappAssistantDialog, WhatsappAssistantQueue, type WhatsappAssistantTarget } from "./whatsapp-assistant";
 import { AdminSearchSelect, type AdminSearchOption } from "./admin-search-select";
+import { filterByAdminPeriod } from "@/lib/admin-period";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
 
 const statuses = operationalOrderStatuses;
 const paymentStatuses = orderPaymentStatuses;
@@ -58,6 +60,7 @@ function emptyManualOrder(): ManualOrderInput {
 
 export function OrdersAdmin() {
   const { data, demoMode, referenceNow } = useAdminData();
+  const { preset: globalPeriod, range } = useAdminPeriod();
   const searchParams = useSearchParams();
   const [selected, setSelected] = useState<Order | null>(null);
   const [creating, setCreating] = useState(false);
@@ -73,13 +76,17 @@ export function OrdersAdmin() {
   const historyOrders = useMemo(() => historicalOrders(data.orders, data.settings), [data.orders, data.settings]);
   const operationDate = operationStartLabel(data.settings);
   const scopeOrders = useMemo(() => scope === "official" ? operationOrders : historyOrders, [historyOrders, operationOrders, scope]);
+  const periodScopeOrders = useMemo(
+    () => scope === "history" && globalPeriod === "all" ? scopeOrders : filterByAdminPeriod(scopeOrders, (order) => order.createdAt, range),
+    [globalPeriod, range, scope, scopeOrders],
+  );
   const referenceDate = useMemo(() => new Date(referenceNow), [referenceNow]);
-  const activeCount = scopeOrders.filter((order) => !isOrderArchived(order, referenceDate)).length;
-  const archivedCount = scopeOrders.filter((order) => isOrderArchived(order, referenceDate)).length;
-  const visibleScopeOrders = useMemo(() => scopeOrders.filter((order) => archiveView === "archived" ? isOrderArchived(order, referenceDate) : !isOrderArchived(order, referenceDate)), [archiveView, referenceDate, scopeOrders]);
+  const activeCount = periodScopeOrders.filter((order) => !isOrderArchived(order, referenceDate)).length;
+  const archivedCount = periodScopeOrders.filter((order) => isOrderArchived(order, referenceDate)).length;
+  const visibleScopeOrders = useMemo(() => periodScopeOrders.filter((order) => archiveView === "archived" ? isOrderArchived(order, referenceDate) : !isOrderArchived(order, referenceDate)), [archiveView, periodScopeOrders, referenceDate]);
   const statusCounts = useMemo(() => Object.fromEntries(statuses.map((item) => [item, visibleScopeOrders.filter((order) => orderOperationalStatus(order) === item).length])), [visibleScopeOrders]);
   const paymentCounts = useMemo(() => Object.fromEntries(paymentStatuses.map((item) => [item, visibleScopeOrders.filter((order) => orderPaymentStatus(order) === item).length])), [visibleScopeOrders]);
-  const filtered = useMemo(() => scopeOrders.filter((order) => {
+  const filtered = useMemo(() => periodScopeOrders.filter((order) => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     const matches = !normalized || `${order.code} ${order.customer.name} ${order.customer.email} ${order.customer.phone}`.toLocaleLowerCase("pt-BR").includes(normalized);
     const matchesArchive = archiveView === "archived" ? isOrderArchived(order, referenceDate) : !isOrderArchived(order, referenceDate);
@@ -88,7 +95,7 @@ export function OrdersAdmin() {
       || (paymentStatus === "open" && ["Pendente", "Parcial"].includes(orderPaymentStatus(order)))
       || orderPaymentStatus(order) === paymentStatus;
     return matches && matchesArchive && matchesStatus && matchesPayment;
-  }), [archiveView, paymentStatus, query, referenceDate, scopeOrders, status]);
+  }), [archiveView, paymentStatus, periodScopeOrders, query, referenceDate, status]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / 12));
   const currentPage = Math.min(page, pageCount);
   const visible = filtered.slice((currentPage - 1) * 12, currentPage * 12);
@@ -143,7 +150,7 @@ export function OrdersAdmin() {
             })}</div>
             <div className="admin-pagination"><span>Página {currentPage} de {pageCount}</span><div><button disabled={currentPage === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} aria-label="Página anterior"><ChevronLeft /></button><button disabled={currentPage === pageCount} onClick={() => setPage((value) => Math.min(pageCount, value + 1))} aria-label="Próxima página"><ChevronRight /></button></div></div>
           </>
-        ) : <AdminEmpty>{archiveView === "archived" ? <Archive /> : <PackagePlus />}<strong>{archiveView === "archived" ? "Nenhum pedido arquivado neste período." : scope === "history" ? "Nenhum pedido no histórico anterior." : "Nenhum pedido na operação oficial."}</strong><span>{archiveView === "archived" ? "Pedidos entregues ou cancelados podem ser arquivados pela tela de detalhes." : scope === "history" ? "Os pedidos antigos continuam disponíveis aqui quando existirem." : demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : "A partir do início oficial, os novos pedidos aparecerão aqui."}</span></AdminEmpty>}
+        ) : <AdminEmpty>{archiveView === "archived" ? <Archive /> : <PackagePlus />}<strong>{archiveView === "archived" ? "Nenhum pedido arquivado neste período." : scope === "history" ? "Nenhum pedido no histórico anterior para este período." : "Nenhum pedido encontrado no período global."}</strong><span>{archiveView === "archived" ? "Pedidos entregues ou cancelados podem ser arquivados pela tela de detalhes." : scope === "history" ? "Selecione Tempo todo para consultar todo o histórico anterior." : demoMode ? "Ajuste os filtros ou faça uma compra demonstrativa na loja." : `O filtro global está em “${range.label}”.`}</span></AdminEmpty>}
       </AdminPanel>
       <WhatsappAssistantQueue onCompose={setAssistantTarget} />
       {creating && <ManualOrderDialog onClose={() => setCreating(false)} onCreated={(order) => { setCreating(false); setSelected(order); setPage(1); }} />}

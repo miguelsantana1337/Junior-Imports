@@ -1,3 +1,5 @@
+import { isAdminPeriodPreset, type AdminPeriodPreset } from "@/lib/admin-period";
+
 export type AdminTableDensity = "comfortable" | "compact";
 export type AdminNotificationCategory = "inventory" | "orders" | "crm" | "purchasing" | "collaboration" | "cashback" | "marketing" | "security" | "system";
 
@@ -13,6 +15,7 @@ export interface SavedProductView {
 export interface AdminPreferences {
   favoriteHrefs: string[];
   tableDensity: AdminTableDensity;
+  globalPeriod: AdminPeriodPreset;
   productViews: SavedProductView[];
   mutedNotificationCategories: AdminNotificationCategory[];
   includeInformativeNotifications: boolean;
@@ -23,6 +26,7 @@ const storagePrefix = "junior-imports:admin-preferences:v1";
 export const defaultAdminPreferences: AdminPreferences = {
   favoriteHrefs: [],
   tableDensity: "comfortable",
+  globalPeriod: "30d",
   productViews: [],
   mutedNotificationCategories: [],
   includeInformativeNotifications: false,
@@ -78,6 +82,7 @@ export function normalizeAdminPreferences(value: unknown): AdminPreferences {
   return {
     favoriteHrefs,
     tableDensity: candidate.tableDensity === "compact" ? "compact" : "comfortable",
+    globalPeriod: isAdminPeriodPreset(candidate.globalPeriod) ? candidate.globalPeriod : defaultAdminPreferences.globalPeriod,
     productViews,
     mutedNotificationCategories,
     includeInformativeNotifications: candidate.includeInformativeNotifications === true,

@@ -48,6 +48,7 @@ import { AdminCommandPalette, type AdminCommandSource } from "@/components/admin
 import { useAdminPreferences } from "@/components/admin/use-admin-preferences";
 import { CopilotJunior } from "@/components/admin/copilot-junior";
 import { AdminNotificationCenter } from "@/components/admin/admin-notification-center";
+import { AdminPeriodProvider, AdminPeriodSelector } from "@/components/admin/admin-period-context";
 
 const navigationGroups = [
   {
@@ -182,6 +183,10 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   const visibleNavigation = navigation.filter((item) => item.permission === null || can(item.permission));
   const visibleUtilityNavigation = utilityNavigation.filter((item) => can(item.permission));
   const visibleCreateLinks = createLinks.filter((item) => can(item.permission));
+  const firstFlowRecordAt = [...data.orders, ...data.financialTransactions]
+    .map((item) => item.createdAt)
+    .filter((value) => Number.isFinite(new Date(value).getTime()))
+    .sort()[0];
   const commandSources: AdminCommandSource[] = [
     ...visibleNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
     ...visibleUtilityNavigation.map((item) => ({ ...item, group: "Navegação" as const })),
@@ -275,6 +280,13 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
   };
 
   return (
+    <AdminPeriodProvider
+      preset={preferences.globalPeriod}
+      referenceNow={referenceNow}
+      operationStartedAt={data.settings.operationStartedAt}
+      fallbackStartedAt={firstFlowRecordAt}
+      onChange={(globalPeriod) => updatePreferences((current) => ({ ...current, globalPeriod }))}
+    >
     <div
       className={`admin-shell-next admin-minimal-preview ${collapsed ? "is-collapsed" : ""} ${moneyHidden ? "admin-money-hidden" : ""}`}
       onClickCapture={(event) => {
@@ -315,6 +327,7 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
 
           <div className="admin-mobile-drawer-tools" aria-label="Ações rápidas">
             <button type="button" onClick={() => { setOpen(false); setCommandOpen(true); }}><IconSearch /><span>Buscar</span></button>
+            <AdminPeriodSelector variant="drawer" />
             <button type="button" onClick={toggleTheme}>{theme === "dark" ? <IconSun /> : <IconMoon />}<span>{theme === "dark" ? "Modo claro" : "Modo escuro"}</span></button>
             <Link href={data.tenant.storefrontPath || "/"} target="_blank"><IconExternalLink /><span>Ver loja</span></Link>
           </div>
@@ -369,6 +382,8 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
             <span>Buscar áreas, produtos, pedidos ou clientes</span>
             <kbd aria-hidden="true">⌘ K</kbd>
           </button>
+
+          <AdminPeriodSelector />
 
           <div className="admin-topbar-actions">
             <AdminPwaInstall />
@@ -446,5 +461,6 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
         <button className={open ? "active" : ""} type="button" onClick={() => setOpen(true)} aria-label="Abrir menu"><IconMenu2 /><span>Menu</span></button>
       </nav>
     </div>
+    </AdminPeriodProvider>
   );
 }

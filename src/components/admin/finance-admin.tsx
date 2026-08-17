@@ -12,11 +12,14 @@ import { orderPaymentSummary } from "@/lib/order-payments";
 import type { FinancialTransaction } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { AdminEmpty, AdminPanel } from "./admin-ui";
+import { filterByAdminPeriod } from "@/lib/admin-period";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
 
 const statusLabels: Record<FinancialTransaction["status"], string> = { pending: "Pendente", paid: "Pago", cancelled: "Cancelado" };
 
 export function FinanceAdmin() {
   const { data, referenceNow, saveFinancialTransaction, deleteFinancialTransaction } = useAdminData();
+  const { preset: globalPeriod, range } = useAdminPeriod();
   const [formOpen, setFormOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | FinancialTransaction["type"]>("all");
   const [scope, setScope] = useState<"official" | "history">("official");
@@ -25,12 +28,14 @@ export function FinanceAdmin() {
   const [form, setForm] = useState<FinancialTransaction>(() => ({ id: crypto.randomUUID(), type: "expense", status: "pending", description: "", amount: 0, category: "Operacional", account: "Conta principal", costCenter: "Administração", dueDate: today, paidAt: "", orderId: "", purchaseOrderId: "", recurring: false, notes: "", createdAt: new Date().toISOString() }));
   const operationTransactions = useMemo(() => officialFinancialTransactions(data.financialTransactions, data.settings), [data.financialTransactions, data.settings]);
   const historyTransactions = useMemo(() => historicalFinancialTransactions(data.financialTransactions, data.settings), [data.financialTransactions, data.settings]);
-  const summary = useMemo(() => financialSummary(operationTransactions), [operationTransactions]);
+  const periodOperationTransactions = useMemo(() => filterByAdminPeriod(operationTransactions, (item) => item.paidAt || item.createdAt, range), [operationTransactions, range]);
+  const periodHistoryTransactions = useMemo(() => globalPeriod === "all" ? historyTransactions : filterByAdminPeriod(historyTransactions, (item) => item.paidAt || item.createdAt, range), [globalPeriod, historyTransactions, range]);
+  const summary = useMemo(() => financialSummary(periodOperationTransactions), [periodOperationTransactions]);
   const receivable = useMemo(() => officialOrders(data.orders, data.settings)
     .filter((order) => !isOrderArchived(order, new Date(referenceNow)))
     .filter((order) => orderOperationalStatus(order) !== "Cancelado" && ["Pendente", "Parcial"].includes(orderPaymentStatus(order)))
     .reduce((total, order) => total + orderPaymentSummary(order, data.financialTransactions).remaining, 0), [data.financialTransactions, data.orders, data.settings, referenceNow]);
-  const transactions = (scope === "official" ? operationTransactions : historyTransactions).filter((item) => filter === "all" || item.type === filter);
+  const transactions = (scope === "official" ? periodOperationTransactions : periodHistoryTransactions).filter((item) => filter === "all" || item.type === filter);
   const operationDate = operationStartLabel(data.settings);
 
   async function submit(event: React.FormEvent) {
@@ -47,10 +52,10 @@ export function FinanceAdmin() {
     <section className="ops-hero"><div><span>CAIXA E RESULTADOS</span><h2>Veja o que entrou, saiu e ainda precisa entrar.</h2><p>Os pedidos atualizam o caixa automaticamente. Registre aqui somente o que acontecer fora deles.</p></div><div className="ops-hero-actions"><button className="admin-button primary" onClick={() => setFormOpen((value) => !value)}><IconPlus /> Registrar entrada ou saída</button></div></section>
     {operationDate && <div className="operation-baseline-note"><IconCalendarEvent /><div><strong>Financeiro oficial desde {operationDate}</strong><span>Os indicadores e os relatórios não somam lançamentos anteriores. Use “Histórico anterior” apenas para consulta.</span></div></div>}
     <section className="ops-metric-grid finance">
-      <article><span className="green"><IconTrendingUp /></span><div><small>Entrou</small><strong className="admin-money-value">{formatMoney(summary.income)}</strong><p>pagamentos confirmados</p></div></article>
+      <article><span className="green"><IconTrendingUp /></span><div><small>Entrou</small><strong className="admin-money-value">{formatMoney(summary.income)}</strong><p>confirmado · {range.label.toLocaleLowerCase("pt-BR")}</p></div></article>
       <article><span className="blue"><IconWallet /></span><div><small>Ainda vai entrar</small><strong className="admin-money-value">{formatMoney(receivable)}</strong><p>saldos pendentes dos pedidos ativos</p></div></article>
-      <article><span className="danger"><IconReceipt2 /></span><div><small>Saiu</small><strong className="admin-money-value">{formatMoney(summary.expenses)}</strong><p>custos, despesas e taxas</p></div></article>
-      <article><span className={summary.netProfit >= 0 ? "blue" : "danger"}><IconCash /></span><div><small>Sobrou</small><strong className="admin-money-value">{formatMoney(summary.netProfit)}</strong><p>{summary.marginPercent.toFixed(1)}% do que entrou</p></div></article>
+      <article><span className="danger"><IconReceipt2 /></span><div><small>Saiu</small><strong className="admin-money-value">{formatMoney(summary.expenses)}</strong><p>no período selecionado</p></div></article>
+      <article><span className={summary.netProfit >= 0 ? "blue" : "danger"}><IconCash /></span><div><small>Sobrou</small><strong className="admin-money-value">{formatMoney(summary.netProfit)}</strong><p>{summary.marginPercent.toFixed(1)}% do que entrou no período</p></div></article>
     </section>
 
     {formOpen && <AdminPanel title="O dinheiro entrou ou saiu?" description="Informe apenas os dados essenciais; detalhes adicionais continuam opcionais."><form className="ops-form" onSubmit={submit}>
@@ -70,9 +75,9 @@ export function FinanceAdmin() {
 
     <div className="ops-two-columns">
       <AdminPanel title="Extrato de movimentações" description="Todas as entradas e saídas, automáticas ou manuais.">
-        {operationDate && <div className="operation-scope-tabs"><button className={scope === "official" ? "active" : ""} onClick={() => setScope("official")}>Operação oficial <b>{operationTransactions.length}</b></button><button className={scope === "history" ? "active" : ""} onClick={() => setScope("history")}>Histórico anterior <b>{historyTransactions.length}</b></button></div>}
+        {operationDate && <div className="operation-scope-tabs"><button className={scope === "official" ? "active" : ""} onClick={() => setScope("official")}>Operação oficial <b>{periodOperationTransactions.length}</b></button><button className={scope === "history" ? "active" : ""} onClick={() => setScope("history")}>Histórico anterior <b>{periodHistoryTransactions.length}</b></button></div>}
         <div className="ops-tabs compact"><button className={filter === "all" ? "active" : ""} onClick={() => setFilter("all")}>Todos</button><button className={filter === "income" ? "active" : ""} onClick={() => setFilter("income")}>Entradas</button><button className={filter === "expense" ? "active" : ""} onClick={() => setFilter("expense")}>Saídas</button></div>
-        <div className="finance-list">{transactions.map((item) => <article key={item.id}><span className={item.type}>{item.type === "income" ? "+" : "−"}</span><div><strong>{item.description}</strong><small>{item.category} · {item.account} · venc. {item.dueDate || "sem data"}</small>{item.orderId && <em>Gerado por pedido</em>}{item.purchaseOrderId && <em>Gerado por compra</em>}</div><div><b className="admin-money-value">{item.type === "income" ? "+ " : "- "}{formatMoney(item.amount)}</b><small className={`finance-status ${item.status}`}>{statusLabels[item.status]}</small></div><div className="ops-row-actions">{item.status === "pending" && <button className="admin-icon-button" aria-label={`Marcar ${item.description} como pago`} onClick={() => void saveFinancialTransaction({ ...item, status: "paid", paidAt: new Date().toISOString() })}><IconCheck /></button>}{!item.orderId && !item.purchaseOrderId && <button className="admin-icon-button" aria-label={`Excluir ${item.description}`} onClick={() => void deleteFinancialTransaction(item.id)}>×</button>}</div></article>)}{!transactions.length && <AdminEmpty><IconWallet /><strong>{scope === "history" ? "Nenhum lançamento no histórico anterior." : "Nenhum lançamento na operação oficial."}</strong><span>{scope === "history" ? "Os registros anteriores continuam preservados quando existirem." : "As novas entradas e saídas aparecerão aqui a partir do início oficial."}</span></AdminEmpty>}</div>
+        <div className="finance-list">{transactions.map((item) => <article key={item.id}><span className={item.type}>{item.type === "income" ? "+" : "−"}</span><div><strong>{item.description}</strong><small>{item.category} · {item.account} · venc. {item.dueDate || "sem data"}</small>{item.orderId && <em>Gerado por pedido</em>}{item.purchaseOrderId && <em>Gerado por compra</em>}</div><div><b className="admin-money-value">{item.type === "income" ? "+ " : "- "}{formatMoney(item.amount)}</b><small className={`finance-status ${item.status}`}>{statusLabels[item.status]}</small></div><div className="ops-row-actions">{item.status === "pending" && <button className="admin-icon-button" aria-label={`Marcar ${item.description} como pago`} onClick={() => void saveFinancialTransaction({ ...item, status: "paid", paidAt: new Date().toISOString() })}><IconCheck /></button>}{!item.orderId && !item.purchaseOrderId && <button className="admin-icon-button" aria-label={`Excluir ${item.description}`} onClick={() => void deleteFinancialTransaction(item.id)}>×</button>}</div></article>)}{!transactions.length && <AdminEmpty><IconWallet /><strong>Nenhum lançamento em {range.label.toLocaleLowerCase("pt-BR")}.</strong><span>{scope === "history" ? "Selecione Tempo todo para consultar todo o histórico anterior." : "Altere o período global para ampliar a consulta."}</span></AdminEmpty>}</div>
       </AdminPanel>
 
       <div className="ops-side-stack">

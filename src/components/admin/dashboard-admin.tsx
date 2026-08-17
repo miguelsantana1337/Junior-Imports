@@ -22,10 +22,12 @@ import {
 import Link from "next/link";
 import { useAdminData } from "./admin-data-provider";
 import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
-import { buildCustomerInsights } from "@/lib/crm";
+import { buildCustomerInsights, customerMatchesOrder } from "@/lib/crm";
 import { orderPaymentsRevenue } from "@/lib/order-payments";
 import { officialFinancialTransactions, officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
 import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
+import { buildAdminPeriodBuckets, filterByAdminPeriod } from "@/lib/admin-period";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
 
 const auditEntityLabels: Record<string, string> = {
   products: "Produto",
@@ -50,6 +52,7 @@ function auditDescription(action: "insert" | "update" | "delete", entityType: st
 
 export function DashboardAdmin() {
   const { data, demoMode, currentUser, referenceNow } = useAdminData();
+  const { range } = useAdminPeriod();
   const now = new Date(referenceNow);
   const hour = formatStoreHour(now);
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
@@ -66,24 +69,25 @@ export function DashboardAdmin() {
   const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
   const lowStock = activeProducts.filter((product) => product.stock <= 10);
-  const ordersToday = operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === todayKey);
+  const periodOrders = filterByAdminPeriod(operationOrders, (order) => order.createdAt, range);
+  const periodTransactions = filterByAdminPeriod(operationTransactions, (transaction) => transaction.paidAt || transaction.createdAt, range);
+  const periodBuyers = customerInsights.filter((customer) => periodOrders.some((order) => customerMatchesOrder(customer, order)));
   const newOrders = operationOrders.filter((order) => orderOperationalStatus(order) === "Novo");
   const pendingPayments = operationOrders.filter((order) => (
     !["Cancelado", "Entregue"].includes(orderOperationalStatus(order))
     && ["Pendente", "Parcial"].includes(orderPaymentStatus(order))
   ));
-  const sevenDaysAgoKey = formatStoreDateKey(new Date(referenceNow - 6 * 86_400_000));
-  const sevenDaysAgo = new Date(`${sevenDaysAgoKey}T00:00:00-03:00`);
-  const weeklyRevenue = orderPaymentsRevenue(operationTransactions, sevenDaysAgo);
+  const periodRevenue = orderPaymentsRevenue(periodTransactions, new Date(0));
 
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(referenceNow - (6 - index) * 86_400_000);
-    const day = formatStoreDateKey(date);
+  const days = buildAdminPeriodBuckets(range).map((bucket) => {
     return {
-      key: day,
-      label: date.toLocaleDateString("pt-BR", { weekday: "short", timeZone: STORE_TIME_ZONE }).replace(".", ""),
-      date: date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: STORE_TIME_ZONE }),
-      value: operationOrders.filter((order) => formatStoreDateKey(order.createdAt) === day).length,
+      key: bucket.key,
+      label: bucket.label,
+      shortLabel: bucket.shortLabel,
+      value: periodOrders.filter((order) => {
+        const day = formatStoreDateKey(order.createdAt);
+        return day >= bucket.dateFrom && day <= bucket.dateTo;
+      }).length,
     };
   });
   const maxOrders = Math.max(...days.map((day) => day.value), 1);
@@ -140,10 +144,10 @@ export function DashboardAdmin() {
       </section>
 
       <section className="admin-command-stats" aria-label="Resumo da loja">
-        <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos</small><strong>{ordersToday.length}</strong><p>{ordersToday.length} novos hoje</p></div></article>
-        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita confirmada</small><strong className="admin-money-value">{formatMoney(weeklyRevenue)}</strong><p>Pagamentos recebidos · últimos 7 dias</p></div></article>
+        <article className="stat-orders"><span><IconShoppingBag /></span><div><small>Pedidos no período</small><strong>{periodOrders.length}</strong><p>{range.label}</p></div></article>
+        <article className="stat-revenue"><span><IconCoin /></span><div><small>Receita recebida</small><strong className="admin-money-value">{formatMoney(periodRevenue)}</strong><p>Pagamentos recebidos · {range.label.toLocaleLowerCase("pt-BR")}</p></div></article>
         <article className="stat-products"><span><IconBox /></span><div><small>Produtos ativos</small><strong>{activeProducts.length}</strong><p>Catálogo publicado</p></div></article>
-        <article className="stat-customers"><span><IconUsers /></span><div><small>Clientes</small><strong>{customerInsights.length}</strong><p>{customersNeedingContact.length} para acompanhar</p></div></article>
+        <article className="stat-customers"><span><IconUsers /></span><div><small>Compradores no período</small><strong>{periodBuyers.length}</strong><p>{customerInsights.length} clientes cadastrados</p></div></article>
       </section>
 
       <div className="admin-command-grid">
@@ -177,10 +181,10 @@ export function DashboardAdmin() {
           </section>
 
           <section className="admin-command-panel admin-weekly-orders">
-            <header><div><h2>Pedidos dos últimos 7 dias</h2><p>{demoMode ? "Pedidos demonstrativos registrados no checkout" : "Pedidos registrados no checkout"}</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
-            <div className="admin-weekly-chart" aria-label="Gráfico de pedidos dos últimos sete dias">
-              {days.map((day) => <div className="admin-weekly-day" key={day.key}><div><span style={{ height: `${Math.max(2, (day.value / maxOrders) * 72)}px` }} /></div><small>{day.label} {day.date}</small></div>)}
-              {operationOrders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href={data.tenant.storefrontPath || "/"}>{demoMode ? "Simular pedido" : "Abrir loja"}</Link></div>}
+            <header><div><h2>Pedidos · {range.label}</h2><p>{demoMode ? "Pedidos demonstrativos registrados no checkout" : "Pedidos registrados no checkout"}</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
+            <div className="admin-weekly-chart" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }} aria-label={`Gráfico de pedidos: ${range.label}`}>
+              {days.map((day) => <div className="admin-weekly-day" key={day.key}><div><span style={{ height: `${Math.max(2, (day.value / maxOrders) * 72)}px` }} /></div><small data-short={day.shortLabel}>{day.label}</small></div>)}
+              {periodOrders.length === 0 && <div className="admin-chart-empty"><IconShoppingCartOff /><div><strong>Nenhum pedido registrado neste período</strong><p>Quando receber pedidos, eles aparecerão aqui.</p></div><Link href={data.tenant.storefrontPath || "/"}>{demoMode ? "Simular pedido" : "Abrir loja"}</Link></div>}
             </div>
           </section>
         </div>

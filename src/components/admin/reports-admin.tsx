@@ -1,7 +1,7 @@
 "use client";
 
 import { BarChart3, CalendarRange, Check, Download, FileClock, FileSpreadsheet, FileText, History, LineChart, LockKeyhole, Plus, Save, Share2, Sparkles, Trash2, TrendingDown, TrendingUp, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, formatMoney, formatStoreDateKey } from "@/lib/format";
 import { downloadReportFile } from "@/lib/report-export";
 import { buildReport, reportTypeLabels, type ReportQuery, type ReportValueFormat } from "@/lib/reporting";
@@ -11,6 +11,8 @@ import { useConfirm } from "@/components/providers/confirm-provider";
 import { useAdminData } from "./admin-data-provider";
 import { operationStartLabel } from "@/lib/operation-scope";
 import { AdminEmpty } from "./admin-ui";
+import { useAdminPeriod } from "@/components/admin/admin-period-context";
+import type { AdminPeriodRange } from "@/lib/admin-period";
 
 type ReportTab = "builder" | "saved" | "exports";
 
@@ -23,14 +25,8 @@ const reportFilterOptions: Record<ReportType, Array<{ value: string; label: stri
   purchases: [{ value: "all", label: "Todas as ordens" }, { value: "status:draft", label: "Rascunhos" }, { value: "status:ordered", label: "Pedidos enviados" }, { value: "status:partial", label: "Recebimento parcial" }, { value: "status:received", label: "Recebidas" }, { value: "status:cancelled", label: "Canceladas" }],
 };
 
-function isoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
-}
-
-function initialQuery(referenceNow: number): ReportQuery {
-  const end = new Date(referenceNow);
-  const start = new Date(end.getTime() - 29 * 86_400_000);
-  return { type: "sales", dateFrom: formatStoreDateKey(start), dateTo: formatStoreDateKey(end), comparePrevious: true, filters: {} };
+function initialQuery(range: Pick<AdminPeriodRange, "dateFrom" | "dateTo">): ReportQuery {
+  return { type: "sales", dateFrom: range.dateFrom, dateTo: range.dateTo, comparePrevious: true, filters: {} };
 }
 
 function metricValue(value: number, format: Exclude<ReportValueFormat, "text" | "date">) {
@@ -48,9 +44,10 @@ function tableValue(value: string | number, format: ReportValueFormat) {
 
 export function ReportsAdmin() {
   const { data, currentUser, referenceNow, saveReport, deleteReport, recordExportRun } = useAdminData();
+  const { range } = useAdminPeriod();
   const confirm = useConfirm();
   const [tab, setTab] = useState<ReportTab>("builder");
-  const [query, setQuery] = useState<ReportQuery>(() => initialQuery(referenceNow));
+  const [query, setQuery] = useState<ReportQuery>(() => initialQuery(range));
   const [selectedReportId, setSelectedReportId] = useState("");
   const [saveOpen, setSaveOpen] = useState(false);
   const [reportName, setReportName] = useState("");
@@ -61,10 +58,17 @@ export function ReportsAdmin() {
   const selectedReport = data.savedReports.find((item) => item.id === selectedReportId);
   const operationDate = operationStartLabel(data.settings);
 
+  useEffect(() => {
+    setQuery((current) => current.dateFrom === range.dateFrom && current.dateTo === range.dateTo
+      ? current
+      : { ...current, dateFrom: range.dateFrom, dateTo: range.dateTo });
+    setSelectedReportId("");
+  }, [range.dateFrom, range.dateTo]);
+
   function setPeriod(days: number) {
-    const end = new Date();
+    const end = new Date(referenceNow);
     const start = new Date(end.getTime() - (days - 1) * 86_400_000);
-    setQuery((current) => ({ ...current, dateFrom: isoDate(start), dateTo: isoDate(end) }));
+    setQuery((current) => ({ ...current, dateFrom: formatStoreDateKey(start), dateTo: formatStoreDateKey(end) }));
     setSelectedReportId("");
   }
 
@@ -130,7 +134,7 @@ export function ReportsAdmin() {
       <section className="report-controls">
         <label><span>Relatório</span><select value={query.type} onChange={(event) => { setQuery((current) => ({ ...current, type: event.target.value as ReportType, filters: {} })); setSelectedReportId(""); }}>{Object.entries(reportTypeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
         <label><span>Filtro principal</span><select value={query.filters.primary || "all"} onChange={(event) => { setQuery((current) => ({ ...current, filters: event.target.value === "all" ? {} : { ...current.filters, primary: event.target.value } })); setSelectedReportId(""); }}>{reportFilterOptions[query.type].map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
-        <div className="report-period-shortcuts"><span>Período rápido</span><div><button onClick={() => setPeriod(7)}>7 dias</button><button onClick={() => setPeriod(30)}>30 dias</button><button onClick={() => setPeriod(90)}>90 dias</button></div></div>
+        <div className="report-period-shortcuts"><span>Período rápido</span><div><button onClick={() => { setQuery((current) => ({ ...current, dateFrom: range.dateFrom, dateTo: range.dateTo })); setSelectedReportId(""); }}>Global</button><button onClick={() => setPeriod(15)}>15 dias</button><button onClick={() => setPeriod(30)}>30 dias</button><button onClick={() => setPeriod(90)}>3 meses</button></div></div>
         <label><span>De</span><input type="date" value={query.dateFrom} max={query.dateTo} onChange={(event) => { setQuery((current) => ({ ...current, dateFrom: event.target.value })); setSelectedReportId(""); }} /></label>
         <label><span>Até</span><input type="date" value={query.dateTo} min={query.dateFrom} onChange={(event) => { setQuery((current) => ({ ...current, dateTo: event.target.value })); setSelectedReportId(""); }} /></label>
         <label className="report-compare"><input type="checkbox" checked={query.comparePrevious} onChange={(event) => setQuery((current) => ({ ...current, comparePrevious: event.target.checked }))} /><span>Comparar ao período anterior</span></label>
