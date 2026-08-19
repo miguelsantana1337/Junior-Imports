@@ -24,7 +24,14 @@ describe("campanha semanal no banco", () => {
   });
 
   it("configura indicação em 10% sem teto", () => {
-    expect(migration).toContain("reward_value = 10");
-    expect(migration).toContain("reward_cap = 0");
+    expect(migration).toContain("'percent', 10, 0, 90, 0");
+    expect(migration).toContain("Indique e ganhe 10%");
+  });
+
+  it("não aplica a campanha retroativamente a pedidos existentes", () => {
+    expect(migration).toContain("promotion_starts_at = now()");
+    expect(migration).toContain("starts_at <= v_order.created_at");
+    expect(migration).toContain("v_reward.reward_value / 100");
+    expect(migration).toContain("status = 'ended'");
   });
 });

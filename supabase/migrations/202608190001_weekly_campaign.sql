@@ -271,11 +271,13 @@ after update of payment_status, status on public.orders
 for each row execute function public.sync_loyalty_reward_reservation();
 
 -- Configuração preparada para a semana de 19 a 23 de agosto de 2026.
+-- `now()` é estável durante toda a transação e funciona como o corte único da
+-- campanha: nenhum pedido criado antes desta migração recebe as novas regras.
 update public.store_settings settings
 set
   promotion_enabled = true,
   promotion_name = 'Semana de Benefícios Junior Imports',
-  promotion_starts_at = '2026-08-19 00:00:00-03'::timestamptz,
+  promotion_starts_at = now(),
   promotion_ends_at = '2026-08-23 23:59:59-03'::timestamptz,
   promotion_highlights = jsonb_build_array(
     '5% de cashback em toda a loja',
@@ -346,7 +348,7 @@ insert into public.cashback_campaigns (
 )
 select tenant.id, 'cashback-week-2026-08-19', 'Cashback 5% em toda a loja',
   'Campanha semanal sobre o valor pago pelos produtos, após descontos e sem frete.',
-  'draft', '2026-08-19 00:00:00-03'::timestamptz, '2026-08-23 23:59:59-03'::timestamptz,
+  'draft', now(), '2026-08-23 23:59:59-03'::timestamptz,
   5, 0, 90, 200, '{}', '{}', '{}', 'compatible', 0, 'commerce-v2'
 from public.tenants tenant where tenant.slug = 'junior-imports'
 on conflict (id) do update set
@@ -364,35 +366,211 @@ on conflict (id) do update set
   calculation_version = excluded.calculation_version,
   updated_at = now();
 
+-- O vínculo usa a data de criação do pedido, não o instante em que a rotina é
+-- chamada. Isso impede que um pedido antigo seja anexado retroativamente à nova
+-- campanha.
+create or replace function public.attach_referral_to_order(
+  p_tenant_id uuid,
+  p_order_id text,
+  p_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_order public.orders%rowtype;
+  v_code public.referral_codes%rowtype;
+  v_campaign public.referral_campaigns%rowtype;
+  v_link_id uuid;
+begin
+  if auth.role() <> 'service_role' then raise exception 'Acesso restrito'; end if;
+  if trim(coalesce(p_code, '')) = '' then return jsonb_build_object('attached', false); end if;
+
+  select * into v_order from public.orders
+  where tenant_id = p_tenant_id and id = p_order_id for update;
+  if not found or coalesce(v_order.customer_id, '') = '' then
+    raise exception 'Pedido ou cliente não encontrado';
+  end if;
+
+  select * into v_code from public.referral_codes
+  where tenant_id = p_tenant_id
+    and upper(code) = upper(trim(p_code))
+    and status = 'active'
+    and (expires_at is null or expires_at > now());
+  if not found then raise exception 'Código de indicação inválido ou expirado'; end if;
+  if v_code.customer_id = v_order.customer_id then raise exception 'Autoindicação não é permitida'; end if;
+  if exists (
+    select 1 from public.referral_links circular
+    where circular.tenant_id = p_tenant_id
+      and circular.referrer_customer_id = v_order.customer_id
+      and circular.referred_customer_id = v_code.customer_id
+  ) then raise exception 'Vínculo circular de indicação não é permitido'; end if;
+
+  if exists (
+    select 1 from public.orders previous
+    where previous.tenant_id = p_tenant_id
+      and previous.customer_id = v_order.customer_id
+      and previous.id <> v_order.id
+      and previous.status <> 'Cancelado'
+  ) then raise exception 'A indicação é válida somente para a primeira compra do cliente'; end if;
+
+  select * into v_campaign from public.referral_campaigns
+  where tenant_id = p_tenant_id and status = 'active'
+    and starts_at <= v_order.created_at
+    and (ends_at is null or ends_at >= v_order.created_at)
+    and greatest(0, coalesce(v_order.financial_total, v_order.total) - v_order.shipping) >= minimum_order_amount
+  order by starts_at desc limit 1;
+  if not found then raise exception 'Não há campanha de indicação ativa para este pedido'; end if;
+
+  insert into public.referral_links (
+    tenant_id, campaign_id, referral_code_id, referrer_customer_id,
+    referred_customer_id, order_id, status, source
+  ) values (
+    p_tenant_id, v_campaign.id, v_code.id, v_code.customer_id,
+    v_order.customer_id, v_order.id, 'tracked', 'checkout'
+  )
+  on conflict (tenant_id, order_id) do update set updated_at = now()
+  returning id into v_link_id;
+
+  insert into public.referral_rewards (
+    tenant_id, referral_link_id, order_id, beneficiary_customer_id,
+    reward_type, reward_value, status
+  ) values (
+    p_tenant_id, v_link_id, v_order.id, v_code.customer_id,
+    v_campaign.reward_type, v_campaign.reward_value, 'predicted'
+  ) on conflict (tenant_id, referral_link_id) do nothing;
+
+  update public.orders set referral_code = upper(trim(p_code))
+  where tenant_id = p_tenant_id and id = p_order_id;
+
+  return jsonb_build_object('attached', true, 'referral_link_id', v_link_id);
+end;
+$$;
+
+-- A recompensa usa o tipo e o percentual congelados em referral_rewards no
+-- momento da compra. Editar ou encerrar a campanha nunca recalcula pedidos já
+-- existentes.
+create or replace function public.sync_referral_reward_from_order()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_link public.referral_links%rowtype;
+  v_campaign public.referral_campaigns%rowtype;
+  v_reward public.referral_rewards%rowtype;
+  v_base numeric(12,2);
+  v_amount numeric(12,2);
+  v_entry_id uuid;
+  v_reversal_id uuid;
+  v_month_count integer;
+  v_total_count integer;
+begin
+  select * into v_link from public.referral_links
+  where tenant_id = new.tenant_id and order_id = new.id;
+  if not found then return new; end if;
+
+  select * into v_campaign from public.referral_campaigns where id = v_link.campaign_id;
+  select * into v_reward from public.referral_rewards
+  where tenant_id = new.tenant_id and referral_link_id = v_link.id for update;
+
+  if new.payment_status = 'Recebido' and old.payment_status is distinct from 'Recebido'
+    and v_reward.status = 'predicted'
+  then
+    select count(*) into v_total_count from public.referral_rewards
+    where tenant_id = new.tenant_id and beneficiary_customer_id = v_link.referrer_customer_id and status = 'available';
+    select count(*) into v_month_count from public.referral_rewards
+    where tenant_id = new.tenant_id and beneficiary_customer_id = v_link.referrer_customer_id
+      and status = 'available' and available_at >= date_trunc('month', now());
+
+    if (v_campaign.max_rewards_per_referrer > 0 and v_total_count >= v_campaign.max_rewards_per_referrer)
+      or (v_campaign.max_rewards_per_month > 0 and v_month_count >= v_campaign.max_rewards_per_month)
+    then
+      update public.referral_links set status = 'blocked', block_reason = 'Limite da campanha atingido', updated_at = now() where id = v_link.id;
+      update public.referral_rewards set status = 'blocked', updated_at = now() where id = v_reward.id;
+      return new;
+    end if;
+
+    v_base := round(greatest(0, coalesce(new.financial_total, new.total) - new.shipping), 2);
+    v_amount := case when v_reward.reward_type = 'percent'
+      then round(v_base * v_reward.reward_value / 100, 2)
+      else round(v_reward.reward_value, 2) end;
+    if v_campaign.reward_cap > 0 then v_amount := least(v_amount, v_campaign.reward_cap); end if;
+
+    if v_amount > 0 then
+      insert into public.cashback_entries (
+        tenant_id, customer_id, kind, amount, description, order_id,
+        operation_id, expires_at, metadata
+      ) values (
+        new.tenant_id, v_link.referrer_customer_id, 'adjustment_credit', v_amount,
+        'Bônus por indicação confirmada no pedido ' || new.code, new.id,
+        gen_random_uuid(), now() + make_interval(days => v_campaign.credit_valid_days),
+        jsonb_build_object('referral_link_id', v_link.id, 'eligible_base', v_base, 'campaign_id', v_campaign.id)
+      ) returning id into v_entry_id;
+
+      update public.referral_rewards set eligible_base = v_base, reward_amount = v_amount,
+        status = 'available', cashback_entry_id = v_entry_id, available_at = now(), updated_at = now()
+      where id = v_reward.id;
+      update public.referral_links set status = 'rewarded', updated_at = now() where id = v_link.id;
+    end if;
+  end if;
+
+  if new.status = 'Cancelado' and old.status is distinct from 'Cancelado'
+    and v_reward.status = 'available' and v_reward.cashback_entry_id is not null
+  then
+    insert into public.cashback_entries (
+      tenant_id, customer_id, kind, amount, description, order_id,
+      reference_entry_id, operation_id, metadata
+    ) values (
+      new.tenant_id, v_link.referrer_customer_id, 'order_reversal', v_reward.reward_amount,
+      'Reversão do bônus de indicação do pedido ' || new.code, new.id,
+      v_reward.cashback_entry_id, gen_random_uuid(), jsonb_build_object('referral_link_id', v_link.id)
+    ) on conflict do nothing returning id into v_reversal_id;
+
+    update public.referral_rewards set status = 'reversed', reversal_entry_id = v_reversal_id,
+      reversed_at = now(), updated_at = now() where id = v_reward.id;
+    update public.referral_links set status = 'reversed', updated_at = now() where id = v_link.id;
+  end if;
+  return new;
+end;
+$$;
+
 -- O indicador recebe 10% do valor confirmado dos produtos, sem frete e sem teto.
 do $$
 declare
   v_tenant uuid;
+  v_new_campaign constant uuid := '20260819-0000-4000-8000-000000000010'::uuid;
 begin
   select id into v_tenant from public.tenants where slug = 'junior-imports' limit 1;
   if v_tenant is null then return; end if;
 
   update public.referral_campaigns
-  set name = 'Indique e ganhe 10%', reward_type = 'percent', reward_value = 10,
-      reward_cap = 0, starts_at = '2026-08-19 00:00:00-03'::timestamptz,
-      ends_at = '2026-08-23 23:59:59-03'::timestamptz, status = 'active', updated_at = now()
-  where tenant_id = v_tenant and status = 'active';
+  set status = 'ended', ends_at = greatest(now(), starts_at + interval '1 second'), updated_at = now()
+  where tenant_id = v_tenant and status = 'active' and id <> v_new_campaign;
 
-  if not found then
-    insert into public.referral_campaigns (
-      tenant_id, name, status, starts_at, ends_at, reward_type, reward_value,
-      reward_cap, credit_valid_days, minimum_order_amount
-    ) values (
-      v_tenant, 'Indique e ganhe 10%', 'active',
-      '2026-08-19 00:00:00-03'::timestamptz, '2026-08-23 23:59:59-03'::timestamptz,
-      'percent', 10, 0, 90, 0
-    );
-  end if;
+  insert into public.referral_campaigns (
+    id, tenant_id, name, status, starts_at, ends_at, reward_type, reward_value,
+    reward_cap, credit_valid_days, minimum_order_amount
+  ) values (
+    v_new_campaign, v_tenant, 'Indique e ganhe 10%', 'active', now(),
+    '2026-08-23 23:59:59-03'::timestamptz, 'percent', 10, 0, 90, 0
+  )
+  on conflict (id) do update set
+    name = excluded.name, status = excluded.status, starts_at = excluded.starts_at,
+    ends_at = excluded.ends_at, reward_type = excluded.reward_type,
+    reward_value = excluded.reward_value, reward_cap = excluded.reward_cap,
+    credit_valid_days = excluded.credit_valid_days,
+    minimum_order_amount = excluded.minimum_order_amount, updated_at = now();
 end;
 $$;
 
 revoke all on function public.apply_order_campaign_benefits() from public, anon, authenticated;
 revoke all on function public.sync_loyalty_reward_reservation() from public, anon, authenticated;
+revoke all on function public.attach_referral_to_order(uuid, text, text) from public, anon, authenticated;
+grant execute on function public.attach_referral_to_order(uuid, text, text) to service_role;
 grant execute on function public.calculate_storefront_shipping(uuid, jsonb, numeric) to service_role;
 
 commit;
