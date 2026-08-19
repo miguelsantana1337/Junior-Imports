@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BadgePercent, ImagePlus, MapPin, MessageCircle, PackageCheck, Paintbrush, Palette, Plus, Store, Trash2, Truck, Upload } from "lucide-react";
+import { ArrowRight, BadgePercent, CalendarDays, CreditCard, Gift, ImagePlus, MapPin, MessageCircle, PackageCheck, Paintbrush, Palette, Plus, Store, Trash2, Truck, Upload } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { useAdminData } from "./admin-data-provider";
@@ -9,6 +9,18 @@ import { settingsSchema } from "@/lib/validation";
 import type { StoreSettings } from "@/types/store";
 import { platformConfig } from "@/config/platform";
 import { formatMoney, formatWhatsappDisplay } from "@/lib/format";
+
+function toLocalDateTime(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+  return local.toISOString().slice(0, 16);
+}
+
+function fromLocalDateTime(value: string) {
+  return value ? new Date(value).toISOString() : "";
+}
 
 export function SettingsAdmin() {
   const { data, saveSettings, uploadMedia } = useAdminData();
@@ -42,6 +54,27 @@ export function SettingsAdmin() {
       <div className="admin-form settings-theme-form"><div className="admin-form-section full"><Palette /><div><strong>Identidade visual</strong><span>Essas escolhas viram o padrão dos novos containers.</span></div></div><label>Cor principal<input type="color" value={form.primaryColor} onChange={(event) => field("primaryColor", event.target.value)} /></label><label>Cor de destaque<input type="color" value={form.secondaryColor} onChange={(event) => field("secondaryColor", event.target.value)} /></label><label>Fundo da loja<input type="color" value={form.backgroundColor} onChange={(event) => field("backgroundColor", event.target.value)} /></label><label>Cor do texto<input type="color" value={form.textColor} onChange={(event) => field("textColor", event.target.value)} /></label><label>Tipografia<select value={form.fontFamily} onChange={(event) => field("fontFamily", event.target.value as StoreSettings["fontFamily"])}><option value="Inter">Inter</option><option value="Manrope">Manrope</option><option value="Poppins">Poppins</option><option value="System">Fonte do sistema</option></select></label><label>Posição da marca<select value={form.headerLayout} onChange={(event) => field("headerLayout", event.target.value as StoreSettings["headerLayout"])}><option value="left">À esquerda</option><option value="center">Centralizada</option></select></label><label>Largura do conteúdo (px)<input type="number" min="960" max="1600" step="20" value={form.contentWidth} onChange={(event) => field("contentWidth", Number(event.target.value))} /></label><label>Arredondamento (px)<input type="number" min="0" max="40" value={form.borderRadius} onChange={(event) => field("borderRadius", Number(event.target.value))} /></label></div>
     </AdminPanel>
 
+    <AdminPanel title="Campanha comercial" description="Centralize a validade e as condições financeiras divulgadas na loja e aplicadas no checkout.">
+      <div className="admin-form settings-form">
+        <div className="admin-form-section full"><CalendarDays /><div><strong>Janela automática</strong><span>Ao terminar a validade, Pix, frete, parcelamento, fidelidade e brindes deixam de ser oferecidos automaticamente.</span></div></div>
+        <label className={`shipping-option-card shipping-option-wide full ${form.promotionEnabled ? "active" : ""}`}><input type="checkbox" checked={form.promotionEnabled} onChange={(event) => field("promotionEnabled", event.target.checked)} /><BadgePercent /><span><strong>Ativar campanha temporária</strong><small>{form.promotionEnabled ? "As regras abaixo respeitam as datas configuradas." : "As regras comerciais funcionam sem prazo, como antes."}</small></span></label>
+        <label className="full">Nome da campanha<input value={form.promotionName} onChange={(event) => field("promotionName", event.target.value)} /></label>
+        <label>Início<input type="datetime-local" value={toLocalDateTime(form.promotionStartsAt)} onChange={(event) => field("promotionStartsAt", fromLocalDateTime(event.target.value))} disabled={!form.promotionEnabled} /></label>
+        <label>Fim<input type="datetime-local" value={toLocalDateTime(form.promotionEndsAt)} onChange={(event) => field("promotionEndsAt", fromLocalDateTime(event.target.value))} disabled={!form.promotionEnabled} /></label>
+        <label>Desconto no Pix (%)<input type="number" min="0" max="100" step="0.1" value={form.pixDiscount} onChange={(event) => field("pixDiscount", Number(event.target.value))} /></label>
+        <label>Pix: pedido mínimo<input type="number" min="0" step="0.01" value={form.pixDiscountMinimum} onChange={(event) => field("pixDiscountMinimum", Number(event.target.value))} /></label>
+        <label>Parcelas sem juros<input type="number" min="1" max="12" value={form.cardInstallments} onChange={(event) => field("cardInstallments", Number(event.target.value))} /></label>
+        <label>Cartão: pedido mínimo<input type="number" min="0" step="0.01" value={form.cardInstallmentMinimum} onChange={(event) => field("cardInstallmentMinimum", Number(event.target.value))} /></label>
+        <div className="admin-form-section full"><CreditCard /><div><strong>Condições no checkout</strong><span>O desconto do Pix é automático. O parcelamento é informado ao cliente e confirmado pelo WhatsApp.</span></div></div>
+        <label className={`shipping-option-card shipping-option-wide full ${form.loyaltyDiscountEnabled ? "active" : ""}`}><input type="checkbox" checked={form.loyaltyDiscountEnabled} onChange={(event) => field("loyaltyDiscountEnabled", event.target.checked)} /><Gift /><span><strong>Recompensa de fidelidade</strong><small>Aplica o desconto no ciclo de compras configurado, com proteção contra duplicidade.</small></span></label>
+        <label>Premiar a cada<input type="number" min="2" max="100" value={form.loyaltyOrderInterval} onChange={(event) => field("loyaltyOrderInterval", Number(event.target.value))} disabled={!form.loyaltyDiscountEnabled} /><small>Ex.: 6 significa 6ª, 12ª, 18ª compra...</small></label>
+        <label>Valor do desconto<input type="number" min="0" step="0.01" value={form.loyaltyDiscountAmount} onChange={(event) => field("loyaltyDiscountAmount", Number(event.target.value))} disabled={!form.loyaltyDiscountEnabled} /></label>
+        <label className="full">Benefícios exibidos (um por linha)<textarea rows={8} value={form.promotionHighlights.join("\n")} onChange={(event) => field("promotionHighlights", event.target.value.split("\n").map((item) => item.trim()).filter(Boolean))} /></label>
+        <label className="full">Brinde incluído no pedido<input value={form.promotionGiftMessage} onChange={(event) => field("promotionGiftMessage", event.target.value)} placeholder="Ex.: Coqueteleira + brindes nos pedidos" /></label>
+        <label className="full">Mensagem de cobertura de preço<input value={form.promotionPriceMatchMessage} onChange={(event) => field("promotionPriceMatchMessage", event.target.value)} /></label>
+      </div>
+    </AdminPanel>
+
     <AdminPanel title="Operação da loja" description="Dados usados no atendimento, nos pedidos e na identificação da loja.">
       <div className="admin-form settings-form">
         <div className="admin-form-section full"><Store /><div><strong>Atendimento e pedidos</strong><span>Estas informações aparecem no checkout, no rodapé e nas mensagens enviadas ao cliente.</span></div></div>
@@ -50,7 +83,6 @@ export function SettingsAdmin() {
         <label>E-mail<input type="email" value={form.email} onChange={(event) => field("email", event.target.value)} /></label>
         <label>Horário de atendimento<input value={form.hours} onChange={(event) => field("hours", event.target.value)} /></label>
         <label className="full">Descrição da loja e prévia do link<textarea value={form.footerDescription} onChange={(event) => field("footerDescription", event.target.value)} /></label>
-        <label>Desconto no Pix (%)<input type="number" min="0" max="100" step="0.1" value={form.pixDiscount} onChange={(event) => field("pixDiscount", Number(event.target.value))} /></label>
         <div className="settings-editor-shortcut full">
           <span className="settings-editor-shortcut-icon"><Paintbrush /></span>
           <div><small>CONTEÚDO DA VITRINE</small><strong>Anúncios, banners e campanhas</strong><p>A barra de anúncio, as imagens, o tempo dos banners e as campanhas agora são editados em um único lugar.</p></div>

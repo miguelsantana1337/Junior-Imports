@@ -9,6 +9,7 @@ import { ProductArt } from "@/components/ui/product-art";
 import { discountPercent, stockLabel } from "@/lib/commerce";
 import { storefrontCashbackOffer } from "@/lib/cashback";
 import { formatMoney } from "@/lib/format";
+import { isPixDiscountEligible } from "@/lib/store-promotion";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { StorefrontProduct } from "@/types/store";
@@ -47,7 +48,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
             {product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}
             <strong>{formatMoney(product.price)}</strong>
             <small>{orderable
-              ? data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% OFF no Pix` : "Confirmação pelo WhatsApp"
+              ? isPixDiscountEligible(data.settings, product.price) ? `${data.settings.pixDiscount}% OFF no Pix` : "Confirmação pelo WhatsApp"
               : cartEligible ? "Comprar pelo WhatsApp" : "Consulte a disponibilidade"}</small>
           </div>
           {cartEligible ? <button

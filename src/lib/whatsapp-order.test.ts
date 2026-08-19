@@ -137,4 +137,15 @@ describe("pedido direcionado ao WhatsApp", () => {
     expect(message).toContain("Total:");
     expect(message).not.toMatch(/tratamento de dados|concordou/i);
   });
+
+  it("inclui fidelidade e brinde confirmados pelo servidor", () => {
+    const message = renderWhatsappOrderMessage({
+      ...seedData.orders[0],
+      loyaltyDiscount: 150,
+      campaignGift: "Coqueteleira + brindes nos pedidos",
+    }, seedData.settings);
+
+    expect(message.replaceAll("\u00a0", " ")).toContain("*Benefício de fidelidade:* -R$ 150,00");
+    expect(message).toContain("*Brinde da campanha:* Coqueteleira + brindes nos pedidos");
+  });
 });

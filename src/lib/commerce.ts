@@ -9,6 +9,7 @@ import type {
   StorefrontProduct,
   StoreSettings,
 } from "@/types/store";
+import { isPixDiscountEligible, isStorePromotionRuleActive } from "@/lib/store-promotion";
 
 function normalizeShippingText(value = "") {
   return value
@@ -29,7 +30,7 @@ export function resolveShipping(
   if (destination?.deliveryMethod === "pickup") {
     return { amount: 0, status: "pickup" };
   }
-  if (settings.freeShippingEnabled && afterDiscounts >= settings.freeShippingThreshold) {
+  if (settings.freeShippingEnabled && isStorePromotionRuleActive(settings) && afterDiscounts >= settings.freeShippingThreshold) {
     return { amount: 0, status: "free" };
   }
 
@@ -110,13 +111,16 @@ export function calculateCart(
   }
 
   const afterCoupon = Math.max(0, subtotal - couponDiscount);
-  const paymentDiscount =
-    payment === "Pix" ? afterCoupon * (settings.pixDiscount / 100) : 0;
+  const paymentDiscount = payment === "Pix" && isPixDiscountEligible(settings, afterCoupon)
+    ? afterCoupon * (settings.pixDiscount / 100)
+    : 0;
   const afterDiscounts = Math.max(0, afterCoupon - paymentDiscount);
   const shipping = resolveShipping(settings, subtotal, afterDiscounts, destination);
 
   const campaign = [...activeCashbackCampaigns]
     .filter((item) => item.status === "active")
+    .filter((item) => !item.startsAt || new Date(item.startsAt) <= new Date())
+    .filter((item) => !item.endsAt || new Date(item.endsAt) >= new Date())
     .filter((item) => item.targetSegments.length === 0)
     .filter((item) => item.productIds.length === 0 || validLines.some((line) => item.productIds.includes(line.product.id)))
     .sort((left, right) => right.priority - left.priority)[0];

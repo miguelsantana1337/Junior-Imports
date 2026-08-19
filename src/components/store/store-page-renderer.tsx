@@ -2,16 +2,19 @@
 
 import Image, { type ImageLoaderProps } from "next/image";
 import Link from "next/link";
+import { Fragment } from "react";
 import { useStore } from "@/components/providers/store-provider";
 import type { HomeSection, PageBlock } from "@/types/store";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { formatMoney } from "@/lib/format";
 import { ensurePurchaseFaqBlock, resolvePurchaseFaqs } from "@/lib/storefront-commerce";
+import { isStorePromotionActive } from "@/lib/store-promotion";
 import { CatalogSection } from "./catalog-section";
 import { HeroCarousel } from "./hero-carousel";
 import { ProductCard } from "./product-card";
 import { SectionHeading } from "./section-heading";
 import { TrustStrip } from "./trust-strip";
+import { StorePromotion } from "./store-promotion";
 
 const passthroughLoader = ({ src }: ImageLoaderProps) => src;
 
@@ -24,7 +27,7 @@ export function StorePageRenderer({ pageId }: { pageId: string }) {
   if (!page || !page.active) return null;
   if (!blocks.length) return <section className="page-state container"><span className="section-kicker">{page.name}</span><h1>{page.title}</h1><p>{page.description}</p></section>;
 
-  return <div className="store-page" data-page={page.slug}>{blocks.map((block) => <PageBlockRenderer block={block} key={block.id} />)}</div>;
+  return <div className="store-page" data-page={page.slug}>{blocks.map((block) => <Fragment key={block.id}><PageBlockRenderer block={block} />{page.isHome && block.kind === "hero" && <StorePromotion />}</Fragment>)}</div>;
 }
 
 function getSection(block: PageBlock, sections: HomeSection[]): HomeSection {
@@ -60,6 +63,7 @@ function PageBlockRenderer({ block }: { block: PageBlock }) {
   }
 
   if (block.kind === "promo") {
+    if (data.settings.promotionEnabled && !isStorePromotionActive(data.settings)) return null;
     const shippingValue = formatMoney(data.settings.freeShippingThreshold);
     const eyebrow = block.eyebrow || data.settings.freeShippingBannerEyebrow;
     const campaignTitle = (block.title || data.settings.freeShippingBannerTitle).replaceAll("{{valor}}", shippingValue);

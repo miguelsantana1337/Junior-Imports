@@ -26,7 +26,9 @@ import {
   writeSensitiveSessionValue,
 } from "@/lib/browser-storage";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
+import { isCardInstallmentEligible, isPixDiscountEligible } from "@/lib/store-promotion";
 import type { Order } from "@/types/store";
+import { StorePromotion } from "@/components/store/store-promotion";
 
 const states = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG",
@@ -43,6 +45,8 @@ type PersistedOrder = {
   shipping: number;
   total: number;
   cashback_total?: number;
+  loyalty_discount?: number;
+  campaign_gift?: string;
   status: Order["status"];
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
@@ -94,6 +98,7 @@ export function CheckoutScreen() {
   const phone = useWatch({ control, name: "phone" });
   const email = useWatch({ control, name: "email" });
   const calculation = calculate(payment, { city, state, deliveryMethod });
+  const merchandiseAfterCoupon = Math.max(0, calculation.subtotal - calculation.couponDiscount);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const referralKey = referralStorageKey(data.tenant.id);
   const cartProducts = useMemo(
@@ -272,6 +277,8 @@ export function CheckoutScreen() {
       shipping: persisted?.shipping ?? calculation.shipping,
       total: persisted?.total ?? calculation.total,
       cashbackTotal: persisted?.cashback_total ?? calculation.cashback,
+      loyaltyDiscount: persisted?.loyalty_discount ?? 0,
+      campaignGift: persisted?.campaign_gift ?? "",
       payment: values.payment,
       status: persisted?.status ?? "Novo",
       couponCode: coupon?.code ?? "",
@@ -310,7 +317,8 @@ export function CheckoutScreen() {
               <div className="form-grid"><Field label="CEP" error={errors.zip?.message}><input inputMode="numeric" autoComplete="postal-code" placeholder="00000-000" {...register("zip")} />{postalCodeStatus !== "idle" && <small className={`postal-code-status ${postalCodeStatus}`} role="status">{postalCodeStatus === "loading" ? "Buscando endereço..." : postalCodeStatus === "success" ? "Dados do CEP preenchidos." : postalCodeStatus === "not-found" ? "CEP não encontrado. Preencha o endereço manualmente." : "Não foi possível consultar agora. Preencha manualmente."}</small>}</Field><Field label="Cidade" error={errors.city?.message}><input autoComplete="address-level2" {...register("city")} /></Field><Field label="Estado" error={errors.state?.message}><select autoComplete="address-level1" {...register("state")}><option value="">Selecione</option>{states.map((state) => <option key={state}>{state}</option>)}</select></Field><Field label="Logradouro" error={errors.address?.message} full><input autoComplete="address-line1" {...register("address")} /></Field><Field label="Número" error={errors.number?.message}><input autoComplete="address-line2" {...register("number")} /></Field><Field label="Complemento" error={errors.complement?.message}><input autoComplete="address-line3" {...register("complement")} /></Field><div className="checkout-shipping-rates form-full"><strong>Valores de entrega</strong>{data.settings.shippingCityRates.map((rate) => <span key={`${rate.city}-${rate.state}`}>📍 {rate.city}: {formatMoney(rate.amount)}</span>)}{data.settings.quoteShippingOutsideCities && <span>📦 Demais cidades: informe o seu CEP para realizarmos a cotação do frete.</span>}{calculation.shippingStatus === "quote" && <em>Seu endereço requer cotação. O valor do frete será confirmado no WhatsApp antes do pagamento.</em>}</div></div>
             )}
           </fieldset>
-          <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% de desconto` : "Confirmação pelo WhatsApp" : method === "Cartao" ? "Condição confirmada pelo WhatsApp" : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
+          <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? isPixDiscountEligible(data.settings, merchandiseAfterCoupon) ? `${data.settings.pixDiscount}% de desconto aplicado` : data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% OFF a partir de ${formatMoney(data.settings.pixDiscountMinimum)}` : "Confirmação pelo WhatsApp" : method === "Cartao" ? isCardInstallmentEligible(data.settings, merchandiseAfterCoupon) ? `${data.settings.cardInstallments}x sem juros` : `${data.settings.cardInstallments}x sem juros a partir de ${formatMoney(data.settings.cardInstallmentMinimum)}` : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
+          <StorePromotion compact />
           <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />

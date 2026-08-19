@@ -127,7 +127,17 @@ export async function POST(request: Request) {
       const referral = await supabase.rpc("attach_referral_to_order", { p_tenant_id: parsed.data.tenantId, p_order_id: order.id, p_code: parsed.data.referralCode });
       if (referral.error) referralWarning = friendlyOrderError(referral.error.message) || "A indicação não pôde ser vinculada.";
     }
-    return Response.json({ order: data, referralWarning }, {
+    const { data: authoritativeOrder, error: authoritativeOrderError } = order.id
+      ? await supabase.from("orders")
+        .select("id, customer_id, code, created_at, subtotal, discount, shipping, total, cashback_total, loyalty_discount, campaign_gift, status, order_source, reservation_expires_at, shipping_status")
+        .eq("tenant_id", parsed.data.tenantId)
+        .eq("id", order.id)
+        .maybeSingle()
+      : { data: null, error: null };
+    if (authoritativeOrderError) {
+      throw new StorefrontRequestError("O pedido foi registrado, mas não foi possível confirmar os benefícios da campanha.", 503);
+    }
+    return Response.json({ order: authoritativeOrder ?? data, referralWarning }, {
       status: 201,
       headers: {
         "Cache-Control": "no-store",

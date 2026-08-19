@@ -6914,3 +6914,35 @@ html[data-admin-theme="dark"] .mcp-integration-alert.error { border-color: #643b
   .order-lifecycle-confirmation-actions { display: grid; grid-template-columns: 1fr; }
   .order-lifecycle-confirmation-actions .admin-button { width: 100%; }
 }
+.store-promotion {
+  padding: 24px 0;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 24%, #07111f), #071019 55%, color-mix(in srgb, var(--primary-2) 15%, #071019));
+  border-block: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+}
+
+.store-promotion header { max-width: 760px; margin-bottom: 18px; }
+.store-promotion header span { color: #77aaff; font-size: .72rem; font-weight: 900; letter-spacing: .15em; }
+.store-promotion header h2 { margin: 6px 0; font-size: clamp(1.5rem, 3vw, 2.35rem); }
+.store-promotion header p { margin: 0; color: var(--muted); }
+.store-promotion-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.store-promotion-grid article { display: flex; align-items: center; gap: 10px; min-height: 76px; padding: 14px; border: 1px solid rgba(255,255,255,.12); border-radius: 16px; background: rgba(255,255,255,.055); box-shadow: inset 0 1px rgba(255,255,255,.08); }
+.store-promotion-grid svg { width: 22px; flex: 0 0 22px; color: #78aaff; }
+.store-promotion-grid strong { font-size: .9rem; line-height: 1.25; }
+.store-promotion footer { display: flex; align-items: center; gap: 9px; margin-top: 12px; color: #dfeaff; font-weight: 800; }
+.store-promotion footer svg { width: 20px; color: #78aaff; }
+.store-promotion.compact { margin-bottom: 18px; padding: 16px; border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent); border-radius: 18px; }
+.store-promotion.compact header { margin-bottom: 12px; }
+.store-promotion.compact header h2 { font-size: 1.2rem; }
+.store-promotion.compact .store-promotion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.store-promotion.compact .store-promotion-grid article { min-height: 58px; padding: 10px; }
+
+@media (max-width: 900px) {
+  .store-promotion-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .store-promotion { padding: 18px 0; }
+  .store-promotion-grid,
+  .store-promotion.compact .store-promotion-grid { grid-template-columns: 1fr; }
+  .store-promotion-grid article { min-height: 58px; }
+}

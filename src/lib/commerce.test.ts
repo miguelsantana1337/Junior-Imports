@@ -24,7 +24,7 @@ describe("calculateCart", () => {
     const result = calculateCart(
       [{ productId: product.id, quantity: 1 }],
       seedData.products,
-      seedData.settings,
+      { ...seedData.settings, pixDiscountMinimum: 0 },
       seedData.coupons[0],
       "Pix",
     );
@@ -174,6 +174,56 @@ describe("calculateCart", () => {
 
     expect(result.total).toBe(80);
     expect(result.cashback).toBe(4);
+  });
+
+  it("aplica 5% no Pix somente quando o valor minimo da campanha e atingido", () => {
+    const item = { ...product, price: 1000, compareAt: 1000, stock: 2 };
+    const settings = {
+      ...seedData.settings,
+      promotionEnabled: true,
+      promotionStartsAt: "2020-01-01T00:00:00.000Z",
+      promotionEndsAt: "2099-12-31T23:59:59.000Z",
+      pixDiscount: 5,
+      pixDiscountMinimum: 900,
+      shippingCityRates: [],
+      freeShippingEnabled: false,
+      shippingFlat: 0,
+    };
+
+    expect(calculateCart([{ productId: item.id, quantity: 1 }], [item], settings, null, "Pix").paymentDiscount).toBe(50);
+    expect(calculateCart([{ productId: item.id, quantity: 1 }], [{ ...item, price: 899 }], settings, null, "Pix").paymentDiscount).toBe(0);
+  });
+
+  it("encerra Pix, frete gratis e cashback junto com suas janelas", () => {
+    const item = { ...product, price: 1000, compareAt: 1000, stock: 1, cashback: 0 };
+    const expiredSettings = {
+      ...seedData.settings,
+      promotionEnabled: true,
+      promotionStartsAt: "2020-01-01T00:00:00.000Z",
+      promotionEndsAt: "2020-01-07T23:59:59.000Z",
+      pixDiscount: 5,
+      pixDiscountMinimum: 0,
+      freeShippingEnabled: true,
+      freeShippingThreshold: 500,
+      shippingCityRates: [],
+      quoteShippingOutsideCities: false,
+      shippingFlat: 20,
+    };
+    const expiredCampaign = {
+      ...seedData.cashbackCampaigns[0],
+      status: "active" as const,
+      startsAt: "2020-01-01T00:00:00.000Z",
+      endsAt: "2020-01-07T23:59:59.000Z",
+      multiplier: 5,
+      fixedBonus: 0,
+      targetSegments: [],
+      productIds: [],
+    };
+    const result = calculateCart([{ productId: item.id, quantity: 1 }], [item], expiredSettings, null, "Pix", [expiredCampaign]);
+
+    expect(result.paymentDiscount).toBe(0);
+    expect(result.shipping).toBe(20);
+    expect(result.cashback).toBe(0);
   });
 });
 

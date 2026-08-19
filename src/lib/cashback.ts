@@ -76,8 +76,8 @@ export function campaignAudienceLabel(segments: CustomerSegment[]) {
 }
 
 export function storefrontCashbackOffer(product: StorefrontProduct, campaigns: CashbackCampaign[]) {
-  const campaign = [...campaigns]
-    .filter((item) => item.status === "active" && item.targetSegments.length === 0)
+  const campaign = activeCashbackCampaigns(campaigns)
+    .filter((item) => item.targetSegments.length === 0)
     .filter((item) => item.productIds.length === 0 || item.productIds.includes(product.id))
     .sort((left, right) => right.priority - left.priority)[0];
 

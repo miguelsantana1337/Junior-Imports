@@ -207,12 +207,25 @@ function Referrals({ payload, busy, run }: ModuleProps) {
   const [copiedCode, setCopiedCode] = useState("");
   const [bonusAmount, setBonusAmount] = useState(50);
   const [bonusReason, setBonusReason] = useState("Bônus adicional por indicação validada pelo atendimento.");
-  const [form, setForm] = useState({ name: "Indique e ganhe", rewardType: "percent", rewardValue: 5, rewardCap: 100, minimum: 0, validDays: 90, maxTotal: 0, maxMonth: 0 });
+  const currentCampaign = campaigns[0];
+  const [form, setForm] = useState(() => ({
+    id: text(currentCampaign?.id),
+    name: text(currentCampaign?.name) || "Indique e ganhe 10%",
+    rewardType: text(currentCampaign?.reward_type) || "percent",
+    rewardValue: number(currentCampaign?.reward_value) || 10,
+    rewardCap: number(currentCampaign?.reward_cap),
+    minimum: number(currentCampaign?.minimum_order_amount),
+    validDays: number(currentCampaign?.credit_valid_days) || 90,
+    maxTotal: number(currentCampaign?.max_rewards_per_referrer),
+    maxMonth: number(currentCampaign?.max_rewards_per_month),
+    startsAt: text(currentCampaign?.starts_at) || new Date().toISOString(),
+    endsAt: text(currentCampaign?.ends_at),
+  }));
   const update = (key: keyof typeof form, next: string | number) => setForm((current) => ({ ...current, [key]: next }));
 
   async function saveCampaign() {
     await apiPost("referral_campaign_save", { input: {
-      name: form.name, status: "active", startsAt: new Date().toISOString(), endsAt: "", rewardType: form.rewardType,
+      id: form.id || undefined, name: form.name, status: "active", startsAt: form.startsAt, endsAt: form.endsAt, rewardType: form.rewardType,
       rewardValue: Number(form.rewardValue), rewardCap: Number(form.rewardCap), creditValidDays: Number(form.validDays),
       maximumPerReferrer: Number(form.maxTotal), maximumPerMonth: Number(form.maxMonth), minimumOrderAmount: Number(form.minimum),
     } });

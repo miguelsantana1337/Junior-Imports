@@ -127,11 +127,17 @@ export function renderWhatsappOrderMessage(order: Order, settings: StoreSettings
   const cashbackNotice = order.cashbackTotal > 0
     ? `\n\n*Cashback previsto:* ${formatMoney(order.cashbackTotal)} (após a confirmação do pedido)`
     : "";
+  const loyaltyNotice = (order.loyaltyDiscount ?? 0) > 0
+    ? `\n\n*Benefício de fidelidade:* -${formatMoney(order.loyaltyDiscount ?? 0)}`
+    : "";
+  const giftNotice = order.campaignGift
+    ? `\n\n*Brinde da campanha:* ${order.campaignGift}`
+    : "";
   const pickupNotice = order.shippingStatus === "pickup" || order.customer.deliveryMethod === "pickup"
     ? `\n\n*Retirada no local:* ${settings.localPickupInstructions}`
     : "";
 
-  return normalizeForWhatsapp(`${rendered}${cashbackNotice}${pickupNotice}`);
+  return normalizeForWhatsapp(`${rendered}${loyaltyNotice}${cashbackNotice}${giftNotice}${pickupNotice}`);
 }
 
 export function checkoutWhatsappUrl(order: Order, settings: StoreSettings) {
