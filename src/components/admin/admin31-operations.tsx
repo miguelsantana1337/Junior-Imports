@@ -70,9 +70,9 @@ export function Admin31Operations({ initialModule = "divergences" }: { initialMo
 
   useEffect(() => { void refresh(); }, [refresh]);
 
-  async function run(id: string, task: () => Promise<unknown>, success: string) {
+  async function run(id: string, task: () => Promise<unknown>, success: string, refreshAfter = true) {
     setBusy(id); setError(""); setMessage("");
-    try { await task(); setMessage(success); await refresh(); }
+    try { await task(); setMessage(success); if (refreshAfter) await refresh(); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível concluir a operação."); }
     finally { setBusy(""); }
   }
@@ -108,7 +108,7 @@ export function Admin31Operations({ initialModule = "divergences" }: { initialMo
   );
 }
 
-type ModuleProps = { payload: ModulePayload | null; busy: string; run: (id: string, task: () => Promise<unknown>, success: string) => Promise<void> };
+type ModuleProps = { payload: ModulePayload | null; busy: string; run: (id: string, task: () => Promise<unknown>, success: string, refreshAfter?: boolean) => Promise<void> };
 
 function Divergences({ payload, busy, run }: ModuleProps) {
   const confirm = useConfirm();
@@ -174,7 +174,7 @@ function Guardian({ payload, busy, run }: ModuleProps) {
       <label>Desconto (%)<input type="number" min={0} max={100} value={couponPercent} onChange={(event) => setCouponPercent(Number(event.target.value))} /></label>
       <label>Cashback (%)<input type="number" min={0} max={100} step="0.1" value={cashbackPercent} onChange={(event) => setCashbackPercent(Number(event.target.value))} /></label>
       <label>Margem mínima (%)<input type="number" min={-100} max={100} step="0.1" value={minimumMargin} onChange={(event) => setMinimumMargin(Number(event.target.value))} /></label>
-    </div><div className="admin31-actions"><button className="admin-button primary" disabled={busy === "guardian" || !productId} onClick={() => void run("guardian", simulate, "Simulação registrada no histórico.")}><Sparkles /> Simular cenário</button></div>
+    </div><div className="admin31-actions"><button className="admin-button primary" disabled={busy === "guardian" || !productId} onClick={() => void run("guardian", simulate, "Simulação registrada no histórico.", false)}><Sparkles /> Simular cenário</button></div>
   </AdminPanel>
   <AdminPanel title="Decisão do guardião" description="Campanhas com custo ausente ou margem abaixo do limite devem ser revisadas.">
     {result ? <div className={`admin31-guardian-result ${text(result.decision)}`}><strong>{text(result.decision).toUpperCase()}</strong><div><span>Total sem frete<b>{formatMoney(number(result.paidProducts))}</b></span><span>Cashback<b>{formatMoney(number(result.cashback))}</b></span><span>Custo<b>{formatMoney(number(result.cost))}</b></span><span>Margem<b>{formatMoney(number(result.margin))} ({number(result.marginPercent).toFixed(1)}%)</b></span></div>{Array.isArray(result.warnings) && result.warnings.length > 0 && <ul>{(result.warnings as string[]).map((warning) => <li key={warning}>{warning}</li>)}</ul>}{campaignId && text(result.decision) !== "blocked" && <button className="admin-button primary" disabled={busy === "publish"} onClick={() => void run("publish", () => apiPost("guardian_publish", { campaignId, simulationId: result.simulationId, reason: "Cenário financeiro revisado e aprovado para publicação." }), "Campanha publicada com a simulação vinculada.")}><Megaphone /> {text(result.decision) === "warning" ? "Autorizar e publicar" : "Publicar campanha"}</button>}</div> : <AdminEmpty><CircleDollarSign /><strong>Pronto para simular</strong><span>Selecione um produto e informe a condição da campanha.</span></AdminEmpty>}
