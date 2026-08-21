@@ -44,4 +44,12 @@ describe("plugin privado Junior Imports para ChatGPT", () => {
     expect(server).toContain("sent: false");
     expect(server.toLowerCase()).toContain("nunca diga que enviou uma mensagem de whatsapp");
   });
+
+  it("expõe consultas gerenciais de pedidos, estoque e faturamento como somente leitura", () => {
+    expect(server).toContain('server.registerTool("get_orders_summary"');
+    expect(server).toContain('server.registerTool("get_inventory_summary"');
+    expect(server).toContain('server.registerTool("get_revenue_summary"');
+    expect(server.match(/readOnlyHint: true/g)?.length ?? 0).toBeGreaterThanOrEqual(10);
+    expect(server).toContain("Distingue pedidos faturados de pagamentos efetivamente recebidos");
+  });
 });

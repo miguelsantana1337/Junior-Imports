@@ -11,10 +11,15 @@ O plugin privado atualmente cadastrado no ChatGPT usa o ID `plugin_asdk_app_6a79
 ## O que o ChatGPT pode consultar
 
 - prioridades do dia, pedidos novos e pagamentos pendentes;
-- pedidos, produtos, estoque e clientes;
-- resumo financeiro;
+- pedidos por período, situação operacional e situação de pagamento;
+- posição do estoque, itens baixos ou zerados, total de unidades e valor armazenado;
+- faturamento, pagamentos recebidos, ticket médio, lucro bruto e margem;
+- entradas, saídas, despesas e resultado de caixa;
+- produtos e clientes individuais;
 - oportunidades de recompra;
 - mensagens de WhatsApp preparadas para revisão humana.
+
+As consultas por período usam, por padrão, o mês atual até hoje e respeitam a data de início da operação oficial configurada no painel. O resumo financeiro separa **faturamento de pedidos recebidos** de **dinheiro efetivamente recebido no período**, evitando apresentar venda e caixa como se fossem o mesmo número.
 
 ## O que pode alterar
 
@@ -58,11 +63,16 @@ Na primeira autorização, confirme que o consentimento mostra **Consultar a ope
 ## Exemplos de uso
 
 - “Quais pedidos precisam de atenção hoje?”
+- “Quantos pedidos tivemos neste mês e qual foi o faturamento?”
+- “Liste os pedidos com pagamento parcial deste mês.”
 - “Consulte o pedido JI-1052.”
 - “Quanto ainda falta pagar no pedido do Thayrone?”
+- “Quanto entrou de pagamentos e quanto saiu de despesas nos últimos 30 dias?”
+- “Qual foi o ticket médio e a margem bruta deste mês?”
 - “Prepare uma mensagem de cobrança para o pedido JI-1052.”
 - “Registre R$ 500,00 de pagamento parcial via Pix no pedido JI-1052.”
 - “Quais produtos estão com estoque baixo?”
+- “Qual é o valor atual do estoque a custo e quantos produtos estão zerados?”
 - “Registre uma perda de uma unidade do produto JI-070.”
 - “Mostre oportunidades de recompra com mais de 35 dias.”
 

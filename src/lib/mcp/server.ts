@@ -16,6 +16,12 @@ import {
   enforceMcpRateLimit,
   logMcpToolCall,
 } from "@/lib/mcp/confirmations";
+import {
+  resolveMcpOperationPeriod,
+  summarizeMcpCash,
+  summarizeMcpInventory,
+  summarizeMcpOrders,
+} from "@/lib/mcp/operation-metrics";
 
 type JsonObject = Record<string, unknown>;
 
@@ -58,6 +64,18 @@ function customerValue(order: JsonObject) {
 
 function orderFinancialTotal(order: JsonObject) {
   return numberValue(order.financial_total ?? order.total);
+}
+
+async function operationStartedAt(actor: McpActor) {
+  const admin = createAdminClient();
+  if (!admin) throw new Error("Supabase indisponível.");
+  const { data, error } = await admin.from("store_settings")
+    .select("operation_started_at")
+    .eq("tenant_id", actor.tenantId)
+    .eq("id", "default")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return typeof data?.operation_started_at === "string" ? data.operation_started_at : null;
 }
 
 function orderView(order: JsonObject) {
@@ -217,7 +235,7 @@ function nextOrderState(order: JsonObject) {
 
 export function createJuniorImportsMcpServer(actor: McpActor) {
   const server = new McpServer(
-    { name: "junior-imports", version: "1.0.0" },
+    { name: "junior-imports", version: "1.1.0" },
     { instructions: "Você opera a Junior Imports para o usuário autenticado. Consulte antes de agir. Para qualquer ferramenta de escrita, apresente o resumo retornado e espere confirmação explícita antes de reenviar com confirmation_token. Nunca diga que enviou uma mensagem de WhatsApp: apenas prepare o texto e o link para revisão humana." },
   );
 
@@ -306,6 +324,135 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
   }, async ({ product }) => runRead(actor, "get_product", can(actor, "inventory") ? "inventory" : "catalog", { product }, async () => {
     const item = await findProduct(actor, product);
     return textResult(`${item.name}: ${item.stock} unidade(s) em estoque, preço ${formatMoney(numberValue(item.price))}.`, { product: item });
+  }));
+
+  server.registerTool("get_orders_summary", {
+    title: "Consultar pedidos por período",
+    description: "Use esta ferramenta quando o usuário pedir quantidade, faturamento, itens, pagamentos em aberto, situação ou lista de pedidos em um período. Para um único pedido, use get_order.",
+    inputSchema: {
+      date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Data inicial no formato YYYY-MM-DD. O padrão é o primeiro dia do mês atual."),
+      date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Data final no formato YYYY-MM-DD. O padrão é hoje."),
+      operational_status: z.enum(["Novo", "Em atendimento", "Confirmado", "Em preparação", "Enviado", "Entregue", "Cancelado"]).optional().describe("Filtra pela situação operacional do pedido."),
+      payment_status: z.enum(["Pendente", "Recebido", "Parcial", "Estornado", "Cancelado"]).optional().describe("Filtra pela situação do pagamento."),
+      limit: z.number().int().min(1).max(50).default(10).describe("Quantidade máxima de pedidos recentes devolvidos junto do resumo."),
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: oauthMeta,
+  }, async ({ date_from, date_to, operational_status, payment_status, limit }) => runRead(actor, "get_orders_summary", "orders", { date_from: date_from ?? "", date_to: date_to ?? "", operational_status: operational_status ?? "", payment_status: payment_status ?? "", limit }, async () => {
+    const admin = createAdminClient();
+    if (!admin) throw new Error("Supabase indisponível.");
+    const period = resolveMcpOperationPeriod({ dateFrom: date_from, dateTo: date_to, operationStartedAt: await operationStartedAt(actor) });
+    let orders: JsonObject[] = [];
+    if (period.hasStarted) {
+      let query = admin.from("orders")
+        .select("id, code, created_at, customer, total, financial_total, amount_paid, status, operational_status, payment_status, order_items(quantity, unit_cost)")
+        .eq("tenant_id", actor.tenantId)
+        .gte("created_at", period.startsAt)
+        .lte("created_at", period.endsAt)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      if (operational_status) query = query.eq("operational_status", operational_status);
+      if (payment_status) query = query.eq("payment_status", payment_status);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      orders = (data ?? []) as unknown as JsonObject[];
+    }
+    const summary = summarizeMcpOrders(orders, limit);
+    const marginNote = summary.grossMarginIsComplete ? "" : ` ${summary.missingCostItems} item(ns) não possuem custo e podem distorcer a margem.`;
+    return textResult(`De ${period.dateFrom} a ${period.dateTo}: ${summary.totalOrders} pedido(s), ${summary.receivedOrders} recebido(s), faturamento de ${formatMoney(summary.revenue)} e ${formatMoney(summary.openAmount)} em aberto.${marginNote}`, {
+      period,
+      filters: { operationalStatus: operational_status ?? null, paymentStatus: payment_status ?? null },
+      summary,
+      truncated: orders.length === 2000,
+    });
+  }));
+
+  server.registerTool("get_inventory_summary", {
+    title: "Consultar visão do estoque",
+    description: "Use esta ferramenta quando o usuário pedir posição geral do estoque, produtos com saldo baixo ou zerado, total de unidades ou valor armazenado. Para um único produto, use get_product.",
+    inputSchema: {
+      status: z.enum(["all", "low_stock", "out_of_stock"]).default("all").describe("Use all para a posição geral, low_stock para reposição e out_of_stock para itens zerados."),
+      include_inactive: z.boolean().default(false).describe("Inclui produtos inativos quando verdadeiro."),
+      limit: z.number().int().min(1).max(100).default(20).describe("Quantidade máxima de produtos devolvidos junto do resumo."),
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: oauthMeta,
+  }, async ({ status, include_inactive, limit }) => runRead(actor, "get_inventory_summary", can(actor, "inventory") ? "inventory" : "catalog", { status, include_inactive, limit }, async () => {
+    const admin = createAdminClient();
+    if (!admin) throw new Error("Supabase indisponível.");
+    const { data, error } = await admin.from("products")
+      .select("id, name, sku, brand, price, cost_price, stock, min_stock, active, updated_at")
+      .eq("tenant_id", actor.tenantId)
+      .order("stock", { ascending: true })
+      .limit(2000);
+    if (error) throw new Error(error.message);
+    const summary = summarizeMcpInventory((data ?? []) as unknown as JsonObject[], { status, includeInactive: include_inactive, limit });
+    return textResult(`Estoque atual: ${summary.totalProducts} produto(s), ${summary.totalUnits} unidade(s), ${summary.lowStockProducts} com saldo baixo e ${summary.outOfStockProducts} zerado(s). Valor a custo: ${formatMoney(summary.stockValueAtCost)}.`, {
+      filters: { status, includeInactive: include_inactive },
+      summary,
+      truncated: (data?.length ?? 0) === 2000,
+    });
+  }));
+
+  server.registerTool("get_revenue_summary", {
+    title: "Consultar faturamento e caixa",
+    description: "Use esta ferramenta quando o usuário pedir faturamento, receita recebida, ticket médio, lucro bruto, margem, despesas ou resultado de caixa em um período. Distingue pedidos faturados de pagamentos efetivamente recebidos.",
+    inputSchema: {
+      date_from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Data inicial no formato YYYY-MM-DD. O padrão é o primeiro dia do mês atual."),
+      date_to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().describe("Data final no formato YYYY-MM-DD. O padrão é hoje."),
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    _meta: oauthMeta,
+  }, async ({ date_from, date_to }) => runRead(actor, "get_revenue_summary", "finance", { date_from: date_from ?? "", date_to: date_to ?? "" }, async () => {
+    requireMcpPermission(actor, "orders");
+    const admin = createAdminClient();
+    if (!admin) throw new Error("Supabase indisponível.");
+    const period = resolveMcpOperationPeriod({ dateFrom: date_from, dateTo: date_to, operationStartedAt: await operationStartedAt(actor) });
+    let orders: JsonObject[] = [];
+    let transactions: JsonObject[] = [];
+    if (period.hasStarted) {
+      const [ordersResponse, transactionsResponse] = await Promise.all([
+        admin.from("orders")
+          .select("id, code, created_at, customer, total, financial_total, amount_paid, status, operational_status, payment_status, order_items(quantity, unit_cost)")
+          .eq("tenant_id", actor.tenantId)
+          .gte("created_at", period.startsAt)
+          .lte("created_at", period.endsAt)
+          .order("created_at", { ascending: false })
+          .limit(2000),
+        admin.from("financial_transactions")
+          .select("id, type, status, amount, category, description, paid_at, created_at, order_id")
+          .eq("tenant_id", actor.tenantId)
+          .eq("status", "paid")
+          .gte("paid_at", period.startsAt)
+          .lte("paid_at", period.endsAt)
+          .order("paid_at", { ascending: false })
+          .limit(2000),
+      ]);
+      if (ordersResponse.error) throw new Error(ordersResponse.error.message);
+      if (transactionsResponse.error) throw new Error(transactionsResponse.error.message);
+      orders = (ordersResponse.data ?? []) as unknown as JsonObject[];
+      transactions = (transactionsResponse.data ?? []) as unknown as JsonObject[];
+    }
+    const ordersSummary = summarizeMcpOrders(orders, 10);
+    const cash = summarizeMcpCash(transactions);
+    const marginNote = ordersSummary.grossMarginIsComplete ? "" : " A margem bruta é estimada porque existem itens sem custo cadastrado.";
+    return textResult(`De ${period.dateFrom} a ${period.dateTo}: faturamento de ${formatMoney(ordersSummary.revenue)}, ${formatMoney(cash.orderPayments)} recebido de pedidos e resultado de caixa de ${formatMoney(cash.result)}.${marginNote}`, {
+      period,
+      revenue: {
+        amount: ordersSummary.revenue,
+        receivedOrders: ordersSummary.receivedOrders,
+        averageTicket: ordersSummary.averageTicket,
+        grossCost: ordersSummary.grossCost,
+        grossProfit: ordersSummary.grossProfit,
+        grossMarginPercent: ordersSummary.grossMarginPercent,
+        grossMarginIsComplete: ordersSummary.grossMarginIsComplete,
+        missingCostItems: ordersSummary.missingCostItems,
+      },
+      cash,
+      openPayments: { orders: ordersSummary.openPaymentOrders, amount: ordersSummary.openAmount },
+      recentOrders: ordersSummary.recentOrders,
+      truncated: orders.length === 2000 || transactions.length === 2000,
+    });
   }));
 
   server.registerTool("get_customer", {
