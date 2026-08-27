@@ -20,7 +20,9 @@ describe("controle financeiro do pedido", () => {
   });
 
   it("arquiva somente pedidos encerrados e reconhece restauração", () => {
-    expect(canArchiveOrder(order({ status: "Entregue" }))).toBe(true);
+    expect(canArchiveOrder(order({ status: "Entregue", paymentStatus: "Recebido" }))).toBe(true);
+    expect(canArchiveOrder(order({ status: "Novo", operationalStatus: "Entregue", paymentStatus: "Pendente" }))).toBe(false);
+    expect(canArchiveOrder(order({ status: "Novo", operationalStatus: "Entregue", paymentStatus: "Parcial" }))).toBe(false);
     expect(canArchiveOrder(order({ status: "Cancelado" }))).toBe(true);
     expect(canArchiveOrder(order({ status: "Novo" }))).toBe(false);
     expect(canArchiveOrder(order({ status: "Pago" }))).toBe(false);

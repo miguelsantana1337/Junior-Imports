@@ -567,10 +567,17 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
   const deleteProduct = useCallback(async (id: string) => {
     await commitMutation(
       (current) => ({ ...current, products: current.products.filter((item) => item.id !== id) }),
-      () => remove("products", id),
-      "Produto excluído.",
+      async () => {
+        if (demoMode || !supabase) return;
+        const { error } = await supabase.rpc("archive_tenant_product", {
+          p_tenant_id: dataRef.current.tenant.id,
+          p_product_id: id,
+        });
+        if (error) throw new Error(error.message);
+      },
+      "Produto excluído do catálogo.",
     );
-  }, [commitMutation, remove]);
+  }, [commitMutation, demoMode, supabase]);
 
   const saveBanner = useCallback(async (banner: Banner) => {
     await commitMutation(
@@ -1548,7 +1555,11 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     if (lifecycleReasonRequired(currentOrder, operationalStatus, paymentStatus) && reason.length < 5) {
       throw new Error("Explique a alteração em pelo menos 5 caracteres.");
     }
-    if (["Em preparação", "Enviado", "Entregue"].includes(operationalStatus) && paymentStatus !== "Recebido") {
+    const deliveryWithOpenBalance = operationalStatus === "Entregue" && paymentStatus !== "Recebido";
+    if (deliveryWithOpenBalance && currentUser.role !== "owner") {
+      throw new Error("Somente o proprietário pode autorizar uma entrega com saldo em aberto.");
+    }
+    if (["Em preparação", "Enviado"].includes(operationalStatus) && paymentStatus !== "Recebido") {
       throw new Error("Confirme o pagamento antes de preparar ou entregar.");
     }
     if (operationalStatus === "Cancelado") {
@@ -1562,23 +1573,49 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
 
     const legacyStatus = legacyStatusForLifecycle(operationalStatus, paymentStatus);
     if (demoMode) {
-      if (legacyStatus !== currentOrder.status) await updateOrderStatus(id, legacyStatus);
+      if (legacyStatus !== currentOrder.status && !deliveryWithOpenBalance) await updateOrderStatus(id, legacyStatus);
       const changedAt = new Date();
       await commitMutation(
-        (current) => ({
-          ...current,
-          orders: current.orders.map((order) => order.id === id ? {
-            ...order,
-            operationalStatus,
-            paymentStatus,
-            lifecycleVersion: (order.lifecycleVersion ?? 1) + 1,
-            cancelledAt: operationalStatus === "Cancelado" ? changedAt.toISOString() : "",
-            archiveAfter: operationalStatus === "Cancelado" ? new Date(changedAt.getTime() + 7 * 86_400_000).toISOString() : "",
-            internalNotes: operationalStatus === "Cancelado" && reason
-              ? [order.internalNotes, `Cancelamento: ${reason}`].filter(Boolean).join("\n")
-              : order.internalNotes,
-          } : order),
-        }),
+        (current) => {
+          const shouldCommitStock = deliveryWithOpenBalance
+            && !current.inventoryMovements.some((movement) => movement.referenceType === "order" && movement.referenceId === id && movement.type === "sale");
+          const products = shouldCommitStock ? current.products.map((product) => {
+            const item = currentOrder.items.find((candidate) => candidate.productId === product.id);
+            return item ? { ...product, stock: Math.max(0, product.stock - item.quantity) } : product;
+          }) : current.products;
+          const movements: InventoryMovement[] = shouldCommitStock ? currentOrder.items.map((item) => ({
+            id: `sale-${id}-${item.productId}`,
+            productId: item.productId,
+            type: "sale",
+            quantity: -item.quantity,
+            balanceAfter: products.find((product) => product.id === item.productId)?.stock ?? 0,
+            unitCost: item.unitCost,
+            referenceType: "order",
+            referenceId: id,
+            note: `Baixa confirmada na entrega com saldo em aberto do pedido ${currentOrder.code}.`,
+            actorEmail: currentUser.email,
+            createdAt: changedAt.toISOString(),
+          })) : [];
+          return {
+            ...current,
+            products,
+            inventoryMovements: [...movements, ...current.inventoryMovements],
+            orders: current.orders.map((order) => order.id === id ? {
+              ...order,
+              status: legacyStatus,
+              operationalStatus,
+              paymentStatus,
+              lifecycleVersion: (order.lifecycleVersion ?? 1) + 1,
+              cancelledAt: operationalStatus === "Cancelado" ? changedAt.toISOString() : "",
+              archiveAfter: operationalStatus === "Cancelado" ? new Date(changedAt.getTime() + 7 * 86_400_000).toISOString() : "",
+              internalNotes: operationalStatus === "Cancelado" && reason
+                ? [order.internalNotes, `Cancelamento: ${reason}`].filter(Boolean).join("\n")
+                : deliveryWithOpenBalance && reason
+                  ? [order.internalNotes, `Entrega com saldo em aberto: ${reason}`].filter(Boolean).join("\n")
+                  : order.internalNotes,
+            } : order),
+          };
+        },
         async () => undefined,
         "Pedido atualizado.",
       );
@@ -1598,7 +1635,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     await refreshOrderInventoryState(id, currentOrder.items.map((item) => item.productId));
     await refreshCashbackEntries();
     toast({ message: "Pedido atualizado.", kind: "success" });
-  }, [commitMutation, demoMode, refreshCashbackEntries, refreshOrderInventoryState, supabase, toast, updateOrderStatus]);
+  }, [commitMutation, currentUser.email, currentUser.role, demoMode, refreshCashbackEntries, refreshOrderInventoryState, supabase, toast, updateOrderStatus]);
 
   const registerOrderPayment = useCallback(async (
     id: string,
@@ -1609,7 +1646,7 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     if (!(currentUser.role === "owner" || currentUser.permissions.includes("finance"))) {
       throw new Error("Seu usuário precisa da permissão Financeiro.");
     }
-    if (["Cancelado", "Entregue"].includes(currentOrder.operationalStatus ?? currentOrder.status)) {
+    if ((currentOrder.operationalStatus ?? currentOrder.status) === "Cancelado") {
       throw new Error("Este pedido não aceita novos pagamentos.");
     }
     const summary = orderPaymentSummary(currentOrder, dataRef.current.financialTransactions);

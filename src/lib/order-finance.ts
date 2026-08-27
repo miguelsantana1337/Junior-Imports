@@ -1,4 +1,4 @@
-import { orderOperationalStatus } from "@/lib/order-lifecycle";
+import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 import type { Order, OrderOperationalStatus } from "@/types/store";
 
 const archiveableStatuses: ReadonlySet<OrderOperationalStatus> = new Set(["Entregue", "Cancelado"]);
@@ -21,6 +21,8 @@ export function isOrderArchived(order: Pick<Order, "archivedAt" | "archiveAfter"
   return Number.isFinite(archiveTime) && archiveTime <= now.getTime();
 }
 
-export function canArchiveOrder(order: Pick<Order, "status" | "operationalStatus">) {
-  return archiveableStatuses.has(orderOperationalStatus(order));
+export function canArchiveOrder(order: Pick<Order, "status" | "operationalStatus" | "paymentStatus">) {
+  const operational = orderOperationalStatus(order);
+  if (!archiveableStatuses.has(operational)) return false;
+  return operational === "Cancelado" || orderPaymentStatus(order) === "Recebido";
 }

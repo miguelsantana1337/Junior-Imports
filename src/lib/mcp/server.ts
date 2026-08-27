@@ -136,10 +136,10 @@ async function findProduct(actor: McpActor, reference: string) {
   const cleaned = cleanSearch(reference);
   if (!cleaned) throw new Error("Informe o produto.");
   const select = "id, name, sku, brand, price, cost_price, stock, min_stock, active, category_id, updated_at";
-  let response = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).eq("id", cleaned).maybeSingle();
-  if (!response.data) response = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).ilike("sku", cleaned).maybeSingle();
+  let response = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).is("deleted_at", null).eq("id", cleaned).maybeSingle();
+  if (!response.data) response = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).is("deleted_at", null).ilike("sku", cleaned).maybeSingle();
   if (!response.data) {
-    const list = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).ilike("name", `%${cleaned}%`).limit(2);
+    const list = await admin.from("products").select(select).eq("tenant_id", actor.tenantId).is("deleted_at", null).ilike("name", `%${cleaned}%`).limit(2);
     if ((list.data?.length ?? 0) > 1) throw new Error("Encontrei mais de um produto. Informe o SKU ou o identificador.");
     response = { data: list.data?.[0] ?? null, error: list.error } as typeof response;
   }
@@ -253,7 +253,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
         ? admin.from("orders").select("id, code, created_at, operational_status, payment_status, amount_paid, total, financial_total, archived_at").eq("tenant_id", actor.tenantId).is("archived_at", null).order("created_at", { ascending: false }).limit(250)
         : Promise.resolve({ data: [] }),
       can(actor, "inventory") || can(actor, "catalog")
-        ? admin.from("products").select("id, name, sku, stock, min_stock").eq("tenant_id", actor.tenantId).eq("active", true).order("stock", { ascending: true }).limit(250)
+        ? admin.from("products").select("id, name, sku, stock, min_stock").eq("tenant_id", actor.tenantId).is("deleted_at", null).eq("active", true).order("stock", { ascending: true }).limit(250)
         : Promise.resolve({ data: [] }),
       can(actor, "finance")
         ? admin.from("financial_transactions").select("type, status, amount, paid_at, created_at").eq("tenant_id", actor.tenantId).eq("status", "paid").order("created_at", { ascending: false }).limit(500)
@@ -296,7 +296,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
     const term = cleanSearch(query);
     const [orders, products, customers] = await Promise.all([
       can(actor, "orders") ? admin.from("orders").select("id, code, customer, total, financial_total, operational_status, payment_status").eq("tenant_id", actor.tenantId).ilike("code", `%${term}%`).limit(5) : Promise.resolve({ data: [] }),
-      can(actor, "catalog") || can(actor, "inventory") ? admin.from("products").select("id, name, sku, stock, price, active").eq("tenant_id", actor.tenantId).or(`name.ilike.%${term}%,sku.ilike.%${term}%`).limit(8) : Promise.resolve({ data: [] }),
+      can(actor, "catalog") || can(actor, "inventory") ? admin.from("products").select("id, name, sku, stock, price, active").eq("tenant_id", actor.tenantId).is("deleted_at", null).or(`name.ilike.%${term}%,sku.ilike.%${term}%`).limit(8) : Promise.resolve({ data: [] }),
       can(actor, "customers") || can(actor, "crm") ? admin.from("customers").select("id, name, email, phone, city, state").eq("tenant_id", actor.tenantId).or(`name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`).limit(8) : Promise.resolve({ data: [] }),
     ]);
     const result = { orders: orders.data ?? [], products: products.data ?? [], customers: customers.data ?? [] };
@@ -383,6 +383,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
     const { data, error } = await admin.from("products")
       .select("id, name, sku, brand, price, cost_price, stock, min_stock, active, updated_at")
       .eq("tenant_id", actor.tenantId)
+      .is("deleted_at", null)
       .order("stock", { ascending: true })
       .limit(2000);
     if (error) throw new Error(error.message);

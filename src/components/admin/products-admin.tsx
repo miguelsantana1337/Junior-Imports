@@ -45,14 +45,14 @@ export function ProductsAdmin() {
   useEffect(() => { setPage(1); setSelected([]); }, [category, query, visibility]);
 
   const askDelete = useCallback(async (product: Product) => {
-    const accepted = await confirm({ title: "Excluir produto?", description: `“${product.name}” será removido permanentemente do catálogo.`, confirmLabel: "Excluir produto", danger: true });
+    const accepted = await confirm({ title: "Excluir produto?", description: `“${product.name}” deixará de aparecer no painel e na loja. Pedidos, estoque e histórico financeiro serão preservados.`, confirmLabel: "Excluir produto", danger: true });
     if (accepted) await deleteProduct(product.id);
   }, [confirm, deleteProduct]);
 
   async function applyBulk(action: "show" | "hide" | "delete") {
     const targets = data.products.filter((product) => selected.includes(product.id));
     if (action === "delete") {
-      const accepted = await confirm({ title: "Excluir produtos selecionados?", description: `${targets.length} produto(s) serão removidos permanentemente.`, confirmLabel: "Excluir selecionados", danger: true });
+      const accepted = await confirm({ title: "Excluir produtos selecionados?", description: `${targets.length} produto(s) deixarão de aparecer no painel e na loja. O histórico será preservado.`, confirmLabel: "Excluir selecionados", danger: true });
       if (!accepted) return;
       for (const product of targets) await deleteProduct(product.id);
     } else {

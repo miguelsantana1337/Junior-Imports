@@ -111,7 +111,7 @@ async function loadBundles(actor: AdminSessionUser) {
   const [bundles, options, products] = await Promise.all([
     supabase.from("product_bundles").select("*").eq("tenant_id", actor.tenantId).order("created_at", { ascending: false }),
     supabase.from("bundle_options").select("*").eq("tenant_id", actor.tenantId).order("order_index"),
-    supabase.from("products").select("id,name,stock,cost_price,active,image_url").eq("tenant_id", actor.tenantId).order("name"),
+    supabase.from("products").select("id,name,stock,cost_price,active,image_url").eq("tenant_id", actor.tenantId).is("deleted_at", null).order("name"),
   ]);
   const productMap = new Map((products.data ?? []).map((row) => [string(row.id), row as Row]));
   return {

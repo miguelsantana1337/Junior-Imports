@@ -820,7 +820,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
     scopeTenant(supabase.from("store_settings").select("*"), tenantId).eq("id", "default").maybeSingle(),
     scopeTenant(supabase.from("categories").select("*"), tenantId).order("order_index"),
     options.admin && canRead("catalog")
-      ? scopeTenant(supabase.from("products").select("*"), tenantId).order("order_index")
+      ? scopeTenant(supabase.from("products").select("*"), tenantId).is("deleted_at", null).order("order_index")
       : options.admin
         ? emptyQuery()
         : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, cashback_type, badge, accent, description, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),

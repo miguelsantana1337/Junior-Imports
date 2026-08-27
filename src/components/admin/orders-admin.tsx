@@ -366,10 +366,12 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
   const typedFinancialTotal = parseMoneyInput(financialTotal);
   const financialChanged = Number.isFinite(typedFinancialTotal) && Math.abs(typedFinancialTotal - currentFinancialTotal) >= 0.01;
   const canManageFinance = currentUser.role === "owner" || currentUser.permissions.includes("finance");
+  const isOwner = currentUser.role === "owner";
   const lifecycleChanged = operationalStatus !== currentOperationalStatus || paymentStatus !== currentPaymentStatus;
   const reasonRequired = lifecycleReasonRequired(order, operationalStatus, paymentStatus);
   const consequences = lifecycleChangeConsequences(order, operationalStatus, paymentStatus);
   const nextAction = archived ? null : nextOrderAction(order);
+  const nextActionNeedsOwner = nextAction?.operationalStatus === "Entregue" && currentPaymentStatus !== "Recebido";
   const terminalOrder = currentOperationalStatus === "Cancelado";
 
   useEffect(() => {
@@ -528,7 +530,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
             </div>)}
           </div>}
 
-          {!paymentFormOpen && paymentSummary.remaining > 0 && !archived && !["Cancelado", "Entregue"].includes(currentOperationalStatus) && <div className="order-payment-actions">
+          {!paymentFormOpen && paymentSummary.remaining > 0 && !archived && currentOperationalStatus !== "Cancelado" && <div className="order-payment-actions">
             <div><strong>Entrou algum valor?</strong><span>Você pode quitar o saldo ou registrar somente a parcela recebida.</span></div>
             <button className="admin-button primary" type="button" disabled={!canManageFinance} onClick={() => openPaymentForm("full")}><Plus /> Registrar pagamento</button>
           </div>}
@@ -581,17 +583,19 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
 
         {!archived && nextAction && <section className="order-next-action-card">
           <div><span>PRÓXIMO PASSO</span><strong>{nextAction.label}</strong><p>{nextAction.description}</p></div>
-          <button className="admin-button primary" disabled={saving || (nextAction.paymentStatus === "Recebido" && !canManageFinance)} onClick={() => void runNextAction()}>{nextAction.label} <ChevronRight /></button>
+          <button className="admin-button primary" disabled={saving || (nextAction.paymentStatus === "Recebido" && !canManageFinance) || (nextActionNeedsOwner && !isOwner)} onClick={() => void runNextAction()}>{nextAction.label} <ChevronRight /></button>
         </section>}
 
         <section className="order-lifecycle-card">
           <div className="order-lifecycle-heading"><div><span>CONTROLE DO PEDIDO</span><h3>Andamento e pagamento</h3><p>O pedido pode avançar sem que o dinheiro tenha entrado. Por isso, os dois controles ficam separados.</p></div></div>
           <div className="order-status-editor order-lifecycle-editor">
-            <label>Situação do pedido<select aria-label="Situação do pedido" value={operationalStatus} disabled={archived || terminalOrder} onChange={(event) => selectOperationalStatus(event.target.value as OrderOperationalStatus)}>{statuses.map((item) => <option key={item}>{item}</option>)}</select></label>
+            <label>Situação do pedido<select aria-label="Situação do pedido" value={operationalStatus} disabled={archived || terminalOrder} onChange={(event) => selectOperationalStatus(event.target.value as OrderOperationalStatus)}>{statuses.map((item) => <option key={item} disabled={item === "Entregue" && currentPaymentStatus !== "Recebido" && !isOwner}>{item}</option>)}</select></label>
             <div className="order-payment-status-display" aria-label={`Situação do pagamento: ${paymentStatus}`}><span>Situação do pagamento</span><strong>{paymentStatus}</strong><small>Atualizada pelos recebimentos registrados acima.</small></div>
             <button className="admin-button primary" disabled={archived || terminalOrder || saving || !lifecycleChanged || (paymentStatus !== currentPaymentStatus && !canManageFinance)} onClick={() => setReviewingLifecycle(true)}>Revisar alteração</button>
           </div>
           {!canManageFinance && <small className="order-financial-help">Seu usuário pode atualizar o andamento, mas precisa da permissão Financeiro para registrar pagamentos.</small>}
+          {currentPaymentStatus !== "Recebido" && isOwner && <small className="order-financial-help">Como proprietário, você pode marcar como entregue com saldo em aberto. O motivo será obrigatório e o financeiro continuará pendente.</small>}
+          {currentPaymentStatus !== "Recebido" && !isOwner && <small className="order-financial-help">Somente o proprietário pode autorizar uma entrega antes da quitação.</small>}
           {terminalOrder && <small className="order-financial-help">Pedidos cancelados ficam preservados para auditoria e não podem voltar à operação.</small>}
           {reviewingLifecycle && lifecycleChanged && <div className="order-lifecycle-confirmation" role="region" aria-label="Confirmar alteração do pedido">
             <div><span>CONFIRME ANTES DE SALVAR</span><h3>O que vai acontecer</h3></div>
@@ -602,7 +606,7 @@ function OrderDetail({ order, onClose, onWhatsApp }: { order: Order; onClose: ()
         </section>
 
         <div className="order-record-actions">
-          <div><strong>{archived ? "Restaurar pedido" : "Arquivar pedido"}</strong><span>{archived ? "O pedido voltará para a lista ativa." : canArchiveOrder(order) ? "Remove da fila sem apagar histórico, estoque ou financeiro." : "Disponível somente após entregar ou cancelar."}</span></div>
+          <div><strong>{archived ? "Restaurar pedido" : "Arquivar pedido"}</strong><span>{archived ? "O pedido voltará para a lista ativa." : canArchiveOrder(order) ? "Remove da fila sem apagar histórico, estoque ou financeiro." : currentOperationalStatus === "Entregue" && currentPaymentStatus !== "Recebido" ? "Quite o saldo antes de arquivar este pedido entregue." : "Disponível somente após entregar e receber, ou cancelar."}</span></div>
           <button className="admin-button" disabled={archiving || (!archived && !canArchiveOrder(order))} onClick={() => void toggleArchive()}>{archived ? <ArchiveRestore /> : <Archive />} {archiving ? "Salvando..." : archived ? "Restaurar" : "Arquivar"}</button>
         </div>
       </div>

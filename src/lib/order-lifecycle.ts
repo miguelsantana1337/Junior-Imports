@@ -43,7 +43,10 @@ export function legacyStatusForLifecycle(
   paymentStatus: OrderPaymentStatus,
 ): OrderStatus {
   if (operationalStatus === "Cancelado") return "Cancelado";
-  if (operationalStatus === "Entregue") return "Entregue";
+  // Um pedido pode ser entregue por decisão do proprietário antes da
+  // quitação. Nesse caso, o status legado não pode indicar recebimento, pois
+  // rotinas antigas ainda usam "Entregue" como sinônimo de venda paga.
+  if (operationalStatus === "Entregue" && paymentStatus === "Recebido") return "Entregue";
   if (paymentStatus === "Recebido") return "Pago";
   return "Novo";
 }
@@ -61,6 +64,9 @@ export function nextOrderAction(order: Pick<Order, "operationalStatus" | "paymen
   const paymentStatus = orderPaymentStatus(order);
 
   if (operationalStatus === "Cancelado") return { label: "Arquivar pedido", description: "Retira o pedido da fila sem apagar o histórico.", archive: true };
+  if (operationalStatus === "Entregue" && paymentStatus !== "Recebido") {
+    return { label: "Registrar pagamento", description: "O pedido foi entregue, mas o saldo ainda está em aberto.", paymentStatus: "Recebido" };
+  }
   if (operationalStatus === "Entregue") return { label: "Finalizar e arquivar", description: "Conclui a operação e preserva o pedido nos relatórios.", archive: true };
   if (operationalStatus === "Enviado") return { label: "Marcar como entregue", description: "Confirma que a entrega foi concluída.", operationalStatus: "Entregue" };
   if (operationalStatus === "Em preparação") return { label: "Marcar como enviado", description: "Registra que o pedido saiu para entrega.", operationalStatus: "Enviado" };
@@ -90,7 +96,13 @@ export function lifecycleChangeConsequences(
   }
   if (nextOperationalStatus === "Em preparação") consequences.push("O pedido passará para a fila de preparação.");
   if (nextOperationalStatus === "Enviado") consequences.push("O pedido ficará aguardando a confirmação da entrega.");
-  if (nextOperationalStatus === "Entregue") consequences.push("O ciclo será concluído e a contagem de recompra será iniciada.");
+  if (nextOperationalStatus === "Entregue" && nextPaymentStatus === "Recebido") {
+    consequences.push("O ciclo será concluído e a contagem de recompra será iniciada.");
+  }
+  if (nextOperationalStatus === "Entregue" && nextPaymentStatus !== "Recebido") {
+    consequences.push("O pedido será entregue com saldo em aberto, o estoque será baixado e o valor continuará pendente no financeiro.");
+    consequences.push("Somente o proprietário pode autorizar esta exceção e o motivo ficará registrado no pedido.");
+  }
   if (!consequences.length) consequences.push("A situação operacional será atualizada e ficará registrada na auditoria.");
   return consequences;
 }
@@ -101,5 +113,6 @@ export function lifecycleReasonRequired(
   nextPaymentStatus: OrderPaymentStatus,
 ) {
   return orderOperationalStatus(current) !== "Cancelado" && nextOperationalStatus === "Cancelado"
-    || orderPaymentStatus(current) !== nextPaymentStatus && ["Estornado", "Cancelado"].includes(nextPaymentStatus);
+    || orderPaymentStatus(current) !== nextPaymentStatus && ["Estornado", "Cancelado"].includes(nextPaymentStatus)
+    || nextOperationalStatus === "Entregue" && nextPaymentStatus !== "Recebido";
 }
