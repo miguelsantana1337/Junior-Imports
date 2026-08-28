@@ -47,6 +47,8 @@ type PersistedOrder = {
   cashback_total?: number;
   loyalty_discount?: number;
   campaign_gift?: string;
+  promotion_discount?: number;
+  promotion_snapshot?: Record<string, unknown>;
   status: Order["status"];
   order_source?: Order["orderSource"];
   reservation_expires_at?: string;
@@ -186,6 +188,10 @@ export function CheckoutScreen() {
 
   async function submit(values: CheckoutInput) {
     setSubmitError("");
+    if (calculation.promotionStockIssue) {
+      setSubmitError(calculation.promotionStockIssue);
+      return;
+    }
     const termsAcceptedAt = new Date().toISOString();
     const customer = {
       name: values.name,
@@ -279,6 +285,8 @@ export function CheckoutScreen() {
       cashbackTotal: persisted?.cashback_total ?? calculation.cashback,
       loyaltyDiscount: persisted?.loyalty_discount ?? 0,
       campaignGift: persisted?.campaign_gift ?? "",
+      promotionDiscount: persisted?.promotion_discount ?? calculation.promotionDiscount,
+      promotionSnapshot: persisted?.promotion_snapshot ?? {},
       payment: values.payment,
       status: persisted?.status ?? "Novo",
       couponCode: coupon?.code ?? "",
@@ -327,7 +335,7 @@ export function CheckoutScreen() {
           {submitError && <p className="field-error" role="alert">{submitError}</p>}
           <button className="button button-primary button-full button-large" type="submit" disabled={isSubmitting}><LockKeyhole /> {isSubmitting ? "Registrando pedido..." : "Finalizar pedido no WhatsApp"}</button>
         </form>
-        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => { const lineCashback = calculation.cashbackByProduct[product!.id] ?? 0; const componentNames = (line.components ?? []).map((id) => data.products.find((item) => item.id === id)?.name).filter(Boolean); return <div className="summary-item" key={line.productId}><i><ProductArt product={product!} /></i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{lineCashback > 0 ? ` · ${formatMoney(lineCashback)} de cashback` : ""}</small>{componentNames.length ? <small className="summary-components">Kit: {componentNames.join(" · ")}</small> : null}</div><b>{formatMoney(product!.price * line.quantity)}</b></div>; })}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div><div><span>Descontos</span><strong>- {formatMoney(calculation.discount)}</strong></div><div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div><div className="grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Calculado sobre o valor pago pelos produtos, após descontos e sem frete.</p></aside>
+        <aside className="checkout-summary"><span>RESUMO DO PEDIDO</span>{cartProducts.map(({ line, product }) => { const lineCashback = calculation.cashbackByProduct[product!.id] ?? 0; const componentNames = (line.components ?? []).map((id) => data.products.find((item) => item.id === id)?.name).filter(Boolean); return <div className="summary-item" key={line.productId}><i><ProductArt product={product!} /></i><div><strong>{product!.name}</strong><small>{line.quantity} unidade{line.quantity > 1 ? "s" : ""}{lineCashback > 0 ? ` · ${formatMoney(lineCashback)} de cashback` : ""}</small>{componentNames.length ? <small className="summary-components">Kit: {componentNames.join(" · ")}</small> : null}</div><b>{formatMoney(product!.price * line.quantity)}</b></div>; })}{calculation.promotionApplied && <div className="checkout-promotion-benefits"><strong>Benefícios desta compra</strong>{calculation.promotionApplications.map((application) => <span key={application.key}><CheckCircle2 /> {application.label}</span>)}{calculation.promotionGifts.map((gift) => <small key={gift.productId}>{gift.quantity}x {gift.name} · grátis</small>)}{calculation.promotionStockIssue && <em>{calculation.promotionStockIssue}</em>}</div>}<div className="summary-totals"><div><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>{calculation.promotionDiscount > 0 && <div><span>Desconto da promoção</span><strong>- {formatMoney(calculation.promotionDiscount)}</strong></div>}<div><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div><div className="grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>{calculation.cashback > 0 && <div className="cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}</div><p className="summary-demo"><CheckCircle2 /> Promoção e cashback valem somente nesta compra. O cashback é calculado após o desconto e sem frete.</p></aside>
       </div>
     </section>
   );

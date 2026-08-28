@@ -495,6 +495,9 @@ function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
     promotionHighlights: Array.isArray(row.promotion_highlights) ? row.promotion_highlights.map(String) : fallback.promotionHighlights,
     promotionGiftMessage: str(row.promotion_gift_message) || fallback.promotionGiftMessage,
     promotionPriceMatchMessage: str(row.promotion_price_match_message) || fallback.promotionPriceMatchMessage,
+    quantityPromotion: row.quantity_promotion && typeof row.quantity_promotion === "object"
+      ? { ...fallback.quantityPromotion, ...(row.quantity_promotion as StoreSettings["quantityPromotion"]) }
+      : fallback.quantityPromotion,
     pixDiscount: num(row.pix_discount),
     pixDiscountMinimum: row.pix_discount_minimum === undefined ? fallback.pixDiscountMinimum : num(row.pix_discount_minimum),
     cardInstallments: row.card_installments === undefined ? fallback.cardInstallments : num(row.card_installments),
@@ -663,6 +666,8 @@ function mapOrder(row: Row): Order {
       unitPrice: num(item.unit_price),
       unitCost: num(item.unit_cost),
       unitCashback: num(item.unit_cashback),
+      isGift: Boolean(item.is_gift),
+      promotionRule: str(item.promotion_rule),
       components: components
         .filter((component) => str(component.bundle_product_id) === str(item.product_id))
         .map((component) => ({ productId: str(component.component_product_id), name: str(component.component_name), quantity: num(component.quantity) })),
@@ -679,6 +684,8 @@ function mapOrder(row: Row): Order {
     cashbackTotal: num(row.cashback_total),
     loyaltyDiscount: num(row.loyalty_discount),
     campaignGift: str(row.campaign_gift),
+    promotionDiscount: num(row.promotion_discount),
+    promotionSnapshot: objectValue(row.promotion_snapshot),
     payment: str(row.payment) as Order["payment"],
     status: str(row.status) as Order["status"],
     operationalStatus: (str(row.operational_status) || undefined) as Order["operationalStatus"],

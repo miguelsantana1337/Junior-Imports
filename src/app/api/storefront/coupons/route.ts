@@ -48,6 +48,22 @@ export async function POST(request: Request) {
       limit: 20,
       windowSeconds: 600,
     });
+    const { data: settings } = await supabase.from("store_settings")
+      .select("promotion_enabled, promotion_starts_at, promotion_ends_at, quantity_promotion")
+      .eq("tenant_id", parsed.data.tenantId).eq("id", "default").maybeSingle();
+    const config = settings?.quantity_promotion as { enabled?: boolean; singleProductId?: string; boxProductId?: string; single_product_id?: string; box_product_id?: string; allowCoupons?: boolean; allow_coupons?: boolean } | null;
+    const startsAt = settings?.promotion_starts_at ? new Date(settings.promotion_starts_at) : null;
+    const endsAt = settings?.promotion_ends_at ? new Date(settings.promotion_ends_at) : null;
+    const campaignActive = Boolean(settings?.promotion_enabled && config?.enabled)
+      && (!startsAt || startsAt <= new Date()) && (!endsAt || endsAt >= new Date());
+    const singleProductId = config?.singleProductId || config?.single_product_id || "";
+    const boxProductId = config?.boxProductId || config?.box_product_id || "";
+    const allowsCoupon = config?.allowCoupons ?? config?.allow_coupons ?? false;
+    if (campaignActive && !allowsCoupon && parsed.data.items.some((item) => item.productId === singleProductId || item.productId === boxProductId)) {
+      return Response.json({ valid: false, message: "Esta promoção acumula cashback, mas não aceita cupom ou outro desconto." }, {
+        headers: { "Cache-Control": "no-store", "X-RateLimit-Remaining": String(rate.remaining) },
+      });
+    }
     const { data, error } = await supabase.rpc("validate_storefront_coupon", {
       p_tenant_id: parsed.data.tenantId,
       p_items: parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),

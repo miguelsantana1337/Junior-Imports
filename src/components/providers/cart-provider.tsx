@@ -222,6 +222,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
         setCoupon(null);
         return { ok: false, message: "Informe um cupom e adicione produtos ao carrinho." };
       }
+      const currentCalculation = calculateCart(lines, data.products, data.settings, null, undefined, data.cashbackCampaigns);
+      if (currentCalculation.promotionApplied && !data.settings.quantityPromotion.allowCoupons) {
+        setCoupon(null);
+        return { ok: false, message: "Esta promoção acumula cashback, mas não aceita cupom ou outro desconto." };
+      }
       const response = await fetch("/api/storefront/coupons", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -254,7 +259,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       });
       return { ok: true, message: `Cupom ${payload.code} aplicado.` };
     },
-    [data.tenant.id, lines],
+    [data.cashbackCampaigns, data.products, data.settings, data.tenant.id, lines],
   );
 
   const value = useMemo(

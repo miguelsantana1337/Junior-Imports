@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       termsAcceptedAt: new Date().toISOString(),
       termsVersion: CHECKOUT_TERMS_VERSION,
     };
-    const { data, error } = await supabase.rpc("create_tenant_order_with_bundles_secure", {
+    const { data, error } = await supabase.rpc("create_tenant_order_with_promotions_secure", {
       p_tenant_id: parsed.data.tenantId,
       p_customer: orderCustomer,
       p_items: parsed.data.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, components: item.components ?? [] })),
@@ -129,7 +129,7 @@ export async function POST(request: Request) {
     }
     const { data: authoritativeOrder, error: authoritativeOrderError } = order.id
       ? await supabase.from("orders")
-        .select("id, customer_id, code, created_at, subtotal, discount, shipping, total, cashback_total, loyalty_discount, campaign_gift, status, order_source, reservation_expires_at, shipping_status")
+        .select("id, customer_id, code, created_at, subtotal, discount, shipping, total, cashback_total, loyalty_discount, campaign_gift, promotion_discount, promotion_snapshot, status, order_source, reservation_expires_at, shipping_status")
         .eq("tenant_id", parsed.data.tenantId)
         .eq("id", order.id)
         .maybeSingle()

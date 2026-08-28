@@ -488,6 +488,12 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .coupon-box input { flex: 1; min-width: 0; height: 40px; padding: 0 12px; border: 1px solid var(--line); border-radius: 10px 0 0 10px; background: var(--surface); color: white; }
 .coupon-box button { padding: 0 13px; border: 0; border-radius: 0 10px 10px 0; background: #1b2739; color: white; font-size: 11px; font-weight: 800; }
 .coupon-box small { min-height: 18px; display: block; margin-top: 5px; font-size: 9px; }
+.cart-promotion-summary { margin-bottom: 14px; padding: 12px; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 9px; border: 1px solid rgb(46 127 236 / 32%); border-radius: 11px; background: linear-gradient(135deg, rgb(22 119 255 / 13%), rgb(65 211 146 / 7%)); }
+.cart-promotion-summary > svg { width: 20px; color: #79afff; }
+.cart-promotion-summary strong, .cart-promotion-summary small { display: block; }
+.cart-promotion-summary strong { margin-bottom: 5px; font-size: 10px; }
+.cart-promotion-summary small { color: #aebed2; font-size: 9px; line-height: 1.45; }
+.cart-promotion-summary button { margin-top: 8px; padding: 8px 10px; border: 1px solid rgb(121 175 255 / 35%); border-radius: 8px; background: rgb(22 119 255 / 18%); color: #dceaff; font-size: 9px; font-weight: 800; text-align: left; }
 .success-text { color: var(--green); }
 .error-text, .field-error { color: var(--danger); }
 .total-line { display: flex; justify-content: space-between; gap: 15px; padding: 5px 0; color: var(--muted); font-size: 11px; }
@@ -815,6 +821,12 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .summary-totals .grand-total { padding-top: 12px; font-size: 17px; }
 .summary-totals .cashback-total { margin-top: 9px; padding: 10px; border: 1px solid rgb(65 211 146 / 24%); border-radius: 9px; background: rgb(65 211 146 / 9%); color: #9bdcbd; }
 .summary-totals .cashback-total strong { color: #78e1ad; }
+.checkout-promotion-benefits { margin: 16px 0 4px; padding: 13px; display: grid; gap: 7px; border: 1px solid rgb(46 127 236 / 32%); border-radius: 11px; background: linear-gradient(135deg, rgb(22 119 255 / 12%), rgb(65 211 146 / 6%)); }
+.checkout-promotion-benefits strong { font-size: 11px; }
+.checkout-promotion-benefits span { display: flex; align-items: center; gap: 6px; color: #cbd8e8; font-size: 9px; }
+.checkout-promotion-benefits span svg { width: 13px; height: 13px; color: #78e1ad; }
+.checkout-promotion-benefits small { color: #8fb8f5; font-size: 9px; }
+.checkout-promotion-benefits em { color: #ff9aa1; font-size: 9px; font-style: normal; }
 .summary-demo { display: flex; align-items: center; gap: 7px; margin: 15px 0 0; color: var(--muted); font-size: 9px; }
 .summary-demo svg { width: 15px; color: var(--green); }
 

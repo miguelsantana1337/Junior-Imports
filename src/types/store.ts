@@ -70,6 +70,32 @@ export type DeliveryMethod = "delivery" | "pickup";
 
 export type ShippingStatus = "free" | "calculated" | "quote" | "pending" | "pickup";
 
+export interface QuantityPromotionSettings {
+  enabled: boolean;
+  singleProductId: string;
+  boxProductId: string;
+  doseProductId: string;
+  groupQuantity: number;
+  groupDiscountPercent: number;
+  doseGiftPerRemainder: number;
+  boxGiftQuantity: number;
+  repeatable: boolean;
+  allowCoupons: boolean;
+  allowAdditionalDiscounts: boolean;
+}
+
+export interface QuantityPromotionGift {
+  productId: string;
+  name: string;
+  quantity: number;
+}
+
+export interface QuantityPromotionApplication {
+  key: "single-gift" | "group-discount" | "box-gift";
+  label: string;
+  applications: number;
+}
+
 export interface StoreSettings {
   operationStartedAt: string;
   storeName: string;
@@ -110,6 +136,7 @@ export interface StoreSettings {
   promotionHighlights: string[];
   promotionGiftMessage: string;
   promotionPriceMatchMessage: string;
+  quantityPromotion: QuantityPromotionSettings;
   pixDiscount: number;
   pixDiscountMinimum: number;
   cardInstallments: number;
@@ -430,6 +457,8 @@ export interface OrderItem {
   unitPrice: number;
   unitCost: number;
   unitCashback: number;
+  isGift?: boolean;
+  promotionRule?: string;
   components?: Array<{ productId: string; name: string; quantity: number }>;
 }
 
@@ -486,6 +515,8 @@ export interface Order {
   cashbackTotal: number;
   loyaltyDiscount?: number;
   campaignGift?: string;
+  promotionDiscount?: number;
+  promotionSnapshot?: Record<string, unknown>;
   payment: PaymentMethod;
   status: OrderStatus;
   operationalStatus?: OrderOperationalStatus;
@@ -855,10 +886,15 @@ export interface CartCalculation {
   subtotal: number;
   couponDiscount: number;
   paymentDiscount: number;
+  promotionDiscount: number;
   discount: number;
   shipping: number;
   shippingStatus: ShippingStatus;
   total: number;
   cashback: number;
   cashbackByProduct: Record<string, number>;
+  promotionApplied: boolean;
+  promotionApplications: QuantityPromotionApplication[];
+  promotionGifts: QuantityPromotionGift[];
+  promotionStockIssue: string;
 }

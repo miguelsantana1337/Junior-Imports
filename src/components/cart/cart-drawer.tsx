@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
+import { Gift, Minus, Plus, ShoppingCart, Trash2, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useCart } from "@/components/providers/cart-provider";
 import { useStore } from "@/components/providers/store-provider";
@@ -9,6 +9,7 @@ import { ProductArt } from "@/components/ui/product-art";
 import { formatMoney } from "@/lib/format";
 import { orderTotalLabel, shippingPriceLabel } from "@/lib/shipping";
 import { withStorefrontPath } from "@/lib/storefront-path";
+import { isStorePromotionActive } from "@/lib/store-promotion";
 
 export function CartDrawer() {
   const { data } = useStore();
@@ -28,6 +29,18 @@ export function CartDrawer() {
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const calculation = calculate();
+  const quantityPromotion = data.settings.quantityPromotion;
+  const promotionSingleLine = lines.find((line) => line.productId === quantityPromotion.singleProductId);
+  const promotionSingleProduct = data.products.find((product) => product.id === quantityPromotion.singleProductId);
+  const groupQuantity = Math.max(2, quantityPromotion.groupQuantity || 3);
+  const canUnlockGroupDiscount = Boolean(
+    quantityPromotion.enabled
+      && isStorePromotionActive(data.settings)
+      && promotionSingleLine
+      && promotionSingleProduct
+      && promotionSingleLine.quantity % groupQuantity === groupQuantity - 1
+      && promotionSingleLine.quantity < promotionSingleProduct.stock,
+  );
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -111,7 +124,8 @@ export function CartDrawer() {
           )}
         </div>
         <div className="drawer-footer">
-          <form
+          {calculation.promotionApplied && <div className="cart-promotion-summary"><Gift /><div><strong>Promoção aplicada nesta compra</strong>{calculation.promotionApplications.map((application) => <small key={application.key}>{application.label}</small>)}{canUnlockGroupDiscount && promotionSingleLine && <button type="button" onClick={() => updateItem(quantityPromotion.singleProductId, promotionSingleLine.quantity + 1)}>Adicionar mais 1 e aplicar {quantityPromotion.groupDiscountPercent}% OFF nela</button>}{calculation.promotionStockIssue && <small className="error-text">{calculation.promotionStockIssue}</small>}</div></div>}
+          {!calculation.promotionApplied && <form
             className="coupon-box"
             onSubmit={async (event) => {
               event.preventDefault();
@@ -127,9 +141,10 @@ export function CartDrawer() {
             <label htmlFor="cart-coupon">Cupom de desconto</label>
             <div><input id="cart-coupon" value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="Digite o código" /><button type="submit" disabled={couponApplying}>{couponApplying ? "Validando..." : "Aplicar"}</button></div>
             <small className={couponMessage?.ok ? "success-text" : "error-text"}>{couponMessage?.text}</small>
-          </form>
+          </form>}
           <div className="total-line"><span>Subtotal</span><strong>{formatMoney(calculation.subtotal)}</strong></div>
-          {calculation.discount > 0 && <div className="total-line"><span>Desconto</span><strong>- {formatMoney(calculation.discount)}</strong></div>}
+          {calculation.promotionDiscount > 0 && <div className="total-line"><span>Desconto da promoção</span><strong>- {formatMoney(calculation.promotionDiscount)}</strong></div>}
+          {calculation.discount - calculation.promotionDiscount > 0 && <div className="total-line"><span>Outros descontos</span><strong>- {formatMoney(calculation.discount - calculation.promotionDiscount)}</strong></div>}
           <div className="total-line"><span>Frete</span><strong>{shippingPriceLabel(calculation.shippingStatus, calculation.shipping)}</strong></div>
           <div className="total-line grand-total"><span>{orderTotalLabel(calculation.shippingStatus)}</span><strong>{formatMoney(calculation.total)}</strong></div>
           {calculation.cashback > 0 && <div className="total-line cart-cashback-total"><span>Cashback previsto</span><strong>+ {formatMoney(calculation.cashback)}</strong></div>}

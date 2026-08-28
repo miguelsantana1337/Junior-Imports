@@ -10,6 +10,7 @@ import type {
   StoreSettings,
 } from "@/types/store";
 import { isPixDiscountEligible, isStorePromotionRuleActive } from "@/lib/store-promotion";
+import { calculateQuantityPromotion } from "@/lib/quantity-promotion";
 
 function normalizeShippingText(value = "") {
   return value
@@ -81,9 +82,10 @@ export function calculateCart(
   });
 
   const subtotal = validLines.reduce((sum, line) => sum + line.gross, 0);
+  const quantityPromotion = calculateQuantityPromotion(lines, products, settings);
 
   let couponDiscount = 0;
-  if (coupon && isCouponValid(coupon, subtotal)) {
+  if (coupon && (!quantityPromotion.applied || settings.quantityPromotion.allowCoupons) && isCouponValid(coupon, subtotal)) {
     let applicableSubtotal = subtotal;
     
     const hasCategoryRestriction = coupon.applicableCategoryIds && coupon.applicableCategoryIds.length > 0;
@@ -110,8 +112,11 @@ export function calculateCart(
     }
   }
 
-  const afterCoupon = Math.max(0, subtotal - couponDiscount);
-  const paymentDiscount = payment === "Pix" && isPixDiscountEligible(settings, afterCoupon)
+  const afterPromotion = Math.max(0, subtotal - quantityPromotion.discount);
+  const afterCoupon = Math.max(0, afterPromotion - couponDiscount);
+  const paymentDiscount = payment === "Pix"
+    && (!quantityPromotion.applied || settings.quantityPromotion.allowAdditionalDiscounts)
+    && isPixDiscountEligible(settings, afterCoupon)
     ? afterCoupon * (settings.pixDiscount / 100)
     : 0;
   const afterDiscounts = Math.max(0, afterCoupon - paymentDiscount);
@@ -156,12 +161,17 @@ export function calculateCart(
     subtotal,
     couponDiscount,
     paymentDiscount,
-    discount: couponDiscount + paymentDiscount,
+    promotionDiscount: quantityPromotion.discount,
+    discount: couponDiscount + paymentDiscount + quantityPromotion.discount,
     shipping: shipping.amount,
     shippingStatus: shipping.status,
     total: afterDiscounts + shipping.amount,
     cashback,
     cashbackByProduct,
+    promotionApplied: quantityPromotion.applied,
+    promotionApplications: quantityPromotion.applications,
+    promotionGifts: quantityPromotion.gifts,
+    promotionStockIssue: quantityPromotion.stockIssue,
   };
 }
 

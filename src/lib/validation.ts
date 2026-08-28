@@ -349,6 +349,19 @@ export const settingsSchema = z.object({
   promotionHighlights: z.array(z.string().trim().min(3).max(180)).max(12),
   promotionGiftMessage: z.string().trim().max(180),
   promotionPriceMatchMessage: z.string().trim().max(180),
+  quantityPromotion: z.object({
+    enabled: z.boolean(),
+    singleProductId: z.string().max(160),
+    boxProductId: z.string().max(160),
+    doseProductId: z.string().max(160),
+    groupQuantity: z.coerce.number().int().min(2).max(20),
+    groupDiscountPercent: z.coerce.number().min(0).max(100),
+    doseGiftPerRemainder: z.coerce.number().int().min(0).max(20),
+    boxGiftQuantity: z.coerce.number().int().min(0).max(20),
+    repeatable: z.boolean(),
+    allowCoupons: z.boolean(),
+    allowAdditionalDiscounts: z.boolean(),
+  }),
   pixDiscount: z.coerce.number().min(0).max(100),
   pixDiscountMinimum: money,
   cardInstallments: z.coerce.number().int().min(1).max(12),
@@ -359,6 +372,14 @@ export const settingsSchema = z.object({
   autoBannerSeconds: z.coerce.number().int().min(3).max(30),
   checkoutMode: z.enum(["whatsapp", "demo"]),
   whatsappMessage: z.string().trim().min(10).max(2000),
+}).superRefine((settings, context) => {
+  if (!settings.quantityPromotion.enabled) return;
+  if (!settings.quantityPromotion.singleProductId) context.addIssue({ code: "custom", path: ["quantityPromotion", "singleProductId"], message: "Selecione a ampola participante." });
+  if (!settings.quantityPromotion.boxProductId) context.addIssue({ code: "custom", path: ["quantityPromotion", "boxProductId"], message: "Selecione a caixa participante." });
+  if (!settings.quantityPromotion.doseProductId) context.addIssue({ code: "custom", path: ["quantityPromotion", "doseProductId"], message: "Selecione a dose brinde." });
+  if (settings.quantityPromotion.singleProductId && settings.quantityPromotion.singleProductId === settings.quantityPromotion.boxProductId) {
+    context.addIssue({ code: "custom", path: ["quantityPromotion", "boxProductId"], message: "Ampola e caixa precisam ser produtos diferentes." });
+  }
 });
 
 export const storePageSchema = z.object({

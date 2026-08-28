@@ -11,12 +11,17 @@ describe("calculateCart", () => {
       subtotal: 0,
       couponDiscount: 0,
       paymentDiscount: 0,
+      promotionDiscount: 0,
       discount: 0,
       shipping: 0,
       shippingStatus: "pending",
       total: 0,
       cashback: 0,
       cashbackByProduct: {},
+      promotionApplied: false,
+      promotionApplications: [],
+      promotionGifts: [],
+      promotionStockIssue: "",
     });
   });
 
@@ -24,7 +29,7 @@ describe("calculateCart", () => {
     const result = calculateCart(
       [{ productId: product.id, quantity: 1 }],
       seedData.products,
-      { ...seedData.settings, pixDiscountMinimum: 0 },
+      { ...seedData.settings, promotionStartsAt: "2020-01-01T00:00:00.000Z", promotionEndsAt: "2099-12-31T23:59:59.000Z", pixDiscountMinimum: 0 },
       seedData.coupons[0],
       "Pix",
     );
@@ -118,6 +123,8 @@ describe("calculateCart", () => {
       fixedBonus: 0,
       targetSegments: [],
       productIds: [],
+      startsAt: "2020-01-01T00:00:00.000Z",
+      endsAt: "2099-12-31T23:59:59.000Z",
     };
     const result = calculateCart(
       [{ productId: product.id, quantity: 1 }],
@@ -147,6 +154,8 @@ describe("calculateCart", () => {
       fixedBonus: 0,
       targetSegments: [],
       productIds: [],
+      startsAt: "2020-01-01T00:00:00.000Z",
+      endsAt: "2099-12-31T23:59:59.000Z",
     };
     const result = calculateCart(
       [{ productId: item.id, quantity: 1 }],

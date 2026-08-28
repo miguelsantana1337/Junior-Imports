@@ -28,6 +28,9 @@ export function SettingsAdmin() {
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState<"logo" | "mobileLogo" | "favicon" | null>(null);
   function field<K extends keyof StoreSettings>(key: K, value: StoreSettings[K]) { setForm((current) => ({ ...current, [key]: value })); }
+  function promotionField<K extends keyof StoreSettings["quantityPromotion"]>(key: K, value: StoreSettings["quantityPromotion"][K]) {
+    field("quantityPromotion", { ...form.quantityPromotion, [key]: value });
+  }
   function updateShippingRate(index: number, changes: Partial<StoreSettings["shippingCityRates"][number]>) {
     field("shippingCityRates", form.shippingCityRates.map((rate, rateIndex) => rateIndex === index ? { ...rate, ...changes } : rate));
   }
@@ -72,6 +75,17 @@ export function SettingsAdmin() {
         <label className="full">Benefícios exibidos (um por linha)<textarea rows={8} value={form.promotionHighlights.join("\n")} onChange={(event) => field("promotionHighlights", event.target.value.split("\n").map((item) => item.trim()).filter(Boolean))} /></label>
         <label className="full">Brinde incluído no pedido<input value={form.promotionGiftMessage} onChange={(event) => field("promotionGiftMessage", event.target.value)} placeholder="Ex.: Coqueteleira + brindes nos pedidos" /></label>
         <label className="full">Mensagem de cobertura de preço<input value={form.promotionPriceMatchMessage} onChange={(event) => field("promotionPriceMatchMessage", event.target.value)} /></label>
+        <div className="admin-form-section full"><Gift /><div><strong>Ofertas por quantidade</strong><span>Configure a promoção das ampolas com baixa real dos brindes. O melhor benefício é aplicado na compra atual e pode se repetir.</span></div></div>
+        <label className={`shipping-option-card shipping-option-wide full ${form.quantityPromotion.enabled ? "active" : ""}`}><input type="checkbox" checked={form.quantityPromotion.enabled} onChange={(event) => promotionField("enabled", event.target.checked)} /><BadgePercent /><span><strong>Ativar promoção por quantidade</strong><small>Quando ativa, a promoção não acumula cupons nem outros descontos; o cashback permanece.</small></span></label>
+        <label className="full">Ampola participante<select value={form.quantityPromotion.singleProductId} onChange={(event) => promotionField("singleProductId", event.target.value)}><option value="">Selecione o produto</option>{data.products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {product.sku} · estoque {product.stock}</option>)}</select></label>
+        <label className="full">Caixa participante<select value={form.quantityPromotion.boxProductId} onChange={(event) => promotionField("boxProductId", event.target.value)}><option value="">Selecione o produto</option>{data.products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {product.sku} · estoque {product.stock}</option>)}</select></label>
+        <label className="full">Dose brinde (já na seringa)<select value={form.quantityPromotion.doseProductId} onChange={(event) => promotionField("doseProductId", event.target.value)}><option value="">Selecione o produto</option>{data.products.filter((product) => product.active).map((product) => <option key={product.id} value={product.id}>{product.name} · {product.sku} · estoque {product.stock}</option>)}</select></label>
+        <label>Quantidade do grupo<input type="number" min="2" max="20" value={form.quantityPromotion.groupQuantity} onChange={(event) => promotionField("groupQuantity", Number(event.target.value))} /><small>Ex.: 3 significa que a cada 3 ampolas uma recebe desconto.</small></label>
+        <label>Desconto da unidade (%)<input type="number" min="0" max="100" step="0.1" value={form.quantityPromotion.groupDiscountPercent} onChange={(event) => promotionField("groupDiscountPercent", Number(event.target.value))} /></label>
+        <label>Doses por ampola restante<input type="number" min="0" max="20" value={form.quantityPromotion.doseGiftPerRemainder} onChange={(event) => promotionField("doseGiftPerRemainder", Number(event.target.value))} /><small>As ampolas usadas no grupo promocional não recebem esse brinde.</small></label>
+        <label>Ampolas grátis por caixa<input type="number" min="0" max="20" value={form.quantityPromotion.boxGiftQuantity} onChange={(event) => promotionField("boxGiftQuantity", Number(event.target.value))} /></label>
+        <label className={`shipping-option-card shipping-option-wide full ${form.quantityPromotion.repeatable ? "active" : ""}`}><input type="checkbox" checked={form.quantityPromotion.repeatable} onChange={(event) => promotionField("repeatable", event.target.checked)} /><PackageCheck /><span><strong>Permitir repetição no mesmo pedido</strong><small>Ex.: 6 ampolas formam dois grupos e geram duas unidades com 50% OFF.</small></span></label>
+        <div className="shipping-free-summary active full"><Gift /><div><small>REGRA ATUAL</small><strong>Promoção + cashback · sem cupom ou desconto adicional · benefícios somente nesta compra.</strong></div></div>
       </div>
     </AdminPanel>
 

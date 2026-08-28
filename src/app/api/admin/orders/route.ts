@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     couponCode: input.couponCode,
     actorId: actor.id,
   });
-  const { data, error } = await supabase.rpc("create_tenant_order_with_bundles_secure", {
+  const { data, error } = await supabase.rpc("create_tenant_order_with_promotions_secure", {
     p_tenant_id: actor.tenantId,
     p_customer: customer,
     p_items: input.items.map((item) => ({ product_id: item.productId, quantity: item.quantity, components: item.components ?? [] })),
