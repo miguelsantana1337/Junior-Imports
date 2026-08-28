@@ -493,8 +493,12 @@ function mapSettings(row: Row, fallback: StoreSettings): StoreSettings {
     promotionStartsAt: str(row.promotion_starts_at) || fallback.promotionStartsAt,
     promotionEndsAt: str(row.promotion_ends_at) || fallback.promotionEndsAt,
     promotionHighlights: Array.isArray(row.promotion_highlights) ? row.promotion_highlights.map(String) : fallback.promotionHighlights,
-    promotionGiftMessage: str(row.promotion_gift_message) || fallback.promotionGiftMessage,
-    promotionPriceMatchMessage: str(row.promotion_price_match_message) || fallback.promotionPriceMatchMessage,
+    promotionGiftMessage: row.promotion_gift_message === undefined || row.promotion_gift_message === null
+      ? fallback.promotionGiftMessage
+      : str(row.promotion_gift_message),
+    promotionPriceMatchMessage: row.promotion_price_match_message === undefined || row.promotion_price_match_message === null
+      ? fallback.promotionPriceMatchMessage
+      : str(row.promotion_price_match_message),
     quantityPromotion: row.quantity_promotion && typeof row.quantity_promotion === "object"
       ? { ...fallback.quantityPromotion, ...(row.quantity_promotion as StoreSettings["quantityPromotion"]) }
       : fallback.quantityPromotion,
