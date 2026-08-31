@@ -15,40 +15,18 @@ import {
   IconPhoto,
   IconShoppingBag,
   IconShoppingCartOff,
-  IconTag,
   IconTicket,
   IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useAdminData } from "./admin-data-provider";
-import { formatDateTime, formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
+import { formatMoney, formatStoreDateKey, formatStoreHour, STORE_TIME_ZONE } from "@/lib/format";
 import { buildCustomerInsights, customerMatchesOrder } from "@/lib/crm";
 import { orderPaymentsRevenue } from "@/lib/order-payments";
 import { officialFinancialTransactions, officialOrders, operationStartLabel, operationStartTime } from "@/lib/operation-scope";
 import { orderOperationalStatus, orderPaymentStatus } from "@/lib/order-lifecycle";
 import { buildAdminPeriodBuckets, filterByAdminPeriod } from "@/lib/admin-period";
 import { useAdminPeriod } from "@/components/admin/admin-period-context";
-
-const auditEntityLabels: Record<string, string> = {
-  products: "Produto",
-  categories: "Categoria",
-  banners: "Banner",
-  home_sections: "Seção",
-  store_pages: "Página",
-  page_blocks: "Container",
-  coupons: "Cupom",
-  message_automations: "Automação",
-  orders: "Pedido",
-  profiles: "Usuário",
-  auth_mfa_factors: "Autenticador",
-  store_settings: "Configurações",
-};
-
-function auditDescription(action: "insert" | "update" | "delete", entityType: string, label: string) {
-  const entity = auditEntityLabels[entityType] ?? "Item";
-  const verb = action === "insert" ? "criado" : action === "delete" ? "excluído" : "atualizado";
-  return `${entity} “${label || "sem nome"}” ${verb}`;
-}
 
 export function DashboardAdmin() {
   const { data, demoMode, currentUser, referenceNow } = useAdminData();
@@ -57,8 +35,6 @@ export function DashboardAdmin() {
   const hour = formatStoreHour(now);
   const greeting = hour < 12 ? "Bom dia" : hour < 18 ? "Boa tarde" : "Boa noite";
   const accountName = currentUser.fullName.split(/\s+/)[0] || "Administrador";
-  const activityProduct = data.products[0];
-  const activityCategory = data.categories[0];
   const todayKey = formatStoreDateKey(now);
   const activeProducts = data.products.filter((product) => product.active);
   const activeSections = data.sections.filter((section) => section.active);
@@ -98,25 +74,6 @@ export function DashboardAdmin() {
     year: "numeric",
     timeZone: STORE_TIME_ZONE,
   }).format(now);
-  const priorities = [
-    newOrders.length ? {
-      tone: "info", Icon: IconShoppingBag, title: `${newOrders.length} pedido${newOrders.length === 1 ? " novo precisa" : "s novos precisam"} de atendimento`,
-      description: "Confirme o atendimento para organizar a próxima ação.", href: "/admin/orders?status=Novo", action: "Ver pedidos",
-    } : null,
-    pendingPayments.length ? {
-      tone: "warning", Icon: IconCoin, title: `${pendingPayments.length} pagamento${pendingPayments.length === 1 ? " precisa" : "s precisam"} de confirmação`,
-      description: "Confira os valores recebidos e o saldo de cada pedido.", href: "/admin/orders?payment=open", action: "Conferir pagamentos",
-    } : null,
-    lowStock.length ? {
-      tone: "warning", Icon: IconAlertTriangle, title: `Revise ${lowStock.length} produto${lowStock.length === 1 ? "" : "s"} com estoque baixo`,
-      description: "O saldo está abaixo do nível recomendado.", href: "/admin/inventory", action: "Revisar estoque",
-    } : null,
-    customersNeedingContact.length ? {
-      tone: "info", Icon: IconUsers, title: `${customersNeedingContact.length} cliente${customersNeedingContact.length === 1 ? " está" : "s estão"} perto da recompra`,
-      description: "Prepare o contato no momento certo, sem disparo automático.", href: "/admin/customers", action: "Ver clientes",
-    } : null,
-  ].filter(Boolean).slice(0, 3) as Array<{ tone: string; Icon: typeof IconShoppingBag; title: string; description: string; href: string; action: string }>;
-
   return (
     <div className="admin-dashboard-command">
       <header className="admin-dashboard-hero">
@@ -152,34 +109,6 @@ export function DashboardAdmin() {
 
       <div className="admin-command-grid">
         <div className="admin-command-primary">
-          <section className="admin-command-panel admin-priorities">
-            <header><h2>Prioridades de hoje</h2><span>No máximo 3</span></header>
-            <div className="admin-priority-list">
-              {priorities.map((priority, index) => <article key={priority.title}>
-                <span className={priority.tone}><priority.Icon /></span><b>{index + 1}</b>
-                <div><strong>{priority.title}</strong><p>{priority.description}</p></div>
-                <Link href={priority.href}>{priority.action}</Link>
-              </article>)}
-              {!priorities.length && <article>
-                <span className="info"><IconCloudCheck /></span><b>✓</b>
-                <div><strong>Operação sob controle</strong><p>Nenhuma prioridade crítica precisa de ação agora.</p></div>
-                <Link href="/admin/orders">Ver pedidos</Link>
-              </article>}
-            </div>
-          </section>
-
-          <section className="admin-command-panel admin-activity">
-            <header><h2>Atividade recente</h2><Link href="/admin/data">Ver todas</Link></header>
-            <div className="admin-activity-list">
-              {data.auditLogs.slice(0, 5).map((log) => <article key={log.id}><span className="blue"><IconDatabase /></span><div><strong>{auditDescription(log.action, log.entityType, log.entityLabel)}</strong><p>{log.actorEmail || "Equipe administrativa"}</p></div><time dateTime={log.createdAt}>{formatDateTime(log.createdAt)}</time></article>)}
-              {!data.auditLogs.length && <>
-                <article><span className="blue"><IconPackage /></span><div><strong>{activityProduct ? `Produto “${activityProduct.name}” está no catálogo` : "Cadastre o primeiro produto"}</strong><p>{activityProduct ? `${activityProduct.stock} unidades disponíveis` : "O catálogo ainda está vazio"}</p></div><time>Agora</time></article>
-                <article><span className="green"><IconDatabase /></span><div><strong>{demoMode ? "Modo demonstrativo iniciado" : "Supabase conectado com sucesso"}</strong><p>{demoMode ? "Dados armazenados neste navegador" : `Projeto “${data.settings.storeName}” — conexão ativa`}</p></div><time>Agora</time></article>
-                <article><span className="purple"><IconTag /></span><div><strong>{activityCategory ? `Categoria “${activityCategory.name}” organizada` : "Crie a primeira categoria"}</strong><p>{activityCategory ? `${data.products.filter((product) => product.categoryId === activityCategory.id).length} produtos vinculados` : "Organize os produtos por categoria"}</p></div><time>Agora</time></article>
-              </>}
-            </div>
-          </section>
-
           <section className="admin-command-panel admin-weekly-orders">
             <header><div><h2>Pedidos · {range.label}</h2><p>{demoMode ? "Pedidos demonstrativos registrados no checkout" : "Pedidos registrados no checkout"}</p></div><Link href="/admin/orders">Ver pedidos <IconArrowRight /></Link></header>
             <div className="admin-weekly-chart" style={{ gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))` }} aria-label={`Gráfico de pedidos: ${range.label}`}>

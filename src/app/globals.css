@@ -1331,6 +1331,23 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
 .admin-notification-settings label b { color: #3c536b; }
 .admin-notification-settings label small { margin-top: 2px; color: #8190a1; }
 .admin-notification-settings .admin-notification-info-toggle { margin-top: 4px; min-height: 67px; }
+.admin-push-settings { margin: 12px 0 7px; padding: 12px; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 11px; border: 1px solid #cfe1f6; border-radius: 13px; background: linear-gradient(135deg, #f2f8ff, #f8fbff); }
+.admin-push-settings.active { border-color: #b8e3ce; background: linear-gradient(135deg, #effaf5, #f8fdfb); }
+.admin-push-settings-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: #dcecff; color: #176fca; }
+.admin-push-settings.active .admin-push-settings-icon { background: #dff5e9; color: #16805a; }
+.admin-push-settings-icon svg { width: 20px; }
+.admin-push-settings-copy { min-width: 0; align-self: center; }
+.admin-push-settings-copy strong, .admin-push-settings-copy span, .admin-push-settings-copy small { display: block; }
+.admin-push-settings-copy strong { color: #30485f; }
+.admin-push-settings-copy span { margin-top: 3px; color: #718398; line-height: 1.4; }
+.admin-push-settings-copy small { margin-top: 7px; color: #176fca; font-weight: 700; }
+.admin-push-settings-actions { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 7px; flex-wrap: wrap; }
+.admin-push-settings-actions button { min-height: 34px; padding: 0 10px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid #cad9e9; border-radius: 9px; background: #fff; color: #526d89; font-weight: 750; }
+.admin-push-settings-actions button.primary { border-color: #176fca; background: #1677e8; color: #fff; }
+.admin-push-settings-actions button.danger { color: #b94758; }
+.admin-push-settings-actions button:disabled { cursor: not-allowed; opacity: .58; }
+.admin-push-settings-actions svg { width: 14px; }
+.admin-push-settings-actions .spin { animation: admin-spin .8s linear infinite; }
 .admin-notification-button.has-critical { color: #cf3f57; box-shadow: 0 0 0 3px rgb(207 63 87 / 8%); }
 .admin-account { min-width: 290px; padding-left: 14px; display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 8px; border-left: 1px solid var(--line); }
 .admin-account > span { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: #276fd0; color: #fff; font-size: 11px; font-weight: 800; }
@@ -3811,6 +3828,12 @@ html[data-admin-theme="dark"] .admin-notification-item-copy > footer a,
 html[data-admin-theme="dark"] .admin-notification-item-copy > footer button,
 html[data-admin-theme="dark"] .admin-notification-header > button { border-color: #33465e; background: #111f31; color: #a9bad0; }
 html[data-admin-theme="dark"] .admin-notification-item-copy > footer a { border-color: #315c8e; background: #102944; color: #76b6ff; }
+html[data-admin-theme="dark"] .admin-push-settings { border-color: #2c4a6d; background: linear-gradient(135deg, #10243c, #101c2d); }
+html[data-admin-theme="dark"] .admin-push-settings.active { border-color: #285d4d; background: linear-gradient(135deg, #102d27, #101f29); }
+html[data-admin-theme="dark"] .admin-push-settings-copy strong { color: #e7eff9; }
+html[data-admin-theme="dark"] .admin-push-settings-copy span { color: #91a3b8; }
+html[data-admin-theme="dark"] .admin-push-settings-actions button { border-color: #334b67; background: #14243a; color: #b9c9db; }
+html[data-admin-theme="dark"] .admin-push-settings-actions button.primary { border-color: #3b8ef0; background: #1a73d6; color: #fff; }
 
 html[data-admin-theme="dark"] .admin-account > span {
   background: #2c7be5;

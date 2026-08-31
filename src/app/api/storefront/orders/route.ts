@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { checkoutCustomerSchema } from "@/lib/validation";
 import { CHECKOUT_TERMS_VERSION } from "@/lib/checkout-terms";
+import { sendAdminPush } from "@/lib/admin-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { featureEnabled } from "@/lib/feature-flags";
 import {
@@ -136,6 +137,21 @@ export async function POST(request: Request) {
       : { data: null, error: null };
     if (authoritativeOrderError) {
       throw new StorefrontRequestError("O pedido foi registrado, mas não foi possível confirmar os benefícios da campanha.", 503);
+    }
+    if (order.id) {
+      const code = String(authoritativeOrder?.code || (data as { code?: string }).code || "novo");
+      try {
+        await sendAdminPush(supabase, parsed.data.tenantId, {
+          notificationKey: `order-created:${order.id}`,
+          category: "orders",
+          priority: "critical",
+          title: "Novo pedido recebido",
+          body: `O pedido ${code} está aguardando conferência no painel.`,
+          href: "/admin/orders",
+        });
+      } catch (pushError) {
+        console.error("[admin-push] O pedido foi criado, mas o push não pôde ser enviado.", pushError);
+      }
     }
     return Response.json({ order: authoritativeOrder ?? data, referralWarning }, {
       status: 201,

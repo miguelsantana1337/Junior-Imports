@@ -3,7 +3,6 @@ import { BannersAdmin } from "@/components/admin/banners-admin";
 import { CategoriesAdmin } from "@/components/admin/categories-admin";
 import { CatalogImportAdmin } from "@/components/admin/catalog-import-admin";
 import { CouponsAdmin } from "@/components/admin/coupons-admin";
-import { CrmAdmin } from "@/components/admin/crm-admin";
 import { CustomersAdmin } from "@/components/admin/customers-admin";
 import { CollaborationAdmin } from "@/components/admin/collaboration-admin";
 import { DataAdmin } from "@/components/admin/data-admin";
@@ -34,7 +33,6 @@ const sections = {
   import: CatalogImportAdmin,
   layout: LayoutAdmin,
   coupons: CouponsAdmin,
-  crm: CrmAdmin,
   customers: CustomersAdmin,
   collaboration: CollaborationAdmin,
   orders: OrdersAdmin,

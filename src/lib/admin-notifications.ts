@@ -136,29 +136,6 @@ export function buildAdminNotifications(
     });
   }
 
-  const normalizedEmail = user.email.toLowerCase();
-  const normalizedName = user.fullName.toLowerCase();
-  for (const task of data.customerTasks.filter((item) => {
-    if (item.status !== "open" || !item.dueAt) return false;
-    const assignment = item.assignedTo.trim().toLowerCase();
-    return !assignment || assignment === normalizedEmail || (normalizedName && assignment === normalizedName);
-  })) {
-    const dueAt = timestamp(task.dueAt);
-    if (dueAt === null || dueAt - now > day) continue;
-    const overdue = dueAt < now;
-    const priority: AdminNotificationPriority = overdue ? "critical" : "important";
-    add({
-      id: ongoingId(`crm:task:${task.id}`, priority, now),
-      category: "crm",
-      priority,
-      title: overdue ? `Tarefa atrasada: ${task.title}` : `Tarefa vence nas próximas 24 horas`,
-      description: task.notes || "Abra o CRM para registrar o próximo passo.",
-      href: "/admin/crm",
-      createdAt: task.dueAt,
-      sourceId: task.id,
-    });
-  }
-
   for (const purchase of data.purchaseOrders.filter((item) => ["ordered", "partial"].includes(item.status) && item.expectedAt)) {
     const days = remainingDays(purchase.expectedAt, now);
     if (days === null || days > 3) continue;

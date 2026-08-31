@@ -55,7 +55,7 @@ const navigationGroups = [
     id: "today",
     label: "Hoje",
     items: [
-      { href: "/admin", label: "Prioridades do dia", icon: IconHome, permission: "dashboard" },
+      { href: "/admin", label: "Visão geral", icon: IconHome, permission: "dashboard" },
       { href: "/admin/operations", label: "Central operacional", icon: IconCloudCheck, permission: "dashboard" },
     ],
   },
@@ -66,7 +66,6 @@ const navigationGroups = [
       { href: "/admin/orders", label: "Pedidos", icon: IconReceipt2, permission: "orders" },
       { href: "/admin/abandoned-carts", label: "Carrinhos abandonados", icon: IconShoppingCartOff, permission: "orders" },
       { href: "/admin/customers", label: "Clientes", icon: IconUsers, permission: "customers" },
-      { href: "/admin/crm", label: "Tarefas e contatos", icon: IconMessageCircle, permission: "crm" },
     ],
   },
   {
@@ -117,7 +116,7 @@ const utilityNavigation = [
 ];
 
 const titles: Record<string, [string, string]> = {
-  "/admin": ["HOJE", "Prioridades do dia"],
+  "/admin": ["HOJE", "Visão geral"],
   "/admin/operations": ["ADMIN 3.1", "Central operacional"],
   "/admin/products": ["CATÁLOGO", "Produtos"],
   "/admin/banners": ["EDITOR DA LOJA", "Biblioteca de banners"],
@@ -129,7 +128,6 @@ const titles: Record<string, [string, string]> = {
   "/admin/messages": ["MARKETING", "Campanhas e automações"],
   "/admin/orders": ["OPERAÇÃO", "Pedidos"],
   "/admin/abandoned-carts": ["OPERAÇÃO", "Carrinhos abandonados"],
-  "/admin/crm": ["RELACIONAMENTO", "Tarefas e contatos"],
   "/admin/customers": ["RELACIONAMENTO", "Clientes"],
   "/admin/finance": ["GESTÃO", "Caixa e resultados"],
   "/admin/inventory": ["ERP", "Estoque e lotes"],

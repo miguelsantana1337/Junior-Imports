@@ -67,7 +67,7 @@ export function WhatsappAssistantQueue({ onCompose }: { onCompose: (target: What
     <div className="whatsapp-assistant-summary" aria-label="Resumo do atendimento">
       <article><span className={priorityCount ? "attention" : "positive"}><Clock3 /></span><div><small>Prioridades</small><strong>{priorityCount}</strong><p>pedidos para olhar primeiro</p></div></article>
       <article><span className="whatsapp"><MessageCircle /></span><div><small>Mensagens prontas</small><strong>{suggestions.length}</strong><p>com dados do pedido</p></div></article>
-      <article><span className="positive"><CheckCircle2 /></span><div><small>Registradas</small><strong>{assistedCount}</strong><p>na timeline do CRM</p></div></article>
+      <article><span className="positive"><CheckCircle2 /></span><div><small>Registradas</small><strong>{assistedCount}</strong><p>no histórico de atendimento</p></div></article>
       <article><span className="secure"><ShieldCheck /></span><div><small>Controle</small><strong>Manual</strong><p>nenhuma mensagem sai sozinha</p></div></article>
     </div>
 
@@ -92,13 +92,12 @@ export function WhatsappAssistantQueue({ onCompose }: { onCompose: (target: What
 }
 
 export function WhatsappAssistantDialog({ target, onClose }: { target: WhatsappAssistantTarget; onClose: () => void }) {
-  const { data, currentUser, saveCustomer, saveCustomerContact, saveCustomerTask } = useAdminData();
+  const { data, currentUser, saveCustomer, saveCustomerContact } = useAdminData();
   const order = data.orders.find((item) => item.id === target.order.id) ?? target.order;
   const initialAction = target.actionId ?? defaultWhatsappAssistantAction(order);
   const [actionId, setActionId] = useState<WhatsappAssistantActionId>(initialAction);
   const [message, setMessage] = useState(() => buildWhatsappAssistantMessage(order, initialAction, data.settings.storeName));
   const [result, setResult] = useState<CustomerContact["result"]>("follow_up");
-  const [nextStepAt, setNextStepAt] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -130,7 +129,7 @@ export function WhatsappAssistantDialog({ target, onClose }: { target: WhatsappA
 
   async function registerContact() {
     if (!customer || !order.customerId) {
-      setError("Vincule este pedido a um cliente do CRM antes de registrar o contato.");
+      setError("Vincule este pedido a um cliente antes de registrar o contato.");
       return;
     }
     setSaving(true);
@@ -145,24 +144,10 @@ export function WhatsappAssistantDialog({ target, onClose }: { target: WhatsappA
         channel: "whatsapp",
         result,
         summary,
-        nextStepAt,
+        nextStepAt: "",
         actorEmail: currentUser.email,
         createdAt: now,
       });
-      if (nextStepAt) {
-        await saveCustomerTask({
-          id: crypto.randomUUID(),
-          customerId: order.customerId,
-          title: `Retornar sobre o pedido ${order.code}`,
-          dueAt: nextStepAt,
-          priority: actionId === "payment_reminder" ? "high" : "medium",
-          status: "open",
-          assignedTo: currentUser.email,
-          notes: whatsappAssistantActions[actionId].label,
-          createdAt: now,
-          completedAt: "",
-        });
-      }
       if (result === "opt_out") {
         await saveCustomer({ ...customer, whatsappConsent: false, updatedAt: now });
       }
@@ -179,7 +164,7 @@ export function WhatsappAssistantDialog({ target, onClose }: { target: WhatsappA
     <div className="admin-modal-panel whatsapp-assistant-panel" ref={panelRef}>
       <header><div><span>ASSISTENTE WHATSAPP</span><h2>{order.customer.name}</h2><small>{order.code} · {order.status} · {formatMoney(order.total)}</small></div><button type="button" onClick={onClose} aria-label="Fechar"><X /></button></header>
 
-      {saved ? <div className="whatsapp-assistant-success"><CheckCircle2 /><div><strong>Contato registrado.</strong><p>A mensagem entrou na timeline do CRM{nextStepAt ? " e o próximo retorno foi agendado" : ""}.</p></div><button className="admin-button primary" onClick={onClose}>Concluir</button></div> : <div className="whatsapp-assistant-compose">
+      {saved ? <div className="whatsapp-assistant-success"><CheckCircle2 /><div><strong>Contato registrado.</strong><p>A mensagem entrou no histórico de atendimento do cliente.</p></div><button className="admin-button primary" onClick={onClose}>Concluir</button></div> : <div className="whatsapp-assistant-compose">
         <section className="whatsapp-assistant-compose-main">
           <label>Objetivo da mensagem<select value={actionId} onChange={(event) => changeAction(event.target.value as WhatsappAssistantActionId)}>{Object.entries(whatsappAssistantActions).map(([value, action]) => <option value={value} disabled={value === "tracking_update" && !order.trackingCode.trim()} key={value}>{action.label}</option>)}</select></label>
           <label>Mensagem pronta<textarea rows={10} value={message} onChange={(event) => { setMessage(event.target.value); setCopied(false); }} maxLength={1500} /></label>
@@ -192,9 +177,8 @@ export function WhatsappAssistantDialog({ target, onClose }: { target: WhatsappA
         <aside className="whatsapp-assistant-register">
           <header><UserRound /><div><strong>Depois de enviar</strong><span>Registre o resultado para a fila aprender o próximo passo.</span></div></header>
           <label>Resultado<select value={result} onChange={(event) => setResult(event.target.value as CustomerContact["result"])}>{Object.entries(resultLabels).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          <label>Próximo retorno, se necessário<input type="datetime-local" value={nextStepAt} onChange={(event) => setNextStepAt(event.target.value)} /></label>
           <div className="whatsapp-assistant-register-note"><ShieldCheck /><p>Confirme somente depois de enviar. O sistema registra a ação, mas não lê suas conversas.</p></div>
-          {!canRegister && <p className="admin-form-error">Este pedido ainda não está vinculado a um cliente do CRM.</p>}
+          {!canRegister && <p className="admin-form-error">Este pedido ainda não está vinculado a um cliente.</p>}
           {error && <p className="admin-form-error" role="alert">{error}</p>}
           <button type="button" className="admin-button primary" disabled={saving || !canRegister || !message.trim()} onClick={() => void registerContact()}><CheckCircle2 /> {saving ? "Registrando..." : "Já enviei — registrar"}</button>
         </aside>

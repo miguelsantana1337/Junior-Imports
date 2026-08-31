@@ -27,11 +27,10 @@ function routeHelp(route: string): CopilotAnswer {
     ["/admin/products", "Catálogo de produtos", "Cadastre, revise preço, cashback, estoque, fotos e visibilidade de cada item.", "/admin/products"],
     ["/admin/inventory", "Estoque e lotes", "Acompanhe saldo, estoque mínimo, movimentações, validade e risco de ruptura.", "/admin/inventory"],
     ["/admin/reports", "Relatórios", "Compare períodos, salve visões e exporte CSV, Excel ou PDF.", "/admin/reports"],
-    ["/admin/crm", "CRM", "Organize tarefas, contatos e oportunidades de relacionamento com clientes.", "/admin/crm"],
     ["/admin/messages", "Marketing Studio", "Planeje publicações e teste automações antes de ativar.", "/admin/messages"],
     ["/admin/collaboration", "Central da equipe", "Reúna tarefas, discussões, menções, aprovações e presença online.", "/admin/collaboration"],
   ];
-  const match = help.find(([prefix]) => route.startsWith(prefix)) ?? ["/admin", "Painel de controle", "Use a visão geral para encontrar prioridades e atalhos para cada área.", "/admin"];
+  const match = help.find(([prefix]) => route.startsWith(prefix)) ?? ["/admin", "Painel de controle", "Use a visão geral para encontrar indicadores e atalhos para cada área.", "/admin"];
   return { title: `Ajuda: ${match[1]}`, message: match[2], cards: [{ title: "Abrir esta área", detail: "Navegação segura, sem alterar dados.", href: match[3] }], sources: ["Guia interno do painel", `Contexto da tela: ${route}`], intent: "help" };
 }
 
@@ -61,12 +60,11 @@ export function buildCopilotAnswer(question: string, data: StoreData, route: str
     return { title: "Cashback com vencimento próximo", message: expiring.length ? `${expiring.length} crédito${expiring.length === 1 ? "" : "s"} somam R$ ${amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} e vencem em até 30 dias.` : "Não há créditos de cashback vencendo nos próximos 30 dias.", cards: [{ title: "Abrir central de cashback", detail: "Consulte carteiras, campanhas e extratos.", href: "/admin/customers?cashback=1", tone: expiring.length ? "warning" : "positive" }], sources: ["Carteira de cashback", "Validade dos créditos"], intent: "cashback_expiring" };
   }
 
-  if (/cliente|crm|relacionamento|tarefa/.test(query)) {
-    const overdue = data.customerTasks.filter((task) => task.status === "open" && task.dueAt && new Date(task.dueAt).getTime() < now.getTime());
-    return { title: "Prioridades de relacionamento", message: `${data.customers.length} clientes cadastrados e ${overdue.length} tarefa${overdue.length === 1 ? "" : "s"} atrasada${overdue.length === 1 ? "" : "s"}.`, cards: overdue.slice(0, 5).map((task) => ({ title: task.title, detail: `Responsável: ${task.assignedTo || "não definido"}`, href: "/admin/crm", tone: "warning" })), sources: ["Clientes", "Tarefas do CRM"], intent: "crm" };
+  if (/cliente|relacionamento/.test(query)) {
+    return { title: "Relacionamento com clientes", message: `${data.customers.length} cliente${data.customers.length === 1 ? " cadastrado" : "s cadastrados"}. Abra a visão de clientes para consultar histórico, recompra e cashback.`, cards: [{ title: "Abrir clientes", detail: "Histórico, pedidos, recompra e cashback.", href: "/admin/customers" }], sources: ["Clientes"], intent: "customers" };
   }
 
   if (/como|onde|ajuda|usar|funciona|tela/.test(query)) return routeHelp(route);
 
-  return { title: "Posso consultar o painel", message: "Tente perguntar sobre estoque baixo, pedidos pendentes, cashback vencendo, tarefas do CRM ou como usar a tela atual.", cards: [{ title: "Ver relatórios", detail: "Análises consolidadas e exportações.", href: "/admin/reports" }, { title: "Ver central da equipe", detail: "Discussões, menções e aprovações.", href: "/admin/collaboration" }], sources: ["Base local segura do painel"], intent: "fallback" };
+  return { title: "Posso consultar o painel", message: "Tente perguntar sobre estoque baixo, pedidos pendentes, clientes, cashback vencendo ou como usar a tela atual.", cards: [{ title: "Ver relatórios", detail: "Análises consolidadas e exportações.", href: "/admin/reports" }, { title: "Ver clientes", detail: "Histórico, recompra e cashback.", href: "/admin/customers" }], sources: ["Base local segura do painel"], intent: "fallback" };
 }

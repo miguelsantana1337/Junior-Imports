@@ -34,6 +34,7 @@ import {
   type AdminNotificationPriority,
 } from "@/lib/admin-notifications";
 import type { AdminPermission, AdminRole, StoreData } from "@/types/store";
+import { AdminPushSettings } from "./admin-push-settings";
 import { useAdminNotifications } from "./use-admin-notifications";
 
 type NotificationTab = "important" | "all" | "settings";
@@ -157,6 +158,7 @@ export function AdminNotificationCenter({
 
       {tab === "settings" && <section className="admin-notification-settings">
         <header><Settings2 /><div><strong>Preferências individuais</strong><span>Escolha o que deve aparecer para esta conta.</span></div></header>
+        {!demoMode && <AdminPushSettings mutedCategories={preferences.mutedNotificationCategories} />}
         <div>{adminNotificationCategories.map((category) => <label key={category}><input type="checkbox" checked={!preferences.mutedNotificationCategories.includes(category)} onChange={() => toggleCategory(category)} /><span><b>{adminNotificationCategoryLabels[category]}</b><small>{category === "system" ? "Backup, banco e disponibilidade" : category === "security" ? "MFA e alterações de acesso" : `Alertas de ${adminNotificationCategoryLabels[category].toLowerCase()}`}</small></span></label>)}</div>
         <label className="admin-notification-info-toggle"><input type="checkbox" checked={preferences.includeInformativeNotifications} onChange={(event) => updatePreferences((current) => ({ ...current, includeInformativeNotifications: event.target.checked }))} /><span><b>Contar alertas informativos no sino</b><small>Eles continuam disponíveis na aba “Todas” quando esta opção está desligada.</small></span></label>
       </section>}

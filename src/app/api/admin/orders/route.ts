@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { friendlyOrderError, requestHash } from "@/lib/storefront-security";
 import { manualOrderSchema } from "@/lib/validation";
 import { featureEnabled } from "@/lib/feature-flags";
+import { sendAdminPush } from "@/lib/admin-push";
 
 export async function POST(request: Request) {
   const actor = await requireAdmin("orders");
@@ -89,6 +90,18 @@ export async function POST(request: Request) {
         has_coupon: Boolean(input.couponCode),
       },
     });
+    try {
+      await sendAdminPush(supabase, actor.tenantId, {
+        notificationKey: `order-created:${order.id}`,
+        category: "orders",
+        priority: "important",
+        title: "Novo pedido manual",
+        body: `O pedido ${String((data as { code?: string }).code || "novo")} foi criado no painel.`,
+        href: "/admin/orders",
+      });
+    } catch (pushError) {
+      console.error("[admin-push] O pedido manual foi criado, mas o push não pôde ser enviado.", pushError);
+    }
   }
   return NextResponse.json({ order: data }, { status: 201, headers: { "Cache-Control": "no-store" } });
 }

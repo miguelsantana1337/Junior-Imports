@@ -2,7 +2,6 @@
 
 import { AtSign, Check, CheckCircle2, CircleDot, Clock3, FileCheck2, Inbox, MessageSquareText, Plus, Radio, Send, ShieldCheck, UserRoundCheck, UsersRound, X, XCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateTime } from "@/lib/format";
 import {
@@ -123,8 +122,7 @@ export function CollaborationAdmin() {
     return !item.reviewerEmail || item.reviewerEmail.toLowerCase() === currentUser.email.toLowerCase();
   }, [currentUser.email, privilegedReviewer]);
   const pendingApprovals = approvals.filter(canDecideApproval);
-  const openTasks = data.customerTasks.filter((task) => task.status === "open");
-  const inboxCount = mentions.length + pendingApprovals.length + openTasks.length;
+  const inboxCount = mentions.length + pendingApprovals.length;
 
   useEffect(() => {
     if (!selectedThreadId) return;
@@ -270,11 +268,10 @@ export function CollaborationAdmin() {
     {message && <div className="collaboration-notice" role="status"><Check /> {message}<button onClick={() => setMessage("")} aria-label="Fechar aviso"><X /></button></div>}
 
     {tab === "inbox" && <div className="collaboration-inbox-grid">
-      <section><header><div><Inbox /><span><strong>Prioridades para você</strong><small>Tarefas, menções e pedidos de decisão.</small></span></div><em>{inboxCount}</em></header>
+      <section><header><div><Inbox /><span><strong>Prioridades para você</strong><small>Menções e pedidos de decisão.</small></span></div><em>{inboxCount}</em></header>
         <div className="collaboration-feed">
           {pendingApprovals.map((item) => <article key={`approval-${item.id}`}><span className="approval"><FileCheck2 /></span><div><small>APROVAÇÃO SOLICITADA</small><strong>{item.entityLabel}</strong><p>{item.requestNote || `Solicitado por ${item.requestedByEmail}`}</p></div><button onClick={() => { setTab("approvals"); }}><UserRoundCheck /> Revisar</button></article>)}
           {mentions.map((item) => { const thread = threads.find((candidate) => candidate.id === item.threadId); return <article key={`mention-${item.id}`}><span className="mention"><AtSign /></span><div><small>VOCÊ FOI MENCIONADO</small><strong>{thread?.title || "Discussão da equipe"}</strong><p>{item.body}</p></div><button onClick={() => { setSelectedThreadId(item.threadId); setTab("threads"); }}><MessageSquareText /> Responder</button></article>; })}
-          {openTasks.slice(0, 8).map((task) => <article key={`task-${task.id}`}><span className="task"><Clock3 /></span><div><small>TAREFA DO CRM</small><strong>{task.title}</strong><p>{task.assignedTo || "Sem responsável"}{task.dueAt ? ` · ${formatDateTime(task.dueAt)}` : ""}</p></div><Link href="/admin/crm"><CheckCircle2 /> Abrir CRM</Link></article>)}
           {!inboxCount && <AdminEmpty><ShieldCheck /><strong>Caixa de entrada em dia.</strong><span>Nenhuma pendência direcionada a você.</span></AdminEmpty>}
         </div>
       </section>

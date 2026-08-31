@@ -4,6 +4,10 @@
     {
       "path": "/api/cron/admin31-health",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/admin-push",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

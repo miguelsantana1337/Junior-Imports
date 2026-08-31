@@ -59,9 +59,9 @@
       ]
     },
     {
-      "name": "CRM",
-      "short_name": "CRM",
-      "url": "/admin/crm?source=pwa-shortcut",
+      "name": "Estoque",
+      "short_name": "Estoque",
+      "url": "/admin/inventory?source=pwa-shortcut",
       "icons": [
         {
           "src": "/pwa/admin-icon-192.png",

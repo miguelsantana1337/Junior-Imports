@@ -19,7 +19,7 @@ describe("alertas administrativos", () => {
     expect(notifications.some((item) => item.category === "orders" && item.priority === "critical")).toBe(true);
   });
 
-  it("avisa sobre tarefa, lote e compra próximos do prazo", () => {
+  it("avisa sobre lote e compra próximos do prazo", () => {
     const data = cloneSeedData();
     data.products = data.products.map((product) => ({ ...product, stock: 50, minStock: 5 }));
     data.orders = [];
@@ -29,7 +29,8 @@ describe("alertas administrativos", () => {
 
     const notifications = buildAdminNotifications(data, user, { now });
 
-    expect(notifications.map((item) => item.category)).toEqual(expect.arrayContaining(["crm", "inventory", "purchasing"]));
+    expect(notifications.map((item) => item.category)).toEqual(expect.arrayContaining(["inventory", "purchasing"]));
+    expect(notifications.some((item) => item.category === "crm")).toBe(false);
   });
 
   it("inclui falhas de automação, eventos de MFA e saúde de produção", () => {
