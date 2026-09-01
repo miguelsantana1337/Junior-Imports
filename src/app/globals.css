@@ -5579,25 +5579,93 @@ body:has(.admin-modal) .admin-mobile-tabbar { opacity: 0; pointer-events: none; 
 .admin-global-search { text-align: left; cursor: pointer; }
 .admin-global-search > span { min-width: 0; flex: 1; overflow: hidden; color: #8290a4; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .admin-global-search kbd { min-width: 37px; height: 23px; display: grid; place-items: center; border: 1px solid rgb(101 126 159 / 20%); border-radius: 7px; background: rgb(117 143 174 / 7%); color: #8190a4; font-family: inherit; font-size: 8px; font-weight: 750; box-shadow: inset 0 1px rgb(255 255 255 / 42%); }
-.admin-period-selector {
-  min-width: 172px;
-  height: 42px;
-  padding: 0 10px;
-  display: flex;
+.admin-period-selector { min-width: 310px; position: relative; flex: none; }
+.admin-period-trigger {
+  width: 100%;
+  min-height: 44px;
+  padding: 7px 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 7px;
-  flex: none;
+  gap: 8px;
   border: 1px solid var(--admin-card-border);
   border-radius: 13px;
-  background: rgb(255 255 255 / 72%);
-  color: #657892;
-  box-shadow: inset 0 1px rgb(255 255 255 / 72%);
+  background: rgb(255 255 255 / 78%);
+  color: #26374e;
+  text-align: left;
+  box-shadow: inset 0 1px rgb(255 255 255 / 76%);
+  cursor: pointer;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
 }
-.admin-period-selector > svg { width: 17px; flex: none; color: #277cd8; }
-.admin-period-selector > span { font-size: 8px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.admin-period-selector > b { display: none; font-size: 9px; white-space: nowrap; }
-.admin-period-selector > select { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: #26374e; font: inherit; font-size: 9px; font-weight: 780; cursor: pointer; }
-.admin-period-selector:focus-within { border-color: rgb(56 132 230 / 52%); box-shadow: 0 0 0 3px rgb(39 124 230 / 10%), inset 0 1px rgb(255 255 255 / 72%); }
+.admin-period-trigger:hover { border-color: rgb(56 132 230 / 42%); background: #fff; }
+.admin-period-trigger:focus-visible { outline: 0; border-color: rgb(56 132 230 / 62%); box-shadow: 0 0 0 3px rgb(39 124 230 / 13%), inset 0 1px rgb(255 255 255 / 72%); }
+.admin-period-trigger > svg:first-child { width: 18px; color: #277cd8; }
+.admin-period-trigger > span { min-width: 0; display: grid; gap: 1px; }
+.admin-period-trigger small { color: #788ba4; font-size: 7px; font-weight: 780; letter-spacing: .08em; text-transform: uppercase; }
+.admin-period-trigger strong { overflow: hidden; color: #26374e; font-size: 9px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.admin-period-trigger > em { display: block; color: #73869f; font-size: 7px; font-style: normal; white-space: nowrap; }
+.admin-period-chevron { width: 14px; color: #8293aa; transition: transform 180ms ease; }
+.admin-period-selector.is-open .admin-period-chevron { transform: rotate(180deg); }
+.admin-period-popover {
+  width: min(430px, calc(100vw - 28px));
+  max-height: min(680px, calc(100dvh - 86px));
+  padding: 16px;
+  display: grid;
+  gap: 13px;
+  overflow: auto;
+  position: absolute;
+  z-index: 5100;
+  top: calc(100% + 9px);
+  right: 0;
+  border: 1px solid #d9e3ee;
+  border-radius: 18px;
+  background: rgb(255 255 255 / 98%);
+  box-shadow: 0 26px 70px rgb(28 54 88 / 20%), inset 0 1px #fff;
+  animation: admin-period-popover-in 180ms var(--ease-out-fluid) both;
+}
+.admin-period-popover > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.admin-period-popover > header strong { color: #1e3047; font-size: 13px; }
+.admin-period-popover > header p { max-width: 44ch; margin: 4px 0 0; color: #77899f; font-size: 9px; line-height: 1.45; }
+.admin-period-popover > header > span { min-width: max-content; padding: 5px 8px; border-radius: 8px; background: #edf5ff; color: #2676c9; font-size: 8px; font-weight: 800; }
+.admin-period-quick-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.admin-period-quick-options > button {
+  min-height: 54px;
+  padding: 9px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #e0e7ef;
+  border-radius: 11px;
+  background: #fafbfd;
+  color: #42566e;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, transform 80ms ease;
+}
+.admin-period-quick-options > button:hover { border-color: #a9c9ef; background: #f4f8fd; }
+.admin-period-quick-options > button.active { border-color: #7fb4f2; background: #edf6ff; box-shadow: inset 3px 0 #2a7ed8; }
+.admin-period-quick-options button > span { min-width: 0; display: grid; gap: 3px; }
+.admin-period-quick-options strong { color: #2b3e55; font-size: 9px; }
+.admin-period-quick-options small { overflow: hidden; color: #8190a3; font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-period-quick-options svg { width: 15px; flex: none; color: #247cd7; }
+.admin-period-custom { padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; border: 1px solid #e1e7ef; border-radius: 13px; background: #f8fafc; }
+.admin-period-custom.active { border-color: #a6caef; box-shadow: inset 3px 0 #2a7ed8; }
+.admin-period-custom > div:first-child { grid-column: 1 / -1; display: grid; gap: 3px; }
+.admin-period-custom > div:first-child strong { color: #2c4058; font-size: 10px; }
+.admin-period-custom > div:first-child small { color: #7f8fa2; font-size: 8px; }
+.admin-period-date-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.admin-period-date-grid label { display: grid; gap: 4px; color: #71849a; font-size: 7px; font-weight: 760; }
+.admin-period-date-grid input { min-width: 0; height: 36px; padding: 0 8px; border: 1px solid #d6e0ea; border-radius: 9px; background: #fff; color: #273b52; font: inherit; font-size: 9px; color-scheme: light; }
+.admin-period-date-grid input:focus { outline: 0; border-color: #72aaf0; box-shadow: 0 0 0 3px rgb(39 124 230 / 10%); }
+.admin-period-custom > .admin-button { min-height: 36px; align-self: end; white-space: nowrap; }
+.admin-period-error { grid-column: 1 / -1; margin: 0; color: #b0444d; font-size: 8px; }
+@keyframes admin-period-popover-in { from { opacity: 0; transform: translateY(-6px) scale(.985); } }
+@media (max-width: 1180px) {
+  .admin-period-selector { min-width: 224px; }
+  .admin-period-trigger { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .admin-period-trigger > em { display: none; }
+}
 .admin-brand-mark { isolation: isolate; }
 .admin-brand-mark::after { content: ""; position: absolute; z-index: -1; inset: -7px; border-radius: 18px; background: rgb(39 127 255 / 24%); filter: blur(14px); opacity: .7; }
 .admin-nav-group a.active { position: relative; }
@@ -5654,8 +5722,26 @@ body:has(.admin-modal) .admin-mobile-tabbar { opacity: 0; pointer-events: none; 
 html[data-admin-theme="dark"] .sortable-row.is-drop-target { border-color: #5ca7ff !important; background: #12243b !important; box-shadow: 0 0 0 3px rgb(62 150 255 / 14%), 0 18px 45px rgb(0 0 0 / 28%); }
 html[data-admin-theme="dark"] .admin-drag-handle { color: #7189a6; }
 html[data-admin-theme="dark"] .admin-global-search kbd { border-color: rgb(128 158 195 / 19%); background: rgb(126 158 197 / 9%); color: #8196b2; box-shadow: inset 0 1px rgb(255 255 255 / 5%); }
-html[data-admin-theme="dark"] .admin-period-selector { border-color: rgb(128 158 195 / 19%); background: rgb(17 28 46 / 72%); color: #8296af; box-shadow: inset 0 1px rgb(255 255 255 / 5%); }
-html[data-admin-theme="dark"] .admin-period-selector > select { color: #d9e6f5; color-scheme: dark; }
+html[data-admin-theme="dark"] .admin-period-trigger { border-color: rgb(128 158 195 / 19%); background: rgb(17 28 46 / 78%); color: #d9e6f5; box-shadow: inset 0 1px rgb(255 255 255 / 5%); }
+html[data-admin-theme="dark"] .admin-period-trigger:hover { border-color: rgb(100 160 232 / 42%); background: #142238; }
+html[data-admin-theme="dark"] .admin-period-trigger strong { color: #d9e6f5; }
+html[data-admin-theme="dark"] .admin-period-trigger small,
+html[data-admin-theme="dark"] .admin-period-trigger > em { color: #8296af; }
+html[data-admin-theme="dark"] .admin-period-popover { border-color: #2a3d55; background: rgb(13 24 40 / 98%); box-shadow: 0 28px 80px rgb(0 0 0 / 45%), inset 0 1px rgb(255 255 255 / 5%); }
+html[data-admin-theme="dark"] .admin-period-popover > header strong,
+html[data-admin-theme="dark"] .admin-period-quick-options strong,
+html[data-admin-theme="dark"] .admin-period-custom > div:first-child strong { color: #dbe7f5; }
+html[data-admin-theme="dark"] .admin-period-popover > header p,
+html[data-admin-theme="dark"] .admin-period-quick-options small,
+html[data-admin-theme="dark"] .admin-period-custom > div:first-child small,
+html[data-admin-theme="dark"] .admin-period-date-grid label { color: #8497ae; }
+html[data-admin-theme="dark"] .admin-period-popover > header > span { background: #172b46; color: #8fc2ff; }
+html[data-admin-theme="dark"] .admin-period-quick-options > button,
+html[data-admin-theme="dark"] .admin-period-custom { border-color: #293d55; background: #111e30; color: #a9bad0; }
+html[data-admin-theme="dark"] .admin-period-quick-options > button:hover { border-color: #3e6490; background: #15263b; }
+html[data-admin-theme="dark"] .admin-period-quick-options > button.active,
+html[data-admin-theme="dark"] .admin-period-custom.active { border-color: #3c78b9; background: #142840; }
+html[data-admin-theme="dark"] .admin-period-date-grid input { border-color: #32475e; background: #0c1726; color: #e3ecf6; color-scheme: dark; }
 
 .admin-command-dialog { position: fixed; z-index: 7000; inset: 0; display: grid; place-items: start center; padding: min(12vh, 110px) 18px 24px; }
 .admin-command-backdrop { position: absolute; inset: 0; border: 0; background: rgb(5 14 27 / 58%); backdrop-filter: blur(10px) saturate(1.1); animation: admin-command-fade-in 180ms ease both; }
@@ -6049,10 +6135,13 @@ html[data-admin-theme="dark"] .customer-wallet-mode button.active { background: 
   .sortable-row.has-drag-handle .admin-actions { grid-column: 3; grid-row: 1 / span 2; }
   .admin-global-search kbd { display: none; }
   .admin-topbar-actions > .admin-theme-toggle { display: none; }
-  .admin-period-selector { min-width: 80px; width: 80px; position: relative; justify-content: center; padding-inline: 8px; }
-  .admin-period-selector > span { display: none; }
-  .admin-period-selector > b { display: block; }
-  .admin-period-selector > select { position: absolute; inset: 0; width: 100%; opacity: 0; }
+  .admin-period-selector { min-width: 124px; }
+  .admin-period-trigger { min-height: 42px; padding-inline: 8px; }
+  .admin-period-trigger > em { display: none; }
+  .admin-period-popover { width: auto; max-height: calc(100dvh - 96px); position: fixed; top: auto; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); left: 12px; }
+  .admin-period-quick-options { grid-template-columns: 1fr; }
+  .admin-period-custom { grid-template-columns: 1fr; }
+  .admin-period-custom > .admin-button { width: 100%; }
   .admin-command-dialog { padding: 12px; align-items: start; }
   .admin-command-palette { max-height: calc(100dvh - 24px); border-radius: 20px; }
   .admin-command-palette > header { min-height: 68px; padding-inline: 14px; gap: 9px; }

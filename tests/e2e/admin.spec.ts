@@ -80,6 +80,32 @@ test("centraliza alertas e preferências de notificações", async ({ page }) =>
   await expect(center.getByRole("checkbox", { name: /Segurança/ })).toBeChecked();
 });
 
+test("torna o período global claro e permite escolher datas", async ({ page }) => {
+  await login(page);
+
+  const menuButton = page.getByRole("button", { name: "Abrir menu" });
+  if (await menuButton.isVisible()) await menuButton.click();
+
+  const trigger = page.getByRole("button", { name: /Dados exibidos/ });
+  await expect(trigger).toContainText("Últimos 30 dias");
+  await trigger.click();
+
+  const dialog = page.getByRole("dialog", { name: "Escolher período dos dados" });
+  await expect(dialog.getByText("Qual período deseja analisar?")).toBeVisible();
+  await expect(dialog.getByText("Este filtro atualiza os números de todas as telas do painel.")).toBeVisible();
+  await expect(dialog.getByRole("button", { name: /Últimos 15 dias/ })).toContainText(/\d{2}\/\d{2}\/\d{4}/);
+  await dialog.getByRole("button", { name: /Últimos 15 dias/ }).click();
+  await expect(trigger).toContainText("Últimos 15 dias");
+
+  await trigger.click();
+  await dialog.getByLabel("Data inicial").fill("2026-08-10");
+  await dialog.getByLabel("Data final").fill("2026-08-20");
+  await dialog.getByRole("button", { name: "Aplicar período" }).click();
+
+  await expect(trigger).toContainText("Período personalizado");
+  await expect(trigger).toHaveAttribute("title", /10\/08\/2026 a 20\/08\/2026/);
+});
+
 test("instala o painel como PWA sem armazenar páginas administrativas", async ({ page, request }) => {
   await login(page);
 

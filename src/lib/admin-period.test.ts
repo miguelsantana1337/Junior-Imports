@@ -23,9 +23,23 @@ describe("período global do painel", () => {
     expect(resolveAdminPeriod("3m", referenceNow)).toMatchObject({ dateFrom: "2026-05-19", dayCount: 90 });
   });
 
-  it("inicia Tempo todo na base oficial ou no primeiro registro disponível", () => {
+  it("inicia Desde o início na base oficial ou no primeiro registro disponível", () => {
     expect(resolveAdminPeriod("all", referenceNow, "2026-08-03T03:00:00.000Z", "2025-01-01T12:00:00.000Z").dateFrom).toBe("2026-08-03");
     expect(resolveAdminPeriod("all", referenceNow, undefined, "2026-02-10T12:00:00.000Z").dateFrom).toBe("2026-02-10");
+  });
+
+  it("resolve um intervalo personalizado e limita datas futuras", () => {
+    expect(resolveAdminPeriod("custom", referenceNow, undefined, undefined, "2026-08-03", "2026-08-12")).toMatchObject({
+      label: "Período personalizado",
+      dateFrom: "2026-08-03",
+      dateTo: "2026-08-12",
+      dateLabel: "03/08/2026 a 12/08/2026",
+      dayCount: 10,
+    });
+    expect(resolveAdminPeriod("custom", referenceNow, undefined, undefined, "2026-08-15", "2026-09-01")).toMatchObject({
+      dateFrom: "2026-08-15",
+      dateTo: "2026-08-16",
+    });
   });
 
   it("compara datas usando o dia comercial de São Paulo", () => {

@@ -22,14 +22,26 @@ describe("preferências do painel", () => {
     expect(preferences.productViews).toHaveLength(1);
     expect(preferences.productViews[0]?.name).toBe("Ativos");
     expect(preferences.globalPeriod).toBe("30d");
+    expect(preferences.globalCustomDateFrom).toBe("");
+    expect(preferences.globalCustomDateTo).toBe("");
     expect(preferences.mutedNotificationCategories).toEqual([]);
     expect(preferences.includeInformativeNotifications).toBe(false);
   });
 
   it("normaliza e persiste o período global", () => {
-    writeAdminPreferences("junior", { ...defaultAdminPreferences, globalPeriod: "week" });
-    expect(readAdminPreferences("junior").globalPeriod).toBe("week");
+    writeAdminPreferences("junior", {
+      ...defaultAdminPreferences,
+      globalPeriod: "custom",
+      globalCustomDateFrom: "2026-08-03",
+      globalCustomDateTo: "2026-08-16",
+    });
+    expect(readAdminPreferences("junior")).toMatchObject({
+      globalPeriod: "custom",
+      globalCustomDateFrom: "2026-08-03",
+      globalCustomDateTo: "2026-08-16",
+    });
     expect(normalizeAdminPreferences({ globalPeriod: "invalid" }).globalPeriod).toBe("30d");
+    expect(normalizeAdminPreferences({ globalCustomDateFrom: "03/08/2026" }).globalCustomDateFrom).toBe("");
   });
 
   it("persiste preferências separadamente por usuário", () => {

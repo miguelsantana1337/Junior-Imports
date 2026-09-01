@@ -283,7 +283,14 @@ export function AdminShell({ children, user, demoMode }: { children: ReactNode; 
       referenceNow={referenceNow}
       operationStartedAt={data.settings.operationStartedAt}
       fallbackStartedAt={firstFlowRecordAt}
-      onChange={(globalPeriod) => updatePreferences((current) => ({ ...current, globalPeriod }))}
+      customDateFrom={preferences.globalCustomDateFrom}
+      customDateTo={preferences.globalCustomDateTo}
+      onChange={(globalPeriod, customRange) => updatePreferences((current) => ({
+        ...current,
+        globalPeriod,
+        globalCustomDateFrom: customRange?.dateFrom ?? current.globalCustomDateFrom,
+        globalCustomDateTo: customRange?.dateTo ?? current.globalCustomDateTo,
+      }))}
     >
     <div
       className={`admin-shell-next admin-minimal-preview ${collapsed ? "is-collapsed" : ""} ${moneyHidden ? "admin-money-hidden" : ""}`}

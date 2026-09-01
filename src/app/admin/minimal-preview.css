@@ -2023,37 +2023,34 @@ html[data-admin-theme="dark"] .admin-minimal-preview .admin-table tbody tr:hover
     min-width: 0;
     min-height: 40px;
     height: 40px;
-    padding: 0 8px;
+    padding: 0;
     position: relative;
-    display: flex;
-    justify-content: center;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger {
+    min-height: 40px;
+    height: 40px;
+    padding: 0 7px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 5px;
     border: 0;
     border-radius: 8px;
     background: #f7f8fa;
     box-shadow: none;
   }
 
-  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > span,
-  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > b {
-    display: block;
-    color: #344054;
-    font-size: 9px;
-    font-weight: 650;
-    letter-spacing: 0;
-    text-transform: none;
+  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger > span {
+    display: grid;
+    text-align: left;
   }
 
-  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > b::before {
-    content: "· ";
-  }
-
-  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > select {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    opacity: 0;
-    cursor: pointer;
-  }
+  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger small { display: none; }
+  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger strong { color: #344054; font-size: 8px; }
+  .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger > em { display: none; }
 
   .admin-minimal-preview .admin-nav-groups {
     padding-top: 12px;
@@ -2637,13 +2634,16 @@ html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-cards > .admi
     color: var(--admin-sidebar-text);
   }
 
-  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > span,
-  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer > b {
-    color: var(--admin-sidebar-text);
+  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer {
+    background: transparent;
   }
 
-  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer {
+  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger {
     background: var(--admin-sidebar-hover);
+  }
+
+  html[data-admin-theme="dark"] .admin-minimal-preview .admin-mobile-drawer-tools .admin-period-selector.is-drawer .admin-period-trigger strong {
+    color: var(--admin-sidebar-text);
   }
 
   html[data-admin-theme="dark"] .admin-minimal-preview .admin-main-next,

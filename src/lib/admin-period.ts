@@ -1,6 +1,6 @@
 import { formatStoreDateKey } from "@/lib/format";
 
-export const adminPeriodPresets = ["today", "week", "15d", "30d", "3m", "all"] as const;
+export const adminPeriodPresets = ["today", "week", "15d", "30d", "3m", "all", "custom"] as const;
 
 export type AdminPeriodPreset = (typeof adminPeriodPresets)[number];
 
@@ -10,6 +10,7 @@ export interface AdminPeriodRange {
   shortLabel: string;
   dateFrom: string;
   dateTo: string;
+  dateLabel: string;
   dayCount: number;
   isAll: boolean;
 }
@@ -28,7 +29,8 @@ export const adminPeriodOptions: ReadonlyArray<{ value: AdminPeriodPreset; label
   { value: "15d", label: "Últimos 15 dias", shortLabel: "15 dias" },
   { value: "30d", label: "Últimos 30 dias", shortLabel: "30 dias" },
   { value: "3m", label: "Últimos 3 meses", shortLabel: "3 meses" },
-  { value: "all", label: "Tempo todo", shortLabel: "Tudo" },
+  { value: "all", label: "Desde o início", shortLabel: "Tudo" },
+  { value: "custom", label: "Escolher datas", shortLabel: "Datas" },
 ];
 
 const dayMs = 86_400_000;
@@ -60,13 +62,32 @@ function firstValidDateKey(...values: Array<string | null | undefined>) {
   return value ? formatStoreDateKey(value) : "2000-01-01";
 }
 
+function validDateKey(value: string | null | undefined) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  return dateKeyTime(value) === null ? null : value;
+}
+
+export function formatAdminPeriodDate(value: string) {
+  const [year, month, day] = value.split("-");
+  return year && month && day ? `${day}/${month}/${year}` : value;
+}
+
+export function formatAdminPeriodDateRange(dateFrom: string, dateTo: string) {
+  return dateFrom === dateTo
+    ? formatAdminPeriodDate(dateFrom)
+    : `${formatAdminPeriodDate(dateFrom)} a ${formatAdminPeriodDate(dateTo)}`;
+}
+
 export function resolveAdminPeriod(
   preset: AdminPeriodPreset,
   referenceNow: Date | string | number,
   operationStartedAt?: string,
   fallbackStartedAt?: string,
+  customDateFrom?: string,
+  customDateTo?: string,
 ): AdminPeriodRange {
-  const dateTo = formatStoreDateKey(referenceNow);
+  const referenceDate = formatStoreDateKey(referenceNow);
+  let dateTo = referenceDate;
   const option = adminPeriodOptions.find((item) => item.value === preset) ?? adminPeriodOptions[3];
   let dateFrom = dateTo;
 
@@ -82,16 +103,23 @@ export function resolveAdminPeriod(
     dateFrom = addDaysToDateKey(dateTo, -89);
   } else if (preset === "all") {
     dateFrom = firstValidDateKey(operationStartedAt, fallbackStartedAt);
+  } else if (preset === "custom") {
+    dateTo = validDateKey(customDateTo) ?? referenceDate;
+    if (dateTo > referenceDate) dateTo = referenceDate;
+    dateFrom = validDateKey(customDateFrom) ?? dateTo;
   }
 
   if (dateFrom > dateTo) dateFrom = dateTo;
 
+  const dateLabel = formatAdminPeriodDateRange(dateFrom, dateTo);
+
   return {
     preset,
-    label: option.label,
-    shortLabel: option.shortLabel,
+    label: preset === "custom" ? "Período personalizado" : option.label,
+    shortLabel: preset === "custom" ? `${shortDateLabel(dateFrom)}–${shortDateLabel(dateTo)}` : option.shortLabel,
     dateFrom,
     dateTo,
+    dateLabel,
     dayCount: daysBetweenDateKeys(dateFrom, dateTo),
     isAll: preset === "all",
   };

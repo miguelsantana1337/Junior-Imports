@@ -16,6 +16,8 @@ export interface AdminPreferences {
   favoriteHrefs: string[];
   tableDensity: AdminTableDensity;
   globalPeriod: AdminPeriodPreset;
+  globalCustomDateFrom: string;
+  globalCustomDateTo: string;
   productViews: SavedProductView[];
   mutedNotificationCategories: AdminNotificationCategory[];
   includeInformativeNotifications: boolean;
@@ -27,6 +29,8 @@ export const defaultAdminPreferences: AdminPreferences = {
   favoriteHrefs: [],
   tableDensity: "comfortable",
   globalPeriod: "30d",
+  globalCustomDateFrom: "",
+  globalCustomDateTo: "",
   productViews: [],
   mutedNotificationCategories: [],
   includeInformativeNotifications: false,
@@ -50,6 +54,11 @@ export function adminPreferencesStorageKey(userId: string) {
 
 function isAdminHref(value: unknown): value is string {
   return typeof value === "string" && /^\/admin(?:[/?#]|$)/.test(value);
+}
+
+function normalizedDateKey(value: unknown) {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return "";
+  return Number.isFinite(new Date(`${value}T12:00:00.000Z`).getTime()) ? value : "";
 }
 
 function normalizeSavedProductView(value: unknown): SavedProductView | null {
@@ -83,6 +92,8 @@ export function normalizeAdminPreferences(value: unknown): AdminPreferences {
     favoriteHrefs,
     tableDensity: candidate.tableDensity === "compact" ? "compact" : "comfortable",
     globalPeriod: isAdminPeriodPreset(candidate.globalPeriod) ? candidate.globalPeriod : defaultAdminPreferences.globalPeriod,
+    globalCustomDateFrom: normalizedDateKey(candidate.globalCustomDateFrom),
+    globalCustomDateTo: normalizedDateKey(candidate.globalCustomDateTo),
     productViews,
     mutedNotificationCategories,
     includeInformativeNotifications: candidate.includeInformativeNotifications === true,
