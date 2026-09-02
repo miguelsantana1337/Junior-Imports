@@ -12,13 +12,24 @@ import {
   buildPrivateCatalogSocialMetadata,
   privateCatalogRobots,
 } from "@/lib/storefront-metadata";
+import {
+  pharmaceuticalScopeHeader,
+  scopeStorefrontData,
+  storefrontCatalogScopeFromHeader,
+} from "@/lib/storefront-catalog-scope";
 
 export async function generateMetadata({ params }: { params: Promise<{ tenant: string }> }): Promise<Metadata> {
   const { tenant: slug } = await params;
   const tenant = await getTenantBySlug(slug);
   if (!tenant) return { title: "Loja não encontrada" };
   const data = await getStoreData({ tenantSlug: slug });
-  const title = `${data.settings.storeName} | Catálogo privado`;
+  const requestHeaders = await headers();
+  const storefrontScope = storefrontCatalogScopeFromHeader(
+    requestHeaders.get(pharmaceuticalScopeHeader),
+  );
+  const title = storefrontScope === "pharmaceutical"
+    ? `${data.settings.storeName} | Catálogo farmacêutico`
+    : `${data.settings.storeName} | Catálogo privado`;
   const description = data.settings.footerDescription || platformConfig.metadataDescription;
 
   return {
@@ -40,15 +51,19 @@ export default async function TenantStoreLayout({ children, params }: { children
   if (!tenant || tenant.status === "suspended") notFound();
   const requestHeaders = await headers();
   const customDomain = requestHeaders.get("x-tenant-domain") === slug;
+  const storefrontScope = storefrontCatalogScopeFromHeader(
+    requestHeaders.get(pharmaceuticalScopeHeader),
+  );
   const data = await getStoreData({ tenantSlug: slug, storefrontPath: customDomain ? "" : `/loja/${slug}` });
+  const initialData = scopeStorefrontData(data, storefrontScope);
 
   return (
-    <AppProviders initialData={data}>
-      <StoreModeNotice />
-      <StoreHeader />
-      <main>{children}</main>
-      <StoreFooter />
-      <CartDrawer />
+    <AppProviders initialData={initialData} storefrontScope={storefrontScope}>
+        <StoreModeNotice />
+        <StoreHeader />
+        <main>{children}</main>
+        <StoreFooter />
+        <CartDrawer />
     </AppProviders>
   );
 }

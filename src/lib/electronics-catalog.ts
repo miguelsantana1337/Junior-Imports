@@ -1,7 +1,8 @@
 import { slugify } from "@/lib/format";
+import { electronicsCategorySlug } from "@/lib/storefront-catalog-scope";
 import type { Category, StorefrontProduct } from "@/types/store";
 
-export const electronicsCategorySlug = "eletronicos";
+export { electronicsCategorySlug };
 
 export function resolveElectronicsCatalog(
   products: StorefrontProduct[],

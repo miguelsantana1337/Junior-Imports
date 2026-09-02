@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, Cpu, Layers3, ShoppingBag } from "lucide-react";
+import { ArrowDown, Cpu, Headphones, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 import { useStore } from "@/components/providers/store-provider";
@@ -16,8 +16,8 @@ const electronicsSection: HomeSection = {
   kind: "catalog",
   name: "Eletrônicos",
   eyebrow: "SOMENTE ELETRÔNICOS",
-  title: "Tecnologia selecionada em uma página própria.",
-  subtitle: "Busque, compare e compre sem misturar categorias.",
+  title: "Tecnologia selecionada para comprar com clareza.",
+  subtitle: "Busque por modelo, compare as opções e finalize com atendimento humano.",
   active: true,
   order: 1,
 };
@@ -55,23 +55,23 @@ export function ElectronicsScreen() {
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const productHref = spotlight
     ? storeHref(`/produtos/${spotlight.slug}`)
-    : storeHref(`/eletronicos#catalogo`);
+    : storeHref(`/#catalogo`);
 
   return (
     <div className="electronics-storefront" data-catalog-scope={electronicsCategorySlug}>
       <section className="electronics-hero" aria-labelledby="electronics-title">
         <div className="container electronics-hero-grid">
           <div className="electronics-hero-copy">
-            <span className="electronics-kicker"><Cpu aria-hidden="true" /> VITRINE DE TECNOLOGIA</span>
-            <h1 id="electronics-title">Eletrônicos,<br /><em>sem misturar catálogos.</em></h1>
-            <p>Uma área separada da Junior Imports que mostra exclusivamente os produtos cadastrados na categoria Eletrônicos.</p>
+            <span className="electronics-kicker"><Cpu aria-hidden="true" /> JUNIOR IMPORTS · ELETRÔNICOS</span>
+            <h1 id="electronics-title">Tecnologia Apple,<br /><em>direta ao ponto.</em></h1>
+            <p>Encontre seu próximo eletrônico, confira os detalhes e tire suas dúvidas com a equipe antes de comprar.</p>
             <div className="electronics-hero-actions">
               <a className="button button-primary button-large" href="#catalogo"><ArrowDown /> Ver eletrônicos</a>
-              <Link className="button button-ghost button-large" href={storeHref("/")}>Voltar à loja completa</Link>
+              <a className="button button-ghost button-large" href="#como-comprar">Como comprar</a>
             </div>
             <div className="electronics-scope-points" aria-label="Características desta página">
-              <span><Layers3 /> Categoria exclusiva</span>
-              <span><ShoppingBag /> Mesmo carrinho e checkout</span>
+              <span><Headphones /> Atendimento antes da compra</span>
+              <span><ShoppingBag /> Carrinho e pedido online</span>
             </div>
           </div>
 
@@ -92,7 +92,7 @@ export function ElectronicsScreen() {
       <aside className="electronics-scope-note">
         <div className="container">
           <strong>{activeProducts.length} {activeProducts.length === 1 ? "produto disponível" : "produtos disponíveis"}</strong>
-          <span>As buscas e listagens desta página consideram apenas a categoria Eletrônicos.</span>
+          <span>Esta loja mostra somente os eletrônicos publicados pela Junior Imports.</span>
         </div>
       </aside>
 
@@ -104,6 +104,21 @@ export function ElectronicsScreen() {
         searchPlaceholder="Busque por eletrônico, modelo ou marca"
         emptyMessage="Quando um eletrônico for publicado no painel, ele aparecerá automaticamente aqui."
       />
+
+      <section className="electronics-purchase-guide" id="como-comprar" aria-labelledby="electronics-guide-title">
+        <div className="container">
+          <header>
+            <span className="electronics-kicker">COMPRA ACOMPANHADA</span>
+            <h2 id="electronics-guide-title">Do modelo certo ao pedido confirmado.</h2>
+            <p>A loja organiza sua escolha. A equipe confirma disponibilidade, condição e atendimento pelo WhatsApp.</p>
+          </header>
+          <div className="electronics-purchase-steps">
+            <article><span>01</span><h3>Escolha o produto</h3><p>Consulte modelos, capacidades e valores disponíveis no catálogo.</p></article>
+            <article><span>02</span><h3>Revise no carrinho</h3><p>Confira os itens e informe os dados necessários para registrar o pedido.</p></article>
+            <article><span>03</span><h3>Confirme com a equipe</h3><p>Finalize e continue o atendimento no WhatsApp oficial da Junior Imports.</p></article>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

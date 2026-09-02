@@ -18,10 +18,16 @@ import {
 } from "@/lib/browser-storage";
 import { sanitizeProductForStorefront } from "@/lib/storefront-product";
 import { mergeStorefrontIntoStoredData } from "@/lib/admin-store-data";
+import {
+  scopeStorefrontData,
+  storefrontStorageKey,
+  type StorefrontCatalogScope,
+} from "@/lib/storefront-catalog-scope";
 
 interface StoreContextValue {
   data: StorefrontData;
   demoMode: boolean;
+  storefrontScope: StorefrontCatalogScope;
   setData: React.Dispatch<React.SetStateAction<StorefrontData>>;
   addOrder: (order: Order) => void;
   resetData: () => void;
@@ -52,13 +58,15 @@ function normalizeData(candidate: StorefrontData, fallback: StorefrontData): Sto
 
 export function StoreProvider({
   initialData,
+  storefrontScope = "all",
   children,
 }: {
   initialData: StorefrontData;
+  storefrontScope?: StorefrontCatalogScope;
   children: ReactNode;
 }) {
   const demoMode = !process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const demoDataKey = `${initialData.tenant.id}:store-data:v1`;
+  const demoDataKey = storefrontStorageKey(initialData.tenant.id, storefrontScope, "store-data");
   const [data, setData] = useState(initialData);
   const [hydrated, setHydrated] = useState(false);
   const initialRef = useRef(initialData);
@@ -111,8 +119,8 @@ export function StoreProvider({
   const importData = useCallback((next: StorefrontData) => setData(normalizeData(next, initialRef.current)), []);
 
   const value = useMemo(
-    () => ({ data, demoMode, setData, addOrder, resetData, importData }),
-    [data, demoMode, addOrder, resetData, importData],
+    () => ({ data: scopeStorefrontData(data, storefrontScope), demoMode, storefrontScope, setData, addOrder, resetData, importData }),
+    [data, demoMode, storefrontScope, addOrder, resetData, importData],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Script from "next/script";
 import { AppProviders } from "@/components/providers/app-providers";
 import { getStoreData } from "@/lib/store-data";
@@ -7,13 +8,21 @@ import {
   buildPrivateCatalogSocialMetadata,
   privateCatalogRobots,
 } from "@/lib/storefront-metadata";
+import {
+  pharmaceuticalScopeHeader,
+  electronicsDescription,
+  scopeStorefrontData,
+  storefrontCatalogScopeFromHeader,
+} from "@/lib/storefront-catalog-scope";
 import "react-circular-progressbar/dist/styles.css";
 import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const data = await getStoreData();
-  const title = `${data.settings.storeName} | Catálogo privado`;
-  const description = data.settings.footerDescription || platformConfig.metadataDescription;
+  const requestHeaders = await headers();
+  const isElectronics = requestHeaders.get(pharmaceuticalScopeHeader) === "electronics";
+  const title = `${data.settings.storeName} | ${isElectronics ? "Eletrônicos" : "Catálogo privado"}`;
+  const description = isElectronics ? electronicsDescription : data.settings.footerDescription || platformConfig.metadataDescription;
 
   return {
     metadataBase: new URL(platformConfig.siteUrl),
@@ -35,6 +44,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const data = await getStoreData();
+  const requestHeaders = await headers();
+  const storefrontScope = storefrontCatalogScopeFromHeader(
+    requestHeaders.get(pharmaceuticalScopeHeader),
+  );
+  const initialData = scopeStorefrontData(data, storefrontScope);
   return (
     <html lang="pt-BR" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
@@ -43,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </Script>
       </head>
       <body>
-        <AppProviders initialData={data}>{children}</AppProviders>
+        <AppProviders initialData={initialData} storefrontScope={storefrontScope}>{children}</AppProviders>
       </body>
     </html>
   );

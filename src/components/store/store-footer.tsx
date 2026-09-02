@@ -8,7 +8,7 @@ import { formatWhatsappDisplay, whatsappUrl } from "@/lib/format";
 import { withStorefrontPath } from "@/lib/storefront-path";
 
 export function StoreFooter() {
-  const { data } = useStore();
+  const { data, storefrontScope } = useStore();
   const message = `Olá! Vim pela loja da ${data.settings.storeName} e gostaria de tirar uma dúvida.`;
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
@@ -36,11 +36,15 @@ export function StoreFooter() {
           <div>
             <strong>Loja</strong>
             <Link href={storeHref("/")}>Início</Link>
-            <Link href={storeHref("/#destaques")}>Destaques</Link>
-            <Link href={storeHref("/#catalogo")}>Produtos</Link>
-            <Link href={storeHref("/eletronicos")}>Eletrônicos</Link>
-            <Link href={storeHref("/#duvidas")}>Como comprar</Link>
-            {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
+            {storefrontScope === "electronics" ? <>
+              <Link href={storeHref("/#catalogo")}>Eletrônicos</Link>
+              <Link href={storeHref("/#como-comprar")}>Como comprar</Link>
+            </> : <>
+              <Link href={storeHref("/#destaques")}>Destaques</Link>
+              <Link href={storeHref("/#catalogo")}>Produtos</Link>
+              <Link href={storeHref("/#duvidas")}>Como comprar</Link>
+              {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
+            </>}
           </div>
           <div>
             <strong>Atendimento</strong>
@@ -51,7 +55,7 @@ export function StoreFooter() {
           <div>
             <strong>Compra segura</strong>
             <Link href={storeHref("/#catalogo")}><ShoppingBag /> Escolha seus produtos</Link>
-            <Link href={storeHref("/#duvidas")}><ShieldCheck /> Pagamento, envio e garantia</Link>
+            <Link href={storeHref(storefrontScope === "electronics" ? "/#como-comprar" : "/#duvidas")}><ShieldCheck /> Pagamento, envio e garantia</Link>
             <span>Pedido registrado no site</span>
             <span>Confirmação pelo WhatsApp</span>
           </div>

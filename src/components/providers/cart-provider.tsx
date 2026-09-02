@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { calculateCart } from "@/lib/commerce";
+import { storefrontStorageKey } from "@/lib/storefront-catalog-scope";
 import {
   readSensitiveSessionValue,
   removeSensitiveBrowserValue,
@@ -48,10 +49,10 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const { data, demoMode } = useStore();
-  const cartKey = `${data.tenant.id}:cart:v1`;
-  const favoritesKey = `${data.tenant.id}:favorites:v1`;
-  const cartSessionKey = `${data.tenant.id}:cart-session:v1`;
+  const { data, demoMode, storefrontScope } = useStore();
+  const cartKey = storefrontStorageKey(data.tenant.id, storefrontScope, "cart");
+  const favoritesKey = storefrontStorageKey(data.tenant.id, storefrontScope, "favorites");
+  const cartSessionKey = storefrontStorageKey(data.tenant.id, storefrontScope, "cart-session");
   const referralKey = referralStorageKey(data.tenant.id);
   const [lines, setLines] = useState<CartLine[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -66,8 +67,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const storedLines = JSON.parse(readSensitiveSessionValue(cartKey) ?? "[]") as CartLine[];
       const storedFavorites = JSON.parse(readSensitiveSessionValue(favoritesKey) ?? "[]") as string[];
       const storedSessionId = readSensitiveSessionValue(cartSessionKey);
-      setLines(storedLines);
-      setFavorites(storedFavorites);
+      const productIds = new Set(data.products.map((product) => product.id));
+      setLines(storedLines.filter((line) => productIds.has(line.productId)
+        && (!line.components || line.components.every((id) => productIds.has(id)))));
+      setFavorites(storedFavorites.filter((id) => productIds.has(id)));
       setCartSessionId(storedSessionId && /^[0-9a-f-]{36}$/i.test(storedSessionId) ? storedSessionId : crypto.randomUUID());
     } catch {
       removeSensitiveBrowserValue(cartKey);
@@ -84,6 +87,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (referralCode) nextSource.ref = referralCode;
     if (document.referrer) nextSource.referrer = document.referrer.slice(0, 500);
     setSource(nextSource);
+  // Reload only when the catalog namespace changes, not on every store update.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cartKey, cartSessionKey, favoritesKey, referralKey]);
 
   useEffect(() => {

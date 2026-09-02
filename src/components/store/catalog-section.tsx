@@ -71,7 +71,7 @@ export function CatalogSection({
         <div className="catalog-status"><span>{search ? <>Resultados para <strong>{search}</strong></> : <>{productCount} produto{productCount === 1 ? "" : "s"}</>}</span><span>{groups.length} categoria{groups.length === 1 ? "" : "s"}</span></div>
         {groups.length
           ? <div className="catalog-category-list">{groups.map((group) => <ProductCarousel group={group} key={group.id} />)}</div>
-          : <div className="empty-state"><strong>Nenhum produto encontrado.</strong><p>{emptyMessage}</p>{search && <button className="button button-ghost" onClick={() => setSearch("")}>Limpar busca</button>}</div>}
+          : <div className="empty-state"><strong>Nenhum produto encontrado.</strong><p>{search ? "Tente outro nome, modelo ou marca." : emptyMessage}</p>{search && <button className="button button-ghost" onClick={() => setSearch("")}>Limpar busca</button>}</div>}
       </div>
     </section>
   );

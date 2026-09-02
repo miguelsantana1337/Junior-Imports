@@ -306,6 +306,17 @@ img { display: block; max-width: 100%; }
 .electronics-scope-note span { color: #7e8da2; font-size: 11px; text-align: right; }
 .electronics-storefront .catalog-section { background: radial-gradient(circle at 4% 6%, rgb(30 105 201 / 10%), transparent 22%), #07090d; }
 .electronics-storefront .catalog-section .section-heading h2 { max-width: 780px; }
+.electronics-purchase-guide { padding: 92px 0 104px; border-top: 1px solid #19283c; background: linear-gradient(180deg, #080d14, #06080c); }
+.electronics-purchase-guide > div > header { max-width: 720px; }
+.electronics-purchase-guide h2 { max-width: 680px; margin: 17px 0 16px; color: #f4f8ff; font-size: clamp(38px, 4.8vw, 66px); line-height: .98; letter-spacing: -.055em; }
+.electronics-purchase-guide header > p { max-width: 620px; margin: 0; color: #8f9eb2; font-size: 15px; line-height: 1.65; }
+.electronics-purchase-steps { margin-top: 50px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid #26374e; }
+.electronics-purchase-steps article { min-height: 230px; padding: 27px 28px 30px 0; border-right: 1px solid #26374e; }
+.electronics-purchase-steps article + article { padding-left: 28px; }
+.electronics-purchase-steps article:last-child { border-right: 0; }
+.electronics-purchase-steps article > span { color: #68a8f6; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+.electronics-purchase-steps h3 { margin: 62px 0 10px; color: #eef5ff; font-size: 20px; letter-spacing: -.025em; }
+.electronics-purchase-steps p { max-width: 300px; margin: 0; color: #7e8da3; font-size: 12px; line-height: 1.6; }
 
 .hero-carousel { position: relative; overflow: hidden; background: #090b10; }
 .hero-slides { position: relative; min-height: 590px; }
@@ -1129,6 +1140,10 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
   .electronics-hero-grid { min-height: 0; padding-block: 54px 64px; grid-template-columns: 1fr; gap: 40px; }
   .electronics-hero-copy { max-width: 680px; }
   .electronics-spotlight { width: min(560px, 100%); min-height: 430px; justify-self: center; }
+  .electronics-purchase-steps { grid-template-columns: 1fr; }
+  .electronics-purchase-steps article, .electronics-purchase-steps article + article { min-height: 0; padding: 24px 0 28px; border-right: 0; border-bottom: 1px solid #26374e; }
+  .electronics-purchase-steps article:last-child { border-bottom: 0; }
+  .electronics-purchase-steps h3 { margin-top: 25px; }
 }
 
 @media (max-width: 560px) {
@@ -1188,6 +1203,9 @@ body:has(.checkout-page) .whatsapp-float { display: none; }
   .electronics-spotlight footer b { font-size: 15px; }
   .electronics-scope-note > div { padding-block: 14px; align-items: flex-start; flex-direction: column; gap: 4px; }
   .electronics-scope-note span { text-align: left; }
+  .electronics-purchase-guide { padding: 68px 0 76px; }
+  .electronics-purchase-guide h2 { font-size: 40px; }
+  .electronics-purchase-steps { margin-top: 36px; }
   .product-mobile-purchase small, .product-mobile-purchase strong { display: block; }
   .product-mobile-purchase small { margin-bottom: 2px; color: var(--muted); font-size: 9px; }
   .product-mobile-purchase strong { font-size: 16px; }
