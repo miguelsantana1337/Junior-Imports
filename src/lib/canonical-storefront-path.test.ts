@@ -17,7 +17,13 @@ describe("URL canônica da loja principal", () => {
     ).toBe("/");
   });
 
-  it("preserva o restante do caminho em produtos, checkout e pedidos", () => {
+  it("preserva o restante do caminho em eletrônicos, produtos, checkout e pedidos", () => {
+    expect(
+      getPrimaryStorefrontRedirectPath(
+        "/loja/junior-imports/eletronicos",
+        "junior-imports",
+      ),
+    ).toBe("/eletronicos");
     expect(
       getPrimaryStorefrontRedirectPath(
         "/loja/junior-imports/produtos/lipoless-md",

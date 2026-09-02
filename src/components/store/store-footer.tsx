@@ -38,6 +38,7 @@ export function StoreFooter() {
             <Link href={storeHref("/")}>Início</Link>
             <Link href={storeHref("/#destaques")}>Destaques</Link>
             <Link href={storeHref("/#catalogo")}>Produtos</Link>
+            <Link href={storeHref("/eletronicos")}>Eletrônicos</Link>
             <Link href={storeHref("/#duvidas")}>Como comprar</Link>
             {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
           </div>

@@ -20,11 +20,15 @@ export function StoreHeader() {
   const router = useRouter();
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
-  const announcement = resolveStoreAnnouncement(data.settings);
+  const electronicsHref = storeHref("/eletronicos");
+  const isElectronicsStore = pathname === electronicsHref;
+  const announcement = isElectronicsStore
+    ? "Eletrônicos em uma vitrine separada da loja completa."
+    : resolveStoreAnnouncement(data.settings);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
-    if (pathname === (data.tenant.storefrontPath || "/")) {
+    if (pathname === (data.tenant.storefrontPath || "/") || isElectronicsStore) {
       window.dispatchEvent(new CustomEvent("junior-search", { detail: query }));
       document.querySelector("#catalogo")?.scrollIntoView({ behavior: "smooth" });
     } else {
@@ -37,7 +41,7 @@ export function StoreHeader() {
       <div className="announcement">
         <div className="container announcement-inner">
           <span>{announcement}</span>
-          <Link href={storeHref("/#catalogo")}>Ver ofertas →</Link>
+          <Link href={isElectronicsStore ? `${electronicsHref}#catalogo` : storeHref("/#catalogo")}>{isElectronicsStore ? "Ver eletrônicos" : "Ver ofertas"} →</Link>
         </div>
       </div>
       <header className="store-header">
@@ -46,6 +50,7 @@ export function StoreHeader() {
           <nav className="desktop-nav" aria-label="Navegacao principal">
             <Link href={storeHref("/#destaques")}>Destaques</Link>
             <Link href={storeHref("/#catalogo")}>Produtos</Link>
+            <Link href={electronicsHref} aria-current={isElectronicsStore ? "page" : undefined}>Eletrônicos</Link>
             <Link href={storeHref("/#beneficios")}>Beneficios</Link>
             <Link href={storeHref("/#duvidas")}>Como comprar</Link>
             {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id}>{page.name}</Link>)}
@@ -101,6 +106,7 @@ export function StoreHeader() {
           <nav className="mobile-nav" aria-label="Navegacao movel">
             <Link href={storeHref("/#destaques")} onClick={() => setMenuOpen(false)}>Destaques</Link>
             <Link href={storeHref("/#catalogo")} onClick={() => setMenuOpen(false)}>Produtos</Link>
+            <Link href={electronicsHref} aria-current={isElectronicsStore ? "page" : undefined} onClick={() => setMenuOpen(false)}>Eletrônicos</Link>
             <Link href={storeHref("/#beneficios")} onClick={() => setMenuOpen(false)}>Beneficios</Link>
             <Link href={storeHref("/#duvidas")} onClick={() => setMenuOpen(false)}>Como comprar</Link>
             {navigationPages.map((page) => <Link href={storeHref(`/paginas/${page.slug}`)} key={page.id} onClick={() => setMenuOpen(false)}>{page.name}</Link>)}

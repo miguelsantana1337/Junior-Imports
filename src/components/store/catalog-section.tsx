@@ -4,11 +4,25 @@ import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/components/providers/store-provider";
 import { buildCatalogProductGroups, type CatalogSort } from "@/lib/catalog-view";
-import type { HomeSection, PageBlock } from "@/types/store";
+import type { Category, HomeSection, PageBlock, StorefrontProduct } from "@/types/store";
 import { ProductCarousel } from "./product-carousel";
 import { SectionHeading } from "./section-heading";
 
-export function CatalogSection({ section, block }: { section: HomeSection; block: PageBlock }) {
+export function CatalogSection({
+  section,
+  block,
+  products,
+  categories,
+  searchPlaceholder = "O que você está procurando? Busque por produto, marca ou categoria",
+  emptyMessage = "Tente outro termo de busca.",
+}: {
+  section: HomeSection;
+  block: PageBlock;
+  products?: StorefrontProduct[];
+  categories?: Category[];
+  searchPlaceholder?: string;
+  emptyMessage?: string;
+}) {
   const { data } = useStore();
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<CatalogSort>("order");
@@ -22,8 +36,8 @@ export function CatalogSection({ section, block }: { section: HomeSection; block
   }, []);
 
   const groups = useMemo(
-    () => buildCatalogProductGroups(data.products, data.categories, search, sort),
-    [data.categories, data.products, search, sort],
+    () => buildCatalogProductGroups(products ?? data.products, categories ?? data.categories, search, sort),
+    [categories, data.categories, data.products, products, search, sort],
   );
   const productCount = groups.reduce((total, group) => total + group.products.length, 0);
 
@@ -41,7 +55,7 @@ export function CatalogSection({ section, block }: { section: HomeSection; block
         <label className="catalog-search-field">
           <Search aria-hidden="true" />
           <span className="sr-only">Buscar no catálogo</span>
-          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="O que você está procurando? Busque por produto, marca ou categoria" />
+          <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder={searchPlaceholder} />
           {search && <button type="button" onClick={() => setSearch("")} aria-label="Limpar busca"><X /></button>}
         </label>
         <div className="catalog-toolbar">
@@ -57,7 +71,7 @@ export function CatalogSection({ section, block }: { section: HomeSection; block
         <div className="catalog-status"><span>{search ? <>Resultados para <strong>{search}</strong></> : <>{productCount} produto{productCount === 1 ? "" : "s"}</>}</span><span>{groups.length} categoria{groups.length === 1 ? "" : "s"}</span></div>
         {groups.length
           ? <div className="catalog-category-list">{groups.map((group) => <ProductCarousel group={group} key={group.id} />)}</div>
-          : <div className="empty-state"><strong>Nenhum produto encontrado.</strong><p>Tente outro termo de busca.</p><button className="button button-ghost" onClick={() => setSearch("")}>Limpar busca</button></div>}
+          : <div className="empty-state"><strong>Nenhum produto encontrado.</strong><p>{emptyMessage}</p>{search && <button className="button button-ghost" onClick={() => setSearch("")}>Limpar busca</button>}</div>}
       </div>
     </section>
   );
