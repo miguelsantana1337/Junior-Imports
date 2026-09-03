@@ -3,8 +3,14 @@ import { platformConfig } from "@/config/platform";
 import { getPrimaryStorefrontRedirectPath } from "@/lib/canonical-storefront-path";
 import { isPharmaceuticalStorefrontHost, normalizeHostname } from "@/lib/pharmaceutical-storefront-host";
 import { pharmaceuticalScopeHeader } from "@/lib/storefront-catalog-scope";
+import { storefrontRobotsHeader } from "@/lib/storefront-seo";
 
 const reservedSubdomains = new Set(["www", "app", "admin"]);
+
+function withStorefrontRobotsPolicy(response: NextResponse, hostname: string, pathname: string) {
+  response.headers.set("X-Robots-Tag", storefrontRobotsHeader(hostname, pathname));
+  return response;
+}
 
 async function customDomainTenant(hostname: string) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -40,22 +46,22 @@ export async function proxy(request: NextRequest) {
   if (primaryStorefrontPath) {
     const canonicalUrl = request.nextUrl.clone();
     canonicalUrl.pathname = primaryStorefrontPath;
-    return NextResponse.redirect(canonicalUrl, 308);
+    return withStorefrontRobotsPolicy(NextResponse.redirect(canonicalUrl, 308), hostname, pathname);
   }
 
   if (/^\/(admin|api|saas|loja|_next|mcp|\.well-known)(\/|$)/.test(pathname)) {
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return withStorefrontRobotsPolicy(NextResponse.next({ request: { headers: requestHeaders } }), hostname, pathname);
   }
 
   if (/\.[a-z0-9]+$/i.test(pathname)) {
     requestHeaders.set(pharmaceuticalScopeHeader, pharmaceuticalStorefront ? "pharmaceutical" : "electronics");
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return withStorefrontRobotsPolicy(NextResponse.next({ request: { headers: requestHeaders } }), hostname, pathname);
   }
 
   if (pathname === "/eletronicos") {
     const rootUrl = request.nextUrl.clone();
     rootUrl.pathname = "/";
-    return NextResponse.redirect(rootUrl, 308);
+    return withStorefrontRobotsPolicy(NextResponse.redirect(rootUrl, 308), hostname, pathname);
   }
 
   if (pharmaceuticalStorefront) {
@@ -63,7 +69,7 @@ export async function proxy(request: NextRequest) {
     url.pathname = `/loja/${platformConfig.clientId}${pathname === "/" ? "" : pathname}`;
     requestHeaders.set("x-tenant-domain", platformConfig.clientId);
     requestHeaders.set(pharmaceuticalScopeHeader, "pharmaceutical");
-    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+    return withStorefrontRobotsPolicy(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), hostname, pathname);
   }
 
   const rootDomain = (process.env.SAAS_ROOT_DOMAIN ?? "").toLowerCase();
@@ -78,12 +84,12 @@ export async function proxy(request: NextRequest) {
 
   if (!tenantSlug) {
     requestHeaders.set(pharmaceuticalScopeHeader, "electronics");
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return withStorefrontRobotsPolicy(NextResponse.next({ request: { headers: requestHeaders } }), hostname, pathname);
   }
   const url = request.nextUrl.clone();
   url.pathname = `/loja/${tenantSlug}${pathname === "/" ? "" : pathname}`;
   requestHeaders.set("x-tenant-domain", tenantSlug);
-  return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
+  return withStorefrontRobotsPolicy(NextResponse.rewrite(url, { request: { headers: requestHeaders } }), hostname, pathname);
 }
 
 export const config = {

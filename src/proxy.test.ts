@@ -9,6 +9,7 @@ function request(path = "/", host = "junior-imports.vercel.app", headers = {}) {
 }
 const pharmaHost = "farmaceuticos.juniorimportsoficial.com.br";
 const scopeHeader = "x-middleware-request-x-storefront-scope";
+const officialElectronicsHost = "www.juniorimportsoficial.com.br";
 
 describe("separação das lojas por hostname", () => {
   it("define eletrônicos na raiz e ignora escopo enviado pelo visitante", async () => {
@@ -49,5 +50,22 @@ describe("separação das lojas por hostname", () => {
   it("não permite que sufixos parecidos com arquivos removam o escopo", async () => {
     const response = await proxy(request("/produtos/exemplo.jpg"));
     expect(response.headers.get(scopeHeader)).toBe("electronics");
+  });
+
+  it.each(["/", "/produtos/iphone-17-pro-256gb"])("libera %s somente no domínio oficial de eletrônicos", async (path) => {
+    const response = await proxy(request(path, officialElectronicsHost));
+    expect(response.headers.get("x-robots-tag")).toContain("index, follow");
+  });
+
+  it.each([
+    [officialElectronicsHost, "/checkout"],
+    [officialElectronicsHost, "/pedidos/JI-1001"],
+    [officialElectronicsHost, "/admin/login"],
+    [pharmaHost, "/"],
+    [pharmaHost, "/produtos/exemplo"],
+    ["junior-imports.vercel.app", "/"],
+  ])("mantém noindex em %s%s", async (host, path) => {
+    const response = await proxy(request(path, host));
+    expect(response.headers.get("x-robots-tag")).toBe("noindex, nofollow");
   });
 });

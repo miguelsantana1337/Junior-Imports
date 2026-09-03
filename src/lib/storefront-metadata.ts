@@ -15,13 +15,17 @@ interface SocialMetadataInput {
   description: string;
   storeName: string;
   imageUrl?: string;
+  imageAlt?: string;
+  url?: string;
 }
 
-export function buildPrivateCatalogSocialMetadata({
+export function buildStorefrontSocialMetadata({
   title,
   description,
   storeName,
   imageUrl,
+  imageAlt,
+  url,
 }: SocialMetadataInput): Pick<Metadata, "openGraph" | "twitter"> {
   const image = imageUrl || platformConfig.socialImageUrl;
 
@@ -32,7 +36,8 @@ export function buildPrivateCatalogSocialMetadata({
       title,
       description,
       siteName: storeName,
-      images: [{ url: image, alt: `Catálogo privado da ${storeName}` }],
+      ...(url ? { url } : {}),
+      images: [{ url: image, alt: imageAlt || storeName }],
     },
     twitter: {
       card: "summary_large_image",
@@ -41,4 +46,11 @@ export function buildPrivateCatalogSocialMetadata({
       images: [image],
     },
   };
+}
+
+export function buildPrivateCatalogSocialMetadata(input: SocialMetadataInput) {
+  return buildStorefrontSocialMetadata({
+    ...input,
+    imageAlt: input.imageAlt || `Catálogo privado da ${input.storeName}`,
+  });
 }

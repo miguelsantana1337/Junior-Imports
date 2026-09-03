@@ -1,6 +1,10 @@
 import type { MetadataRoute } from "next";
+import { headers } from "next/headers";
+import { electronicsStorefrontUrl, isOfficialElectronicsHost } from "@/lib/storefront-seo";
 
-export default function robots(): MetadataRoute.Robots {
+export default async function robots(): Promise<MetadataRoute.Robots> {
+  const requestHeaders = await headers();
+  const officialElectronics = isOfficialElectronicsHost(requestHeaders.get("host"));
   return {
     rules: [
       {
@@ -9,8 +13,10 @@ export default function robots(): MetadataRoute.Robots {
       },
       {
         userAgent: "*",
-        disallow: "/",
+        allow: "/",
+        disallow: ["/admin/", "/api/", "/mcp", "/.well-known/", "/saas", "/loja/", "/checkout", "/pedidos/"],
       },
     ],
+    ...(officialElectronics ? { sitemap: electronicsStorefrontUrl("/sitemap.xml") } : {}),
   };
 }
