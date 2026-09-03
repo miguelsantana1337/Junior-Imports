@@ -37,7 +37,12 @@ export function isIndexableElectronicsPath(pathname: string) {
     || /^\/produtos\/[^/]+\/?$/.test(pathname);
 }
 
+export function isSearchEngineControlFile(pathname: string) {
+  return pathname === "/robots.txt" || pathname === "/sitemap.xml";
+}
+
 export function storefrontRobotsHeader(hostname: string | null | undefined, pathname: string) {
+  if (isSearchEngineControlFile(pathname)) return null;
   return isOfficialElectronicsHost(hostname) && isIndexableElectronicsPath(pathname)
     ? "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"
     : "noindex, nofollow";

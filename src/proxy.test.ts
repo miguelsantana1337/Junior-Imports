@@ -57,6 +57,11 @@ describe("separação das lojas por hostname", () => {
     expect(response.headers.get("x-robots-tag")).toContain("index, follow");
   });
 
+  it.each(["/robots.txt", "/sitemap.xml"])("não aplica diretiva de página ao arquivo técnico %s", async (path) => {
+    const response = await proxy(request(path, officialElectronicsHost));
+    expect(response.headers.has("x-robots-tag")).toBe(false);
+  });
+
   it.each([
     [officialElectronicsHost, "/checkout"],
     [officialElectronicsHost, "/pedidos/JI-1001"],

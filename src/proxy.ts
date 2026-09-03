@@ -8,7 +8,8 @@ import { storefrontRobotsHeader } from "@/lib/storefront-seo";
 const reservedSubdomains = new Set(["www", "app", "admin"]);
 
 function withStorefrontRobotsPolicy(response: NextResponse, hostname: string, pathname: string) {
-  response.headers.set("X-Robots-Tag", storefrontRobotsHeader(hostname, pathname));
+  const robotsPolicy = storefrontRobotsHeader(hostname, pathname);
+  if (robotsPolicy) response.headers.set("X-Robots-Tag", robotsPolicy);
   return response;
 }
 
