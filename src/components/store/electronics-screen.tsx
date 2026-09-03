@@ -2,12 +2,14 @@
 
 import { ArrowDown, Cpu, Headphones, ShoppingBag } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useMemo } from "react";
 import { useStore } from "@/components/providers/store-provider";
 import { ProductArt } from "@/components/ui/product-art";
 import { electronicsCategorySlug, resolveElectronicsCatalog } from "@/lib/electronics-catalog";
 import { formatMoney } from "@/lib/format";
 import { withStorefrontPath } from "@/lib/storefront-path";
+import { electronicsHomeHref, resolveElectronicsHome } from "@/lib/electronics-home";
 import type { HomeSection, PageBlock } from "@/types/store";
 import { CatalogSection } from "./catalog-section";
 
@@ -44,6 +46,7 @@ const electronicsBlock: PageBlock = {
 
 export function ElectronicsScreen() {
   const { data } = useStore();
+  const content = resolveElectronicsHome(data.tenant.id, data.pageBlocks);
   const catalog = useMemo(
     () => resolveElectronicsCatalog(data.products, data.categories),
     [data.categories, data.products],
@@ -51,7 +54,7 @@ export function ElectronicsScreen() {
   const activeProducts = catalog.products
     .filter((product) => product.active)
     .sort((a, b) => a.order - b.order);
-  const spotlight = activeProducts[0];
+  const spotlight = activeProducts.find((product) => product.featured) ?? activeProducts[0];
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const productHref = spotlight
     ? storeHref(`/produtos/${spotlight.slug}`)
@@ -62,11 +65,11 @@ export function ElectronicsScreen() {
       <section className="electronics-hero" aria-labelledby="electronics-title">
         <div className="container electronics-hero-grid">
           <div className="electronics-hero-copy">
-            <span className="electronics-kicker"><Cpu aria-hidden="true" /> JUNIOR IMPORTS · ELETRÔNICOS</span>
-            <h1 id="electronics-title">Tecnologia Apple,<br /><em>direta ao ponto.</em></h1>
-            <p>Encontre seu próximo eletrônico, confira os detalhes e tire suas dúvidas com a equipe antes de comprar.</p>
+            <span className="electronics-kicker"><Cpu aria-hidden="true" /> {content.hero.eyebrow}</span>
+            <h1 id="electronics-title">{content.hero.title.split("\n").map((line, index) => index === 0 ? <span key={index}>{line}</span> : <em key={index}><br />{line}</em>)}</h1>
+            <p>{content.hero.body}</p>
             <div className="electronics-hero-actions">
-              <a className="button button-primary button-large" href="#catalogo"><ArrowDown /> Ver eletrônicos</a>
+              <a className="button button-primary button-large" href={electronicsHomeHref(content.hero.buttonLink)}><ArrowDown /> {content.hero.buttonText}</a>
               <a className="button button-ghost button-large" href="#como-comprar">Como comprar</a>
             </div>
             <div className="electronics-scope-points" aria-label="Características desta página">
@@ -75,9 +78,9 @@ export function ElectronicsScreen() {
             </div>
           </div>
 
-          <Link className={`electronics-spotlight ${spotlight ? "has-product" : "is-empty"}`} href={productHref} aria-label={spotlight ? `Ver ${spotlight.name}` : "Ver catálogo de eletrônicos"}>
+          <Link className={`electronics-spotlight ${spotlight || content.hero.imageUrl ? "has-product" : "is-empty"}`} href={content.hero.imageUrl ? electronicsHomeHref(content.hero.buttonLink) : productHref} aria-label={content.hero.imageUrl ? content.hero.title : spotlight ? `Ver ${spotlight.name}` : "Ver catálogo de eletrônicos"}>
             <div className="electronics-circuit" aria-hidden="true" />
-            {spotlight ? <>
+            {content.hero.imageUrl ? <Image className="electronics-custom-hero" src={content.hero.imageUrl} alt={content.hero.title} width={1200} height={1200} unoptimized priority /> : spotlight ? <>
               <div className="electronics-product-art"><ProductArt product={spotlight} large /></div>
               <footer>
                 <span>{spotlight.brand || "Eletrônicos"}</span>
@@ -97,8 +100,9 @@ export function ElectronicsScreen() {
       </aside>
 
       <CatalogSection
-        section={electronicsSection}
-        block={electronicsBlock}
+        section={{ ...electronicsSection, eyebrow: content.catalog.eyebrow, title: content.catalog.title, subtitle: content.catalog.body }}
+        block={{ ...electronicsBlock, columns: content.catalog.columns }}
+        desktopColumns={content.catalog.columns}
         products={catalog.products}
         categories={catalog.categories}
         searchPlaceholder="Busque por eletrônico, modelo ou marca"
@@ -108,14 +112,12 @@ export function ElectronicsScreen() {
       <section className="electronics-purchase-guide" id="como-comprar" aria-labelledby="electronics-guide-title">
         <div className="container">
           <header>
-            <span className="electronics-kicker">COMPRA ACOMPANHADA</span>
-            <h2 id="electronics-guide-title">Do modelo certo ao pedido confirmado.</h2>
-            <p>A loja organiza sua escolha. A equipe confirma disponibilidade, condição e atendimento pelo WhatsApp.</p>
+            <span className="electronics-kicker">{content.guide.eyebrow}</span>
+            <h2 id="electronics-guide-title">{content.guide.title}</h2>
+            <p>{content.guide.body}</p>
           </header>
           <div className="electronics-purchase-steps">
-            <article><span>01</span><h3>Escolha o produto</h3><p>Consulte modelos, capacidades e valores disponíveis no catálogo.</p></article>
-            <article><span>02</span><h3>Revise no carrinho</h3><p>Confira os itens e informe os dados necessários para registrar o pedido.</p></article>
-            <article><span>03</span><h3>Confirme com a equipe</h3><p>Finalize e continue o atendimento no WhatsApp oficial da Junior Imports.</p></article>
+            {(["step-1", "step-2", "step-3"] as const).map((key, index) => <article key={key}><span>0{index + 1}</span><h3>{content[key].title}</h3><p>{content[key].body}</p></article>)}
           </div>
         </div>
       </section>

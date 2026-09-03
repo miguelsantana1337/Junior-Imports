@@ -45,6 +45,9 @@ import { useAdminData } from "./admin-data-provider";
 import { adminCatalogHref, hasSeparateCatalogs } from "@/lib/admin-catalog-link";
 import { AdminPanel, StatusTag } from "./admin-ui";
 import { useConfirm } from "@/components/providers/confirm-provider";
+import { ElectronicsHomeAdmin } from "./electronics-home-admin";
+import { electronicsHomePageId } from "@/lib/electronics-home";
+import { resolveStorefrontCatalogScope } from "@/lib/storefront-catalog-scope";
 
 const blockKinds: Array<{ value: PageBlockKind; label: string; description: string }> = [
   { value: "hero", label: "Banners rotativos", description: "Escolha os banners visíveis e o tempo de troca." },
@@ -109,10 +112,27 @@ function resolveBlockContent(block: PageBlock, sections: HomeSection[], settings
 }
 
 export function LayoutAdmin() {
+  const { data } = useAdminData();
+  const searchParams = useSearchParams();
+  const [catalog, setCatalog] = useState(searchParams.get("catalog") === "electronics" ? "electronics" : "pharmaceutical");
+  useEffect(() => {
+    setCatalog(searchParams.get("catalog") === "electronics" ? "electronics" : "pharmaceutical");
+  }, [searchParams]);
+  if (!hasSeparateCatalogs(data.tenant)) return <OriginalLayoutAdmin />;
+  return <>
+    <nav className="admin-catalog-switch" aria-label="Catálogo em edição">
+      <button className={catalog === "electronics" ? "active" : ""} aria-pressed={catalog === "electronics"} onClick={() => setCatalog("electronics")}><strong>Eletrônicos</strong><small>Home principal</small></button>
+      <button className={catalog === "pharmaceutical" ? "active" : ""} aria-pressed={catalog === "pharmaceutical"} onClick={() => setCatalog("pharmaceutical")}><strong>Farmacêuticos</strong><small>Catálogo no subdomínio</small></button>
+    </nav>
+    {catalog === "electronics" ? <ElectronicsHomeAdmin /> : <OriginalLayoutAdmin />}
+  </>;
+}
+
+function OriginalLayoutAdmin() {
   const { data, deletePage, savePageBlock, deletePageBlock, movePageBlock } = useAdminData();
   const confirm = useConfirm();
   const searchParams = useSearchParams();
-  const pages = useMemo(() => [...data.pages].sort((a, b) => a.order - b.order), [data.pages]);
+  const pages = useMemo(() => data.pages.filter((page) => page.id !== electronicsHomePageId(data.tenant.id)).sort((a, b) => a.order - b.order), [data.pages, data.tenant.id]);
   const [selectedId, setSelectedId] = useState(pages[0]?.id ?? "home");
   const [pageEditor, setPageEditor] = useState<StorePage | "new" | null>(null);
   const [blockEditor, setBlockEditor] = useState<PageBlock | "new" | null>(null);
@@ -135,7 +155,7 @@ export function LayoutAdmin() {
   return (
     <>
       <div className="layout-builder-intro">
-        <div className="layout-builder-intro-copy"><Sparkles /><div><strong>{hasSeparateCatalogs(data.tenant) ? "Editor do catálogo farmacêutico" : "Tudo da loja em um único editor"}</strong><span>{hasSeparateCatalogs(data.tenant) ? "Edite a home, banners e páginas do catálogo farmacêutico. A loja principal de eletrônicos tem apresentação própria." : "Edite a página inicial, páginas institucionais, ordem das seções, textos e itens exibidos."}</span></div></div>
+        <div className="layout-builder-intro-copy"><Sparkles /><div><strong>{hasSeparateCatalogs(data.tenant) ? "Editor do catálogo farmacêutico" : "Tudo da loja em um único editor"}</strong><span>{hasSeparateCatalogs(data.tenant) ? "Edite a home, banners e páginas do catálogo farmacêutico. Para mudar a home principal, selecione Eletrônicos acima." : "Edite a página inicial, páginas institucionais, ordem das seções, textos e itens exibidos."}</span></div></div>
         <div className="layout-builder-steps" aria-label="Etapas do editor">
           <span><b>1</b> Página</span>
           <ChevronRight aria-hidden="true" />
@@ -328,9 +348,11 @@ function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [resourceQuery, setResourceQuery] = useState("");
-  const [featuredProductIds, setFeaturedProductIds] = useState(() => data.products.filter((product) => product.featured).map((product) => product.id));
+  const separateCatalogs = hasSeparateCatalogs(data.tenant);
+  const resources = resolveStorefrontCatalogScope(data.products, data.categories, separateCatalogs ? "pharmaceutical" : "all");
+  const [featuredProductIds, setFeaturedProductIds] = useState(() => resources.products.filter((product) => product.featured).map((product) => product.id));
   const [activeBannerIds, setActiveBannerIds] = useState(() => data.banners.filter((banner) => banner.active).map((banner) => banner.id));
-  const [activeCategoryIds, setActiveCategoryIds] = useState(() => data.categories.filter((category) => category.active).map((category) => category.id));
+  const [activeCategoryIds, setActiveCategoryIds] = useState(() => resources.categories.filter((category) => category.active).map((category) => category.id));
   const [bannerSeconds, setBannerSeconds] = useState(data.settings.autoBannerSeconds);
   const [trustItems, setTrustItems] = useState(() => [...data.trustItems].sort((a, b) => a.order - b.order));
   const [benefits, setBenefits] = useState(() => [...data.benefits].sort((a, b) => a.order - b.order));
@@ -386,8 +408,8 @@ function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | 
           await saveBannerVisibility(activeBannerIds);
           if (bannerSeconds !== data.settings.autoBannerSeconds) await saveSettings({ ...data.settings, autoBannerSeconds: bannerSeconds });
         }
-        if (form.kind === "featured") await saveFeaturedProducts(featuredProductIds);
-        if (form.kind === "catalog") await saveCategoryVisibility(activeCategoryIds);
+        if (form.kind === "featured") await saveFeaturedProducts(featuredProductIds, separateCatalogs ? resources.products.map((product) => product.id) : undefined);
+        if (form.kind === "catalog") await saveCategoryVisibility(activeCategoryIds, separateCatalogs ? resources.categories.map((category) => category.id) : undefined);
         if (form.kind === "trust") await saveTrustItems(trustItems);
         if (form.kind === "benefits") await saveBenefits(benefits);
         if (form.kind === "faq") await saveFaqs(faqs);
@@ -402,7 +424,7 @@ function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | 
   }
 
   const normalizedQuery = resourceQuery.trim().toLocaleLowerCase("pt-BR");
-  const visibleProducts = [...data.products]
+  const visibleProducts = [...resources.products]
     .filter((product) => product.active && (!normalizedQuery || `${product.name} ${product.sku} ${product.category}`.toLocaleLowerCase("pt-BR").includes(normalizedQuery)))
     .sort((a, b) => Number(featuredProductIds.includes(b.id)) - Number(featuredProductIds.includes(a.id)) || a.order - b.order);
 
@@ -447,7 +469,7 @@ function BlockEditor({ block, page, blockCount, onClose }: { block: PageBlock | 
 
             {form.kind === "catalog" && <div className="layout-resource-section full">
               <div className="layout-resource-heading"><div><strong>Categorias disponíveis no catálogo</strong><span>Desmarque somente o que não deve aparecer para o cliente.</span></div><Link className="admin-button" href="/admin/categories">Gerenciar categorias</Link></div>
-              <div className="layout-choice-grid">{[...data.categories].sort((a, b) => a.order - b.order).map((category) => <label key={category.id}><input type="checkbox" checked={activeCategoryIds.includes(category.id)} onChange={() => toggleSelection(activeCategoryIds, category.id, setActiveCategoryIds)} /><span><strong>{category.name}</strong><small>{data.products.filter((product) => product.categoryId === category.id && product.active).length} produtos ativos</small></span></label>)}</div>
+              <div className="layout-choice-grid">{[...resources.categories].sort((a, b) => a.order - b.order).map((category) => <label key={category.id}><input type="checkbox" checked={activeCategoryIds.includes(category.id)} onChange={() => toggleSelection(activeCategoryIds, category.id, setActiveCategoryIds)} /><span><strong>{category.name}</strong><small>{resources.products.filter((product) => product.categoryId === category.id && product.active).length} produtos ativos</small></span></label>)}</div>
             </div>}
 
             {form.kind === "trust" && <TrustItemsEditor items={trustItems} onChange={setTrustItems} />}

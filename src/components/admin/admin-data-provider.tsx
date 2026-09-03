@@ -84,6 +84,7 @@ import type { AdminUserCreateInput, AdminUserUpdateInput, ManualOrderInput } fro
 import type { CashbackAdjustmentInput } from "@/lib/validation";
 import { cashbackWalletSummary } from "@/lib/cashback";
 import { canTransitionPublication, simulateMessageAutomation } from "@/lib/marketing";
+import { scopedSelection } from "@/lib/scoped-selection";
 
 type OrderedEntity = Product | Banner | Category | HomeSection;
 type OrderedKey = "products" | "banners" | "categories" | "sections";
@@ -190,9 +191,9 @@ interface AdminDataContextValue {
   savePageBlock: (block: PageBlock) => Promise<void>;
   deletePageBlock: (id: string) => Promise<void>;
   movePageBlock: (pageId: string, id: string, direction: -1 | 1) => Promise<void>;
-  saveFeaturedProducts: (productIds: string[]) => Promise<void>;
+  saveFeaturedProducts: (productIds: string[], editableIds?: string[]) => Promise<void>;
   saveBannerVisibility: (bannerIds: string[]) => Promise<void>;
-  saveCategoryVisibility: (categoryIds: string[]) => Promise<void>;
+  saveCategoryVisibility: (categoryIds: string[], editableIds?: string[]) => Promise<void>;
   saveTrustItems: (items: TrustItem[]) => Promise<void>;
   saveBenefits: (items: Benefit[]) => Promise<void>;
   saveFaqs: (items: Faq[]) => Promise<void>;
@@ -663,10 +664,10 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     }, (next) => persistOrder("page_blocks", next.pageBlocks.filter((block) => block.pageId === pageId)));
   }, [commitMutation, persistOrder]);
 
-  const saveFeaturedProducts = useCallback(async (productIds: string[]) => {
-    const selected = new Set(productIds);
+  const saveFeaturedProducts = useCallback(async (productIds: string[], editableIds?: string[]) => {
     const changed: Product[] = [];
     await commitMutation((current) => {
+      const selected = scopedSelection(productIds, editableIds, current.products.filter((product) => product.featured).map((product) => product.id));
       const products = current.products.map((product) => {
         const featured = selected.has(product.id);
         if (product.featured === featured) return product;
@@ -697,10 +698,10 @@ export function AdminDataProvider({ initialData, currentUser, referenceNow, chil
     }, () => Promise.all(changed.map((banner) => update("banners", banner.id, { active: banner.active }))).then(() => undefined), "Banners da vitrine atualizados.");
   }, [commitMutation, update]);
 
-  const saveCategoryVisibility = useCallback(async (categoryIds: string[]) => {
-    const selected = new Set(categoryIds);
+  const saveCategoryVisibility = useCallback(async (categoryIds: string[], editableIds?: string[]) => {
     const changed: Category[] = [];
     await commitMutation((current) => {
+      const selected = scopedSelection(categoryIds, editableIds, current.categories.filter((category) => category.active).map((category) => category.id));
       const categories = current.categories.map((category) => {
         const active = selected.has(category.id);
         if (category.active === active) return category;

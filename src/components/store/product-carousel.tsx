@@ -1,11 +1,11 @@
 "use client";
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { CatalogProductGroup } from "@/lib/catalog-view";
 import { ProductCard } from "./product-card";
 
-export function ProductCarousel({ group }: { group: CatalogProductGroup }) {
+export function ProductCarousel({ group, desktopColumns }: { group: CatalogProductGroup; desktopColumns?: number }) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
@@ -74,7 +74,7 @@ export function ProductCarousel({ group }: { group: CatalogProductGroup }) {
           tabIndex={0}
           aria-label={`Produtos da categoria ${group.name}`}
         >
-          <div className="product-carousel-track">
+          <div className="product-carousel-track" style={desktopColumns ? { "--catalog-columns": Math.max(1, Math.min(4, Math.round(desktopColumns))) } as CSSProperties : undefined}>
             {group.products.map((product) => <ProductCard product={product} key={product.id} />)}
           </div>
         </div>

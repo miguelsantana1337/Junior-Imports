@@ -11,18 +11,31 @@ Atualização de 02/09/2026. Desenvolvimento em `codex/electronics-home`; public
 - `/eletronicos` redireciona para `/`, preservando busca e código de indicação.
 - O painel continua único. Não são duplicados ou removidos produtos, clientes, pedidos, estoque, caixa ou cashback.
 - O WhatsApp continua vindo das configurações existentes da loja.
-- A prévia do editor abre o catálogo farmacêutico. No programa de indicações, o administrador escolhe qual vitrine o link deve abrir, sem alterar código ou recompensa.
+- O Editor da loja tem duas opções: Eletrônicos e Farmacêuticos. Cada uma abre a prévia do catálogo correspondente. No programa de indicações, o administrador também escolhe qual vitrine o link deve abrir, sem alterar código ou recompensa.
 - Botões editoriais antigos apontando para os domínios principais conhecidos passam a usar o mesmo catálogo em que são exibidos. Links externos, como WhatsApp, permanecem iguais; os registros originais no banco não são alterados.
 
 ## Classificação dos produtos
 
 A categoria `eletronicos` (ou o nome legado `Eletrônicos`) identifica o catálogo principal. Os demais produtos permanecem no catálogo original. Novos eletrônicos precisam ser cadastrados nessa categoria.
 
-Esta mudança não importa a lista de produtos Apple enviada separadamente, não define preços de faixas e não altera estoques. Na conferência pública de produção em 02/09/2026, havia 83 produtos no catálogo original e nenhum eletrônico publicado. O eletrônico observado durante a preparação anterior não estava mais na visão pública. Não foi inferido que ele tenha sido excluído: apenas que não está disponível publicamente. Novos cadastros dependem da confirmação dos preços finais e disponibilidades, solicitada ao responsável.
+Esta mudança não define preços de faixas nem altera estoques. A conferência autenticada do painel em 02/09/2026 encontrou a categoria Eletrônicos sem produtos cadastrados (incluindo ocultos). Os 26 itens Apple foram preparados em `docs/catalogo-apple-preparado.json`, com nomes, descrições, valores de referência fornecidos pelo usuário e imagens de fontes oficiais. As 19 URLs de imagem distintas estavam acessíveis na verificação. **Esse arquivo não é uma importação realizada**: preço final, estoque e custo permanecem nulos, sem valores inventados. Publicar os cadastros depende da confirmação dos preços e da disponibilidade. Algumas variantes, especialmente a geração do AirTag e a conexão do estojo dos AirPods Pro 2, também precisam de confirmação antes de usar a imagem correspondente.
 
 ## Conteúdo e carrinho
 
-O conteúdo do editor visual existente (banners, páginas e blocos) continua no catálogo original. A nova home de eletrônicos tem apresentação própria e guia de compra; ela não publica automaticamente esses blocos institucionais.
+O conteúdo do editor visual original (banners, páginas e blocos) continua no catálogo farmacêutico. A home de eletrônicos tem conteúdo próprio, editável no mesmo painel. Não publica automaticamente os blocos institucionais do outro catálogo.
+
+### Como o Junior edita os eletrônicos
+
+1. Acessar o painel pelo login habitual, mantendo a verificação em duas etapas.
+2. Abrir **Produtos → Eletrônicos**. É possível buscar, editar fotos, descrição, preço, estoque, visibilidade e destaque com as mesmas ferramentas existentes.
+3. Usar **Adicionar produto** nessa visão: a categoria Eletrônicos e o tipo não medicamentoso já vêm selecionados. Confirmar todos os dados reais antes de publicar.
+4. Abrir **Editor da loja → Eletrônicos** para alterar o banner principal, a barra de anúncio, os textos do catálogo, as colunas no computador, o guia de compra e a descrição do rodapé.
+5. Salvar cada seção alterada. As mensagens de erro preservam o texto para permitir nova tentativa; nada muda na outra home.
+6. Usar **Ver eletrônicos** para conferir o resultado. Sem imagem de banner personalizada, o primeiro eletrônico em destaque é usado; se não houver destaque, aparece o primeiro produto da ordem do catálogo.
+
+Os destaques e a visibilidade de categorias alterados no editor farmacêutico ficam limitados a esse catálogo, preservando as escolhas dos eletrônicos. Pedidos, clientes, financeiro e configurações de WhatsApp continuam compartilhados. A imagem personalizada do banner é opcional; a indicação é 1200 × 1200 px.
+
+O conteúdo eletrônico reutiliza as tabelas existentes `store_pages` e `page_blocks`, com identificadores próprios por tenant. A página reservada não aparece no menu público nem no editor de páginas farmacêuticas. Não há migração de banco nem novos acessos administrativos nesta atualização.
 
 Dados de produtos são filtrados no servidor antes de serem enviados ao navegador, além da filtragem do lado do cliente. Favoritos, carrinho e sessão de acompanhamento têm namespaces diferentes. Carrinhos antigos do endereço principal não são migrados automaticamente para o subdomínio; pedidos já registrados no banco permanecem intactos.
 
@@ -70,3 +83,9 @@ O bloqueio anterior por DNS foi resolvido. A versão anterior à separação é 
 - Produção: as duas homes respondem em HTTPS e a API de acompanhamento aceita a origem correta de cada loja. O domínio sem `www` redireciona para `www`; uma chamada artificial que preserve o Origin antigo após seguir esse redirecionamento é recusada corretamente pela proteção de origem. Não foi necessário relaxar essa proteção.
 
 O fluxo final de registro de pedido não foi executado contra dados reais, nem foi simulado pagamento, envio ou movimentação financeira. Login/MFA continua protegido; não foi feita uma operação administrativa autenticada em produção durante esta validação. A estrutura foi publicada, mas a venda de eletrônicos depende da publicação de produtos com valores e disponibilidade confirmados.
+
+### Complemento: edição compartilhada
+
+Além dos testes anteriores, foram adicionados cenários para persistência isolada da home eletrônica, valores opcionais vazios, falha de gravação com preservação do formulário, destinos internos seguros, filtros salvos por catálogo e seleções em lote sem afetar a outra vitrine. A validação comercial do catálogo e uma compra eletrônica completa continuam pendentes dos preços e da disponibilidade reais.
+
+Validação local desta etapa: **376 testes em 99 arquivos**, TypeScript, ESLint e build de produção aprovados. A configuração de colunas é aplicada ao carrossel eletrônico no computador e mantém os ajustes responsivos existentes para telas menores.

@@ -1,11 +1,12 @@
 import { slugify } from "@/lib/format";
 import type { Category, StorefrontData, StorefrontProduct } from "@/types/store";
+import { electronicsDescription, electronicsHomePageId, resolveElectronicsHome } from "@/lib/electronics-home";
 
 export type StorefrontCatalogScope = "all" | "electronics" | "pharmaceutical";
 
 export const electronicsCategorySlug = "eletronicos";
 export const pharmaceuticalScopeHeader = "x-storefront-scope";
-export const electronicsDescription = "Eletrônicos selecionados pela Junior Imports. Escolha seu produto e confirme os detalhes pelo WhatsApp.";
+export { electronicsDescription };
 
 export function storefrontCatalogScopeFromHeader(value: string | null | undefined): StorefrontCatalogScope {
   if (value === "electronics" || value === "pharmaceutical") return value;
@@ -45,8 +46,8 @@ export function isElectronicsProduct(product: StorefrontProduct, categories: Cat
     || slugify(product.category) === electronicsCategorySlug;
 }
 
-export function resolveStorefrontCatalogScope(
-  products: StorefrontProduct[],
+export function resolveStorefrontCatalogScope<T extends StorefrontProduct>(
+  products: T[],
   categories: Category[],
   scope: StorefrontCatalogScope,
 ) {
@@ -73,6 +74,8 @@ export function scopeStorefrontData(data: StorefrontData, scope: StorefrontCatal
   if (scope === "all") return data;
   const catalog = resolveStorefrontCatalogScope(data.products, data.categories, scope);
   const productIds = new Set(catalog.products.map((product) => product.id));
+  const homePageId = electronicsHomePageId(data.tenant.id);
+  const electronicsContent = resolveElectronicsHome(data.tenant.id, data.pageBlocks);
   const scoped = {
     ...data,
     ...catalog,
@@ -90,9 +93,10 @@ export function scopeStorefrontData(data: StorefrontData, scope: StorefrontCatal
   };
   if (scope === "pharmaceutical") return {
     ...scoped,
+    pages: scoped.pages.filter((page) => page.id !== homePageId),
     banners: scoped.banners.map((banner) => ({ ...banner, buttonLink: originalCatalogLink(banner.buttonLink) })),
     sections: scoped.sections.map((section) => ({ ...section, ...(section.buttonLink ? { buttonLink: originalCatalogLink(section.buttonLink) } : {}) })),
-    pageBlocks: scoped.pageBlocks.map((block) => ({ ...block, buttonLink: originalCatalogLink(block.buttonLink) })),
+    pageBlocks: scoped.pageBlocks.filter((block) => block.pageId !== homePageId).map((block) => ({ ...block, buttonLink: originalCatalogLink(block.buttonLink) })),
     settings: {
       ...scoped.settings,
       freeShippingBannerButtonLink: originalCatalogLink(scoped.settings.freeShippingBannerButtonLink),
@@ -103,15 +107,17 @@ export function scopeStorefrontData(data: StorefrontData, scope: StorefrontCatal
   // original catalog. Do not publish that content on the electronics home.
   return {
     ...scoped,
-    banners: [], sections: [], pages: [], pageBlocks: [],
+    banners: [], sections: [],
+    pages: [],
+    pageBlocks: data.pageBlocks.filter((block) => block.pageId === homePageId),
     trustItems: [], benefits: [], faqs: [],
     cashbackCampaigns: scoped.cashbackCampaigns.map((campaign) => ({
       ...campaign, name: "Cashback da loja", description: "",
     })),
     settings: {
       ...data.settings,
-      announcement: "Eletrônicos selecionados pela Junior Imports.",
-      footerDescription: electronicsDescription,
+      announcement: electronicsContent.announcement.title,
+      footerDescription: electronicsContent.footer.body,
       freeShippingBannerButtonLink: "#catalogo",
       promotionName: "Condições da loja",
       promotionHighlights: [],

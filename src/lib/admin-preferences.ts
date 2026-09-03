@@ -8,6 +8,7 @@ export interface SavedProductView {
   name: string;
   query: string;
   category: string;
+  catalog?: "all" | "electronics" | "pharmaceutical";
   visibility: string;
   createdAt: string;
 }
@@ -70,6 +71,7 @@ function normalizeSavedProductView(value: unknown): SavedProductView | null {
     name: candidate.name.trim().slice(0, 48),
     query: typeof candidate.query === "string" ? candidate.query.slice(0, 120) : "",
     category: typeof candidate.category === "string" ? candidate.category : "all",
+    catalog: candidate.catalog === "electronics" || candidate.catalog === "pharmaceutical" ? candidate.catalog : "all",
     visibility: ["all", "active", "hidden"].includes(candidate.visibility ?? "") ? candidate.visibility! : "all",
     createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : new Date(0).toISOString(),
   };

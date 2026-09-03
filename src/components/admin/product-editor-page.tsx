@@ -18,7 +18,7 @@ import {
   IconUpload,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfirm } from "@/components/providers/confirm-provider";
 import { useToast } from "@/components/providers/toast-provider";
@@ -35,6 +35,8 @@ import { productSchema } from "@/lib/validation";
 import type { Product } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
 import { useEntityEditLock } from "./use-entity-edit-lock";
+import { isElectronicsProduct } from "@/lib/storefront-catalog-scope";
+import { hasSeparateCatalogs } from "@/lib/admin-catalog-link";
 
 const steps = [
   { title: "Informações", description: "Nome, categoria e descrição", icon: IconPackage },
@@ -63,10 +65,17 @@ function withGallery(product: Product): Product {
 export function ProductEditorPage({ productId }: { productId?: string }) {
   const { data, saveProduct, uploadMedia } = useAdminData();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const separateCatalogs = hasSeparateCatalogs(data.tenant);
+  const requestedCatalog = separateCatalogs ? searchParams.get("catalog") : null;
   const confirm = useConfirm();
   const toast = useToast();
   const existingProduct = productId ? data.products.find((product) => product.id === productId) : undefined;
-  const defaultCategory = data.categories[0];
+  const defaultCategory = requestedCatalog === "electronics"
+    ? data.categories.find((category) => category.slug === "eletronicos" || category.name === "Eletrônicos")
+    : requestedCatalog === "pharmaceutical"
+      ? data.categories.find((category) => category.slug !== "eletronicos" && category.name !== "Eletrônicos") ?? data.categories[0]
+      : data.categories[0];
   const startingProduct = useMemo<Product>(() => withGallery(existingProduct ?? {
     id: "new-product",
     slug: "",
@@ -85,21 +94,21 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
     accent: data.settings.primaryColor,
     description: "",
     sku: `${data.settings.orderPrefix}-${String(data.products.length + 1).padStart(3, "0")}`,
-    rating: 5,
+    rating: 0,
     reviews: 0,
     featured: false,
     active: true,
     order: data.products.length + 1,
     imageUrl: "",
     imageUrls: [],
-    productType: "unclassified",
-    regulatoryStatus: "pending",
+    productType: requestedCatalog === "electronics" ? "non_medicine" : "unclassified",
+    regulatoryStatus: requestedCatalog === "electronics" ? "approved" : "pending",
     activeIngredient: "",
     anvisaRegistration: "",
     presentation: "",
     regulatoryWarning: "",
     pharmacistReviewed: false,
-  }), [data.products.length, data.settings.orderPrefix, data.settings.primaryColor, defaultCategory?.id, defaultCategory?.name, existingProduct]);
+  }), [data.products.length, data.settings.orderPrefix, data.settings.primaryColor, defaultCategory?.id, defaultCategory?.name, existingProduct, requestedCatalog]);
   const [form, setForm] = useState<Product>(startingProduct);
   const initialForm = useRef(JSON.stringify(startingProduct));
   const restoredDraft = useRef(false);
@@ -112,7 +121,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
   const [urlInput, setUrlInput] = useState("");
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
-  const draftKey = `junior-imports:product-draft:${productId ?? "new"}`;
+  const draftKey = `junior-imports:product-draft:${productId ?? (requestedCatalog === "electronics" ? "new-electronics" : "new")}`;
   const images = normalizeProductImages(form);
   const cover = form.imageUrl || images[0] || "";
   const cashbackLabel = form.cashbackType === "percent"
@@ -335,6 +344,7 @@ export function ProductEditorPage({ productId }: { productId?: string }) {
       </header>
 
       <div className="product-editor-progress" aria-hidden="true"><span style={{ width: `${((step + 1) / steps.length) * 100}%` }} /></div>
+      {separateCatalogs && <p className="product-catalog-destination">Este produto aparecerá em <strong>{isElectronicsProduct(form, data.categories) ? "Eletrônicos — home principal" : "Catálogo farmacêutico — subdomínio"}</strong>, conforme a categoria selecionada.</p>}
 
       <div className="product-editor-layout">
         <nav className="product-editor-steps" aria-label="Etapas do cadastro">

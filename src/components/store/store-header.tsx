@@ -9,6 +9,7 @@ import { useStore } from "@/components/providers/store-provider";
 import { Logo } from "@/components/ui/logo";
 import { resolveStoreAnnouncement } from "@/lib/store-announcement";
 import { withStorefrontPath } from "@/lib/storefront-path";
+import { electronicsHomeHref, resolveElectronicsHome } from "@/lib/electronics-home";
 
 export function StoreHeader() {
   const { data, storefrontScope } = useStore();
@@ -21,11 +22,12 @@ export function StoreHeader() {
   const navigationPages = data.pages.filter((page) => page.active && page.showInNavigation && !page.isHome).sort((a, b) => a.order - b.order);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const isElectronicsStore = storefrontScope === "electronics";
+  const electronicsAnnouncement = resolveElectronicsHome(data.tenant.id, data.pageBlocks).announcement;
   const electronicsHref = isElectronicsStore ? storeHref("/") : storeHref("/eletronicos");
   const showElectronicsPortal = storefrontScope === "all"
     && data.categories.some((category) => category.active && category.slug === "eletronicos");
   const announcement = isElectronicsStore
-    ? "Tecnologia Apple e eletrônicos selecionados pela Junior Imports."
+    ? electronicsAnnouncement.title
     : resolveStoreAnnouncement(data.settings);
 
   function submitSearch(event: React.FormEvent) {
@@ -43,7 +45,7 @@ export function StoreHeader() {
       <div className="announcement">
         <div className="container announcement-inner">
           <span>{announcement}</span>
-          <Link href={storeHref("/#catalogo")}>{isElectronicsStore ? "Ver eletrônicos" : "Ver ofertas"} →</Link>
+          <Link href={storeHref(isElectronicsStore ? electronicsHomeHref(electronicsAnnouncement.buttonLink) : "/#catalogo")}>{isElectronicsStore ? electronicsAnnouncement.buttonText : "Ver ofertas"} →</Link>
         </div>
       </div>
       <header className="store-header">

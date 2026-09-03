@@ -21,6 +21,7 @@ describe("preferências do painel", () => {
     expect(preferences.tableDensity).toBe("comfortable");
     expect(preferences.productViews).toHaveLength(1);
     expect(preferences.productViews[0]?.name).toBe("Ativos");
+    expect(preferences.productViews[0]?.catalog).toBe("all");
     expect(preferences.globalPeriod).toBe("30d");
     expect(preferences.globalCustomDateFrom).toBe("");
     expect(preferences.globalCustomDateTo).toBe("");
@@ -42,6 +43,13 @@ describe("preferências do painel", () => {
     });
     expect(normalizeAdminPreferences({ globalPeriod: "invalid" }).globalPeriod).toBe("30d");
     expect(normalizeAdminPreferences({ globalCustomDateFrom: "03/08/2026" }).globalCustomDateFrom).toBe("");
+  });
+
+  it("mantém o catálogo escolhido em uma visualização salva", () => {
+    const view = { id: "apple", name: "Apple", query: "iphone", category: "all", catalog: "electronics" as const, visibility: "active", createdAt: "2026-09-02" };
+    writeAdminPreferences("miguel", { ...defaultAdminPreferences, productViews: [view] });
+    expect(readAdminPreferences("miguel").productViews[0].catalog).toBe("electronics");
+    expect(normalizeAdminPreferences({ productViews: [{ ...view, catalog: "invalid" }] }).productViews[0].catalog).toBe("all");
   });
 
   it("persiste preferências separadamente por usuário", () => {
