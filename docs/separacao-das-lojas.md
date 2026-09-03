@@ -1,8 +1,8 @@
 # Separação das lojas — eletrônicos e catálogo original
 
-Preparação em 02/09/2026. Branch: `codex/electronics-home`.
+Atualização de 02/09/2026. Desenvolvimento em `codex/electronics-home`; publicação pela branch `main`.
 
-## Resultado preparado
+## Estrutura da atualização
 
 - O endereço principal passa a abrir a home de eletrônicos.
 - O catálogo original fica em `farmaceuticos.juniorimportsoficial.com.br`.
@@ -30,33 +30,32 @@ Regras financeiras compartilhadas não são reconfiguradas por esta mudança. Ca
 
 São vitrines separadas, não bancos de dados separados nem um novo sistema de acesso por senha. `noindex, nofollow` permanece configurado, mas não garante sigilo nem impede que alguém com o endereço acesse o catálogo. A administração e as APIs mantêm suas proteções existentes. Controle de acesso ao catálogo exige um projeto adicional de autenticação/autorização.
 
-## DNS necessário antes de trocar a home em produção
+## Endereços de produção e DNS
 
-O subdomínio já foi adicionado ao projeto Vercel `junior-imports`. A verificação autenticada da Vercel informa que falta este registro no Registro.br:
+- Eletrônicos: `https://juniorimportsoficial.com.br` (também no alias `https://junior-imports.vercel.app`).
+- Catálogo original: `https://farmaceuticos.juniorimportsoficial.com.br`.
 
-| Tipo | Nome | Destino |
-| --- | --- | --- |
-| CNAME | `farmaceuticos` | `c56ac75ece9e02c0.vercel-dns-017.com.` |
+Na retomada para publicação, a verificação autenticada da Vercel confirmou o subdomínio como `configured-correctly`, vinculado ao projeto `junior-imports`. O acesso direto por HTTPS retornou 200.
 
-Não trocar os nameservers e não alterar registros de e-mail. Nameservers atuais: `a.auto.dns.br` e `b.auto.dns.br`.
+Os nameservers observados passaram a ser `ns1.vercel-dns.com` e `ns2.vercel-dns.com`. Essa alteração já estava aplicada ao retomar a tarefa; não foi necessário alterar DNS ou e-mail nesta publicação. A recomendação anterior de CNAME no Registro.br deixou de ser uma pendência.
 
 O hostname padrão está em `src/lib/pharmaceutical-storefront-host.ts`. Para outro endereço, configure `PHARMACEUTICAL_STOREFRONT_HOST` na Vercel e refaça o deploy.
 
 ### Ordem segura de publicação
 
-1. Criar o CNAME e aguardar resolução pública.
-2. Rodar `vercel domains verify farmaceuticos.juniorimportsoficial.com.br`; exigir configuração válida e HTTPS funcional.
+1. Confirmar resolução pública dos dois endereços.
+2. Rodar `vercel domains verify farmaceuticos.juniorimportsoficial.com.br`; exigir configuração válida e HTTPS funcional antes da troca.
 3. Publicar a branch validada em `main` e aguardar o deploy ficar Ready.
 4. Conferir `/`, produto eletrônico, carrinho e checkout no endereço principal.
 5. Conferir home original, produto original e checkout no subdomínio.
 6. Conferir ausência de links cruzados e os 404 de produtos fora do catálogo.
 7. Validar login/MFA no endereço administrativo já utilizado, sem migrar sessões administrativas para o novo host.
 
-Até a confirmação do DNS, manter `main` em `3464cf9` e não promover o preview. A produção atual não foi substituída nesta preparação.
+O bloqueio anterior por DNS foi resolvido. A versão anterior à separação é `3464cf9`; mantê-la como referência de recuperação, sem apagar os commits da atualização.
 
 ## Validação realizada
 
-- Suite automatizada: escopos, campanhas, armazenamento, roteamento por host, proteção contra cabeçalho de escopo forjado, rotas administrativas e integração MCP.
+- Suite automatizada: 357 testes em 94 arquivos, incluindo escopos, campanhas, armazenamento, roteamento por host, proteção contra cabeçalho de escopo forjado, rotas administrativas e integração MCP.
 - TypeScript, ESLint e build de produção.
 - Servidor de produção local: `localhost:3020` para eletrônicos e `127.0.0.1:3020` para catálogo original, usando `PHARMACEUTICAL_STOREFRONT_HOST=127.0.0.1`.
 - HTML da home eletrônica sem produtos/categorias farmacêuticos e HTML da outra home sem iPhone.
@@ -64,5 +63,6 @@ Até a confirmação do DNS, manter `main` em `3464cf9` e não promover o previe
 - Busca por produto farmacêutico na home eletrônica: nenhum resultado.
 - Inclusão de eletrônico no carrinho e navegação ao checkout, sem finalizar pedido nem movimentar estoque.
 - Carrinho vazio no outro host; nenhum link para a loja eletrônica na navegação observada do catálogo original.
+- Desktop a 1280 px e celular a 390 px, sem overflow horizontal nas duas homes; menu móvel e guia de compra funcionais.
 
-O fluxo final de registro de pedido não foi executado contra dados reais. Validação externa do subdomínio depende do DNS; preview/build não são prova de funcionamento em produção.
+O fluxo final de registro de pedido não foi executado contra dados reais. Após a publicação, confirmar novamente os dois domínios reais; preview/build isoladamente não são prova de funcionamento em produção.
