@@ -93,8 +93,31 @@ describe("escopos públicos dos catálogos", () => {
     expect(calculateCart(lines, scoped.products, scoped.settings, null, "Pix", scoped.cashbackCampaigns))
       .toEqual(calculateCart(lines, data.products, data.settings, null, "Pix", data.cashbackCampaigns));
     const pharma = scopeStorefrontData(data, "pharmaceutical");
-    expect(pharma.banners).toBe(data.banners);
-    expect(pharma.settings).toBe(data.settings);
+    expect(pharma.banners).toEqual(data.banners);
+    expect(pharma.settings).toEqual(data.settings);
+  });
+
+  it("mantém os links editoriais antigos no próprio catálogo, preservando buscas e âncoras", () => {
+    const data = {
+      ...seedData, products, categories,
+      banners: [{ ...seedData.banners[0], buttonLink: "https://junior-imports.vercel.app/#catalogo" }],
+      sections: [{ ...seedData.sections[0], buttonLink: "https://www.juniorimportsoficial.com.br/?busca=produto#catalogo" }],
+      pageBlocks: [{ ...seedData.pageBlocks[0], buttonLink: "https://juniorimportsoficial.com.br/loja/junior-imports/paginas/como-comprar" }],
+      settings: { ...seedData.settings, freeShippingBannerButtonLink: "https://junior-imports.vercel.app/loja/junior-imports#catalogo" },
+    };
+    const result = scopeStorefrontData(data, "pharmaceutical");
+    expect(result.banners[0].buttonLink).toBe("/#catalogo");
+    expect(result.sections[0].buttonLink).toBe("/?busca=produto#catalogo");
+    expect(result.pageBlocks[0].buttonLink).toBe("/paginas/como-comprar");
+    expect(result.settings.freeShippingBannerButtonLink).toBe("/#catalogo");
+    expect(data.banners[0].buttonLink).toBe("https://junior-imports.vercel.app/#catalogo");
+  });
+
+  it("não reescreve WhatsApp, outros sites ou links relativos", () => {
+    for (const href of ["https://wa.link/exemplo", "https://junior-imports.vercel.app.exemplo.com/#catalogo", "https://outro.com", "https://junior-imports.vercel.app:444/", "/#catalogo", "#catalogo", ""]) {
+      const data = { ...seedData, banners: [{ ...seedData.banners[0], buttonLink: href }] };
+      expect(scopeStorefrontData(data, "pharmaceutical").banners[0].buttonLink).toBe(href);
+    }
   });
 
   it("não converte campanha específica do outro catálogo em campanha global", () => {

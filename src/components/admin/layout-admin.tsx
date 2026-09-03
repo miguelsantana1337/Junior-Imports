@@ -42,6 +42,7 @@ import { legacyFaqDraft } from "@/lib/storefront-commerce";
 import { pageBlockSchema, storePageSchema } from "@/lib/validation";
 import type { Benefit, Faq, HomeSection, PageBlock, PageBlockKind, StorePage, StoreSettings, TrustItem } from "@/types/store";
 import { useAdminData } from "./admin-data-provider";
+import { adminCatalogHref, hasSeparateCatalogs } from "@/lib/admin-catalog-link";
 import { AdminPanel, StatusTag } from "./admin-ui";
 import { useConfirm } from "@/components/providers/confirm-provider";
 
@@ -134,7 +135,7 @@ export function LayoutAdmin() {
   return (
     <>
       <div className="layout-builder-intro">
-        <div className="layout-builder-intro-copy"><Sparkles /><div><strong>Tudo da loja em um único editor</strong><span>Edite a página inicial, páginas institucionais, ordem das seções, textos e itens exibidos.</span></div></div>
+        <div className="layout-builder-intro-copy"><Sparkles /><div><strong>{hasSeparateCatalogs(data.tenant) ? "Editor do catálogo farmacêutico" : "Tudo da loja em um único editor"}</strong><span>{hasSeparateCatalogs(data.tenant) ? "Edite a home, banners e páginas do catálogo farmacêutico. A loja principal de eletrônicos tem apresentação própria." : "Edite a página inicial, páginas institucionais, ordem das seções, textos e itens exibidos."}</span></div></div>
         <div className="layout-builder-steps" aria-label="Etapas do editor">
           <span><b>1</b> Página</span>
           <ChevronRight aria-hidden="true" />
@@ -144,7 +145,7 @@ export function LayoutAdmin() {
         </div>
         <div className="layout-builder-actions">
           <Link className="admin-button" href="/admin/banners"><Images /> Biblioteca de banners</Link>
-          <Link className="admin-button" href={selectedPage.isHome ? "/" : `/paginas/${selectedPage.slug}`} target="_blank">Ver resultado na loja <ChevronRight /></Link>
+          <Link className="admin-button" href={adminCatalogHref(data.tenant, "pharmaceutical", selectedPage.isHome ? "/" : `/paginas/${selectedPage.slug}`)} target="_blank">{hasSeparateCatalogs(data.tenant) ? "Ver no catálogo farmacêutico" : "Ver resultado na loja"} <ChevronRight /></Link>
         </div>
       </div>
       <AnnouncementEditor />

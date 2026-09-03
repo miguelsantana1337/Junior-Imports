@@ -10,7 +10,8 @@ import { useConfirm } from "@/components/providers/confirm-provider";
 import { parseMobileOperationDraft } from "@/lib/admin31";
 import { formatDateTime, formatMoney, whatsappUrl } from "@/lib/format";
 import { AdminEmpty, AdminPanel, StatusTag } from "@/components/admin/admin-ui";
-import { buildReferralSharePath, buildReferralShareUrl } from "@/lib/referral-link";
+import { adminReferralHref, hasSeparateCatalogs, type AdminCatalogDestination } from "@/lib/admin-catalog-link";
+import { useAdminData } from "./admin-data-provider";
 
 type Row = Record<string, unknown>;
 type ModuleKey = "divergences" | "guardian" | "continuity" | "referrals" | "bundles" | "funnel" | "flags" | "mobile";
@@ -197,6 +198,8 @@ function Continuity({ payload, busy, run }: ModuleProps) {
 
 function Referrals({ payload, busy, run }: ModuleProps) {
   const confirm = useConfirm();
+  const { data } = useAdminData();
+  const [catalogDestination, setCatalogDestination] = useState<AdminCatalogDestination>("pharmaceutical");
   const customers = rows(payload, "customers");
   const campaigns = rows(payload, "campaigns");
   const codes = rows(payload, "codes");
@@ -239,9 +242,9 @@ function Referrals({ payload, busy, run }: ModuleProps) {
     await apiPost("referral_bonus_apply", { customerId, amount: bonusAmount, validDays: 90, confirmationId: confirmation.id, reason: bonusReason });
   }
   async function copyReferralLink(code: string) {
-    const link = buildReferralShareUrl(window.location.origin, text(payload?.storefrontPath), code);
-    if (!link) throw new Error("Não foi possível montar o link de indicação.");
-    await navigator.clipboard.writeText(link);
+    const href = adminReferralHref(data.tenant, catalogDestination, code);
+    if (!href) throw new Error("Não foi possível montar o link de indicação.");
+    await navigator.clipboard.writeText(new URL(href, window.location.origin).toString());
     setCopiedCode(code);
   }
   return <div className="admin31-two-columns"><AdminPanel title="Campanha de indicação" description="O indicador recebe cashback somente após a primeira compra do indicado ser quitada.">
@@ -249,10 +252,11 @@ function Referrals({ payload, busy, run }: ModuleProps) {
     <div className="admin31-actions"><button className="admin-button primary" disabled={busy === "campaign"} onClick={() => void run("campaign", saveCampaign, "Campanha de indicação ativada.")}><Megaphone /> Ativar campanha</button></div>
     {campaigns.length > 0 && <p className="admin31-note">Campanha atual: <strong>{text(campaigns[0].name)}</strong> · {text(campaigns[0].status)}</p>}
   </AdminPanel><AdminPanel title="Código e link do cliente" description="Crie o código e copie um link que o aplica automaticamente no checkout. O compartilhamento continua sendo uma ação humana.">
+    {hasSeparateCatalogs(data.tenant) && <div className="admin31-form-grid"><label className="wide">Qual loja o link deve abrir?<select value={catalogDestination} onChange={(event) => { setCatalogDestination(event.target.value as AdminCatalogDestination); setCopiedCode(""); }}><option value="pharmaceutical">Catálogo farmacêutico</option><option value="electronics">Eletrônicos — loja principal</option></select><small>Altera somente o destino do link. O código e as regras da campanha continuam iguais.</small></label></div>}
     <div className="admin31-form-grid"><label className="wide">Cliente<select value={customerId} onChange={(event) => setCustomerId(event.target.value)}><option value="">Selecione...</option>{customers.map((customer) => <option value={text(customer.id)} key={text(customer.id)}>{text(customer.name)} · {text(customer.phone)}</option>)}</select></label><label className="wide">Código personalizado (opcional)<input value={customCode} onChange={(event) => setCustomCode(event.target.value.toUpperCase().replace(/[^A-Z0-9_-]/g, ""))} placeholder="Ex.: JUNIOR10" /></label></div>
     <div className="admin31-actions"><button className="admin-button primary" disabled={!customerId || busy === "code"} onClick={() => void run("code", () => apiPost("referral_code_save", { customerId, code: customCode || undefined }), "Código criado e pronto para compartilhar.")}><Gift /> Gerar código</button></div>
     <div className="admin31-form-grid admin31-subform"><label>Prêmio manual (R$)<input type="number" min={0.01} max={100000} value={bonusAmount} onChange={(event) => setBonusAmount(Number(event.target.value))} /></label><label className="wide">Motivo auditável<input value={bonusReason} onChange={(event) => setBonusReason(event.target.value)} maxLength={300} /></label></div><div className="admin31-actions"><button className="admin-button" disabled={!customerId || bonusAmount <= 0 || bonusReason.trim().length < 5 || busy === "bonus"} onClick={() => void run("bonus", grantBonus, "Bônus manual liberado e registrado no extrato.")}><CircleDollarSign /> Liberar prêmio manual</button></div>
-    <div className="admin31-mini-list">{codes.slice(0, 8).map((code) => { const value = text(code.code); return <div className="admin31-referral-code" key={text(code.id)}><span><strong>{value}</strong><small>{text(customers.find((customer) => text(customer.id) === text(code.customer_id))?.name) || "Cliente"}</small></span><span className="admin31-referral-link-actions"><button className="admin-button" type="button" onClick={() => void run(`copy-${value}`, () => copyReferralLink(value), "Link copiado e pronto para compartilhar.")} disabled={busy === `copy-${value}`}><Copy /> {copiedCode === value ? "Copiado" : "Copiar link"}</button><a className="admin-button" href={buildReferralSharePath(text(payload?.storefrontPath), value)} target="_blank" rel="noreferrer"><ExternalLink /> Testar</a></span></div>; })}</div>
+    <div className="admin31-mini-list">{codes.slice(0, 8).map((code) => { const value = text(code.code); return <div className="admin31-referral-code" key={text(code.id)}><span><strong>{value}</strong><small>{text(customers.find((customer) => text(customer.id) === text(code.customer_id))?.name) || "Cliente"}</small></span><span className="admin31-referral-link-actions"><button className="admin-button" type="button" onClick={() => void run(`copy-${value}`, () => copyReferralLink(value), "Link copiado e pronto para compartilhar.")} disabled={busy === `copy-${value}`}><Copy /> {copiedCode === value ? "Copiado" : "Copiar link"}</button><a className="admin-button" href={adminReferralHref(data.tenant, catalogDestination, value)} target="_blank" rel="noreferrer"><ExternalLink /> Testar</a></span></div>; })}</div>
   </AdminPanel><AdminPanel title="Resultado do programa" description="Rastreamento, bloqueios e créditos confirmados." ><div className="admin31-stat-grid compact"><article><UsersRound /><span><small>Indicações</small><strong>{links.length}</strong></span></article><article><Gift /><span><small>Créditos liberados</small><strong>{rewards.filter((item) => text(item.status) === "available").length}</strong></span></article><article><CircleDollarSign /><span><small>Valor premiado</small><strong>{formatMoney(rewards.filter((item) => text(item.status) === "available").reduce((sum, item) => sum + number(item.reward_amount), 0))}</strong></span></article></div></AdminPanel></div>;
 }
 

@@ -16,6 +16,27 @@ function isElectronicsCategory(category: Category) {
   return (category.slug || slugify(category.name)) === electronicsCategorySlug;
 }
 
+// Editorial links created before the catalog moved must stay on its current
+// host. Match only the known former origins, never third-party destinations.
+function originalCatalogLink(href: string) {
+  try {
+    const url = new URL(href);
+    const formerOrigins = [
+      "https://junior-imports.vercel.app",
+      "https://juniorimportsoficial.com.br",
+      "https://www.juniorimportsoficial.com.br",
+    ];
+    if (!formerOrigins.includes(url.origin)) return href;
+    const prefix = "/loja/junior-imports";
+    const pathname = url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)
+      ? url.pathname.slice(prefix.length) || "/"
+      : url.pathname;
+    return `${pathname}${url.search}${url.hash}`;
+  } catch {
+    return href;
+  }
+}
+
 export function isElectronicsProduct(product: StorefrontProduct, categories: Category[]) {
   const electronicsCategoryIds = new Set(
     categories.filter(isElectronicsCategory).map((category) => category.id),
@@ -67,7 +88,16 @@ export function scopeStorefrontData(data: StorefrontData, scope: StorefrontCatal
         productIds: campaign.productIds.filter((id) => productIds.has(id)),
       })),
   };
-  if (scope !== "electronics") return scoped;
+  if (scope === "pharmaceutical") return {
+    ...scoped,
+    banners: scoped.banners.map((banner) => ({ ...banner, buttonLink: originalCatalogLink(banner.buttonLink) })),
+    sections: scoped.sections.map((section) => ({ ...section, ...(section.buttonLink ? { buttonLink: originalCatalogLink(section.buttonLink) } : {}) })),
+    pageBlocks: scoped.pageBlocks.map((block) => ({ ...block, buttonLink: originalCatalogLink(block.buttonLink) })),
+    settings: {
+      ...scoped.settings,
+      freeShippingBannerButtonLink: originalCatalogLink(scoped.settings.freeShippingBannerButtonLink),
+    },
+  };
 
   // The existing visual editor and its institutional content belong to the
   // original catalog. Do not publish that content on the electronics home.
