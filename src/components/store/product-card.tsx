@@ -13,10 +13,11 @@ import { isPixDiscountEligible } from "@/lib/store-promotion";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { StorefrontProduct } from "@/types/store";
+import { ElectronicsBlueprintCorners } from "./electronics-blueprint-corners";
 
 export function ProductCard({ product }: { product: StorefrontProduct }) {
   const { favorites, toggleFavorite, addItem, setDrawerOpen, ready: cartReady } = useCart();
-  const { data } = useStore();
+  const { data, storefrontScope } = useStore();
   const toast = useToast();
   const stock = stockLabel(product);
   const discount = discountPercent(product);
@@ -28,6 +29,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
 
   return (
     <article className="product-card" data-testid={`product-${product.slug}`}>
+      {storefrontScope === "electronics" && <ElectronicsBlueprintCorners />}
       <div className="product-card-visual">
         {(product.badge || discount > 0) && <span className="product-badge">{product.badge || `-${discount}%`}</span>}
         <button

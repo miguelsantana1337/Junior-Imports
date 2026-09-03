@@ -1,6 +1,6 @@
 "use client";
 
-import { Menu, Search, ShoppingCart, X } from "lucide-react";
+import { Home, Menu, MessageCircle, Search, ShoppingCart, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,7 @@ import { Logo } from "@/components/ui/logo";
 import { resolveStoreAnnouncement } from "@/lib/store-announcement";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { electronicsHomeHref, resolveElectronicsHome } from "@/lib/electronics-home";
+import { whatsappUrl } from "@/lib/format";
 
 export function StoreHeader() {
   const { data, storefrontScope } = useStore();
@@ -32,6 +33,7 @@ export function StoreHeader() {
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
+    if (isElectronicsStore) setSearchOpen(false);
     if (pathname === (data.tenant.storefrontPath || "/") || (storefrontScope === "all" && pathname === electronicsHref)) {
       window.dispatchEvent(new CustomEvent("junior-search", { detail: query }));
       document.querySelector("#catalogo")?.scrollIntoView({ behavior: "smooth" });
@@ -42,13 +44,13 @@ export function StoreHeader() {
 
   return (
     <>
-      <div className="announcement">
+      <div className={`announcement ${isElectronicsStore ? "electronics-announcement" : ""}`}>
         <div className="container announcement-inner">
           <span>{announcement}</span>
           <Link href={storeHref(isElectronicsStore ? electronicsHomeHref(electronicsAnnouncement.buttonLink) : "/#catalogo")}>{isElectronicsStore ? electronicsAnnouncement.buttonText : "Ver ofertas"} →</Link>
         </div>
       </div>
-      <header className="store-header">
+      <header className={`store-header ${isElectronicsStore ? "electronics-header" : ""}`}>
         <div className="container header-inner">
           <Logo />
           <nav className="desktop-nav" aria-label="Navegacao principal">
@@ -129,6 +131,12 @@ export function StoreHeader() {
           </nav>
         )}
       </header>
+      {isElectronicsStore && <nav className="electronics-mobile-nav" aria-label="Atalhos da loja">
+        <Link href={storeHref("/")} aria-current={pathname === storeHref("/") ? "page" : undefined}><Home /><span>Início</span></Link>
+        <button type="button" aria-expanded={searchOpen} onClick={() => { setSearchOpen(true); setMenuOpen(false); window.scrollTo({ top: 0, behavior: "smooth" }); }}><Search /><span>Buscar</span></button>
+        <button type="button" onClick={() => setDrawerOpen(true)}><ShoppingCart /><span>Carrinho</span><b>{itemCount}</b></button>
+        <a href={whatsappUrl(data.settings.whatsapp, `Olá! Vim pela loja de eletrônicos da ${data.settings.storeName} e gostaria de atendimento.`)} target="_blank" rel="noreferrer"><MessageCircle /><span>Atendimento</span></a>
+      </nav>}
     </>
   );
 }

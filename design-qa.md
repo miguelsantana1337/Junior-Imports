@@ -1,5 +1,9 @@
 # Design QA — Junior Imports Admin
 
+## Atualização de eletrônicos mobile — 03/09/2026
+
+O relatório desta atualização está em [docs/design-qa/electronics-mobile-2026-09-03/design-qa.md](docs/design-qa/electronics-mobile-2026-09-03/design-qa.md). Ele documenta a referência recebida, capturas mobile/desktop, carrossel, testes e limites de validação. A nova aparência está disponível em prévia local; não foi publicada nesta entrega.
+
 ## Visual truth and test state
 
 - Source visual: `C:\Users\migue\.codex\generated_images\019f5a20-abba-7121-800a-10226f4dd117\exec-7d60cf76-0886-433d-92f9-551a28bdeae3.png`

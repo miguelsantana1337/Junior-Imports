@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useAdminData } from "./admin-data-provider";
 import { AdminPanel } from "./admin-ui";
 import { adminCatalogHref } from "@/lib/admin-catalog-link";
-import { electronicsHomeBlock, electronicsHomeKeys, electronicsHomePage, resolveElectronicsHome, type ElectronicsHomeKey } from "@/lib/electronics-home";
+import { electronicsBannerKeys, electronicsHomeBlock, electronicsHomeKeys, electronicsHomePage, resolveElectronicsHome, type ElectronicsHomeKey } from "@/lib/electronics-home";
 import { pageBlockSchema } from "@/lib/validation";
 import type { PageBlock } from "@/types/store";
 
@@ -32,15 +32,17 @@ function ElectronicsSectionEditor({ sectionKey, block }: { sectionKey: Electroni
       setForm(block); setSavedSnapshot(JSON.stringify(block));
     }
   }, [block, busy, form, savedSnapshot]);
-  const hasEyebrow = ["hero", "catalog", "guide"].includes(sectionKey);
-  const hasButton = sectionKey === "hero" || sectionKey === "announcement";
+  const isRotatingBanner = electronicsBannerKeys.includes(sectionKey as (typeof electronicsBannerKeys)[number]);
+  const isOptionalBanner = sectionKey === "banner-2" || sectionKey === "banner-3";
+  const hasEyebrow = isRotatingBanner || ["catalog", "guide"].includes(sectionKey);
+  const hasButton = isRotatingBanner || sectionKey === "announcement";
   const hasBody = sectionKey !== "announcement";
   function field<K extends keyof PageBlock>(key: K, value: PageBlock[K]) { setForm((current) => ({ ...current, [key]: value })); setError(""); }
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
     const fixed = electronicsHomeBlock(data.tenant.id, sectionKey);
-    const candidate = { ...form, id: fixed.id, pageId: fixed.pageId, kind: fixed.kind, active: true };
+    const candidate = { ...form, id: fixed.id, pageId: fixed.pageId, kind: fixed.kind, active: isOptionalBanner ? form.active : true };
     const result = pageBlockSchema.safeParse(candidate);
     if (!result.success) { setError(result.error.issues[0].message); return; }
     if (hasButton && !/^\/(?!\/)[^\\\s]*$/.test(form.buttonLink) && !/^#[a-zA-Z0-9_-]+$/.test(form.buttonLink)) {
@@ -55,14 +57,15 @@ function ElectronicsSectionEditor({ sectionKey, block }: { sectionKey: Electroni
     finally { setBusy(false); }
   }
 
-  return <AdminPanel title={block.name} description={sectionKey === "hero" ? "Edite a chamada inicial. A imagem é opcional; sem ela, o banner usa a foto do produto em destaque." : "Salve esta seção para atualizar os eletrônicos."}>
+  return <AdminPanel title={block.name} description={sectionKey === "hero" ? "Primeiro banner da vitrine. Sem imagem, ele usa a foto do produto em destaque." : isOptionalBanner ? "Banner adicional do carrossel mobile. Ative somente quando o conteúdo estiver pronto." : "Salve esta seção para atualizar os eletrônicos."}>
     <form className="admin-form electronics-section-form" onSubmit={(event) => void save(event)}>
+      {isOptionalBanner && <label className="full check-field"><input type="checkbox" checked={form.active} onChange={(event) => field("active", event.target.checked)} /> Exibir no carrossel mobile</label>}
       {hasEyebrow && <label className="full">Chamada superior<input value={form.eyebrow} maxLength={80} onChange={(event) => field("eyebrow", event.target.value)} /></label>}
       {sectionKey !== "footer" && <label className="full">{sectionKey === "announcement" ? "Texto da barra" : "Título"}<textarea value={form.title} maxLength={160} rows={2} required onChange={(event) => field("title", event.target.value)} />{sectionKey === "hero" && <small>Use uma quebra de linha para destacar a segunda parte do título.</small>}</label>}
       {hasBody && <label className="full">{sectionKey === "footer" ? "Descrição do rodapé" : "Descrição"}<textarea value={form.body} maxLength={1200} rows={3} onChange={(event) => field("body", event.target.value)} /></label>}
       {hasButton && <><label>Texto do botão<input value={form.buttonText} required maxLength={60} onChange={(event) => field("buttonText", event.target.value)} /></label><label>Destino dentro da loja<input value={form.buttonLink} required maxLength={300} onChange={(event) => field("buttonLink", event.target.value)} /><small>Ex.: /#catalogo ou /#como-comprar</small></label></>}
       {sectionKey === "catalog" && <label>Colunas no computador<select value={form.columns} onChange={(event) => field("columns", Number(event.target.value))}>{[1, 2, 3, 4].map((count) => <option key={count} value={count}>{count}</option>)}</select><small>No celular, a grade se adapta automaticamente.</small></label>}
-      {sectionKey === "hero" && <div className="full electronics-editor-image"><label>Imagem do banner (opcional)<input type="url" value={form.imageUrl} placeholder="https://..." onChange={(event) => field("imageUrl", event.target.value)} /></label><label className="admin-button"><ImagePlus /> {busy ? "Aguarde…" : "Enviar imagem"}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); setError(""); try { field("imageUrl", await uploadMedia(file, "banner-media")); } catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível enviar a imagem."); } finally { setBusy(false); } }} /></label><small>Prefira imagem quadrada de 1200 × 1200 px. Deixe o campo vazio para usar o produto em destaque.</small></div>}
+      {isRotatingBanner && <div className="full electronics-editor-image"><label>Imagem do banner (opcional)<input type="url" value={form.imageUrl} placeholder="https://..." onChange={(event) => field("imageUrl", event.target.value)} /></label><label className="admin-button"><ImagePlus /> {busy ? "Aguarde…" : "Enviar imagem"}<input type="file" className="sr-only" accept="image/jpeg,image/png,image/webp,image/avif" disabled={busy} onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setBusy(true); setError(""); try { field("imageUrl", await uploadMedia(file, "banner-media")); } catch (caught) { setError(caught instanceof Error ? caught.message : "Não foi possível enviar a imagem."); } finally { setBusy(false); } }} /></label><small>Para o celular, prefira 1080 × 1350 px (4:5). No primeiro banner, deixe vazio para usar a foto do produto em destaque.</small></div>}
       {error && <p className="full" role="alert">{error}</p>}
       <div className="admin-form-actions full"><button className="admin-button primary" type="submit" disabled={busy || JSON.stringify(form) === savedSnapshot}><Save /> {busy ? "Salvando…" : "Salvar seção"}</button></div>
     </form>

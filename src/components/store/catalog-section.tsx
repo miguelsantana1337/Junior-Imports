@@ -3,7 +3,7 @@
 import { Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useStore } from "@/components/providers/store-provider";
-import { buildCatalogProductGroups, type CatalogSort } from "@/lib/catalog-view";
+import { buildCatalogProductGroups, type CatalogProductGroup, type CatalogSort } from "@/lib/catalog-view";
 import type { Category, HomeSection, PageBlock, StorefrontProduct } from "@/types/store";
 import { ProductCarousel } from "./product-carousel";
 import { SectionHeading } from "./section-heading";
@@ -16,6 +16,7 @@ export function CatalogSection({
   desktopColumns,
   searchPlaceholder = "O que você está procurando? Busque por produto, marca ou categoria",
   emptyMessage = "Tente outro termo de busca.",
+  groupsBuilder = buildCatalogProductGroups,
 }: {
   section: HomeSection;
   block: PageBlock;
@@ -24,6 +25,7 @@ export function CatalogSection({
   desktopColumns?: number;
   searchPlaceholder?: string;
   emptyMessage?: string;
+  groupsBuilder?: (products: StorefrontProduct[], categories: Category[], search: string, sort: CatalogSort) => CatalogProductGroup[];
 }) {
   const { data } = useStore();
   const [search, setSearch] = useState("");
@@ -38,8 +40,8 @@ export function CatalogSection({
   }, []);
 
   const groups = useMemo(
-    () => buildCatalogProductGroups(products ?? data.products, categories ?? data.categories, search, sort),
-    [categories, data.categories, data.products, products, search, sort],
+    () => groupsBuilder(products ?? data.products, categories ?? data.categories, search, sort),
+    [categories, data.categories, data.products, groupsBuilder, products, search, sort],
   );
   const productCount = groups.reduce((total, group) => total + group.products.length, 0);
 

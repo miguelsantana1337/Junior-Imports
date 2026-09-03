@@ -1,11 +1,14 @@
 import type { PageBlock, StorePage } from "@/types/store";
 
-export const electronicsHomeKeys = ["hero", "catalog", "guide", "step-1", "step-2", "step-3", "announcement", "footer"] as const;
+export const electronicsHomeKeys = ["hero", "banner-2", "banner-3", "catalog", "guide", "step-1", "step-2", "step-3", "announcement", "footer"] as const;
 export type ElectronicsHomeKey = typeof electronicsHomeKeys[number];
+export const electronicsBannerKeys = ["hero", "banner-2", "banner-3"] as const satisfies readonly ElectronicsHomeKey[];
 export const electronicsDescription = "Eletrônicos selecionados pela Junior Imports. Escolha seu produto e confirme os detalhes pelo WhatsApp.";
 
 const defaults: Record<ElectronicsHomeKey, Partial<PageBlock> & Pick<PageBlock, "name" | "title" | "body">> = {
   hero: { name: "Banner principal", eyebrow: "JUNIOR IMPORTS · ELETRÔNICOS", title: "Tecnologia Apple,\ndireta ao ponto.", body: "Encontre seu próximo eletrônico, confira os detalhes e tire suas dúvidas com a equipe antes de comprar.", buttonText: "Ver eletrônicos", buttonLink: "/#catalogo" },
+  "banner-2": { name: "Banner rotativo 2", eyebrow: "COMPRA ACOMPANHADA", title: "Do catálogo\nao WhatsApp.", body: "Escolha seu produto e confirme disponibilidade, prazo e condições com a equipe.", buttonText: "Como comprar", buttonLink: "/#como-comprar", active: false },
+  "banner-3": { name: "Banner rotativo 3", eyebrow: "ENCONTRE SEU MODELO", title: "Sua próxima escolha\ncomeça aqui.", body: "Explore iPhone, Apple Watch, iPad, MacBook, AirPods e acessórios.", buttonText: "Explorar catálogo", buttonLink: "/#catalogo", active: false },
   catalog: { name: "Catálogo", kind: "catalog", eyebrow: "SOMENTE ELETRÔNICOS", title: "Tecnologia selecionada para comprar com clareza.", body: "Busque por modelo, compare as opções e finalize com atendimento humano.", columns: 4 },
   guide: { name: "Como comprar", eyebrow: "COMPRA ACOMPANHADA", title: "Do modelo certo ao pedido confirmado.", body: "A loja organiza sua escolha. A equipe confirma disponibilidade, condição e atendimento pelo WhatsApp." },
   "step-1": { name: "Como comprar — primeiro passo", title: "Escolha o produto", body: "Consulte modelos, capacidades e valores disponíveis no catálogo." },

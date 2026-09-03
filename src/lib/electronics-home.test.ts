@@ -10,6 +10,7 @@ describe("editor da home de eletrônicos", () => {
     expect(storePageSchema.safeParse(electronicsHomePage(tenant)).success).toBe(true);
     for (const key of electronicsHomeKeys) expect(pageBlockSchema.safeParse(electronicsHomeBlock(tenant, key)).success).toBe(true);
     expect(resolveElectronicsHome(tenant, []).hero.title).toContain("Tecnologia Apple");
+    expect(resolveElectronicsHome(tenant, [])["banner-2"].active).toBe(false);
   });
   it("usa valores salvos, inclusive textos opcionais vazios, sem alterar outros blocos", () => {
     const hero = { ...electronicsHomeBlock(seedData.tenant.id, "hero"), title: "Minha loja de tecnologia", body: "" };

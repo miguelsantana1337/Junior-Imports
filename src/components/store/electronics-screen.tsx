@@ -10,8 +10,10 @@ import { electronicsCategorySlug, resolveElectronicsCatalog } from "@/lib/electr
 import { formatMoney } from "@/lib/format";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { electronicsHomeHref, resolveElectronicsHome } from "@/lib/electronics-home";
+import { buildElectronicsProductGroups } from "@/lib/electronics-catalog-view";
 import type { HomeSection, PageBlock } from "@/types/store";
 import { CatalogSection } from "./catalog-section";
+import { ElectronicsMobileCarousel } from "./electronics-mobile-carousel";
 
 const electronicsSection: HomeSection = {
   id: "electronics-catalog",
@@ -62,6 +64,7 @@ export function ElectronicsScreen() {
 
   return (
     <div className="electronics-storefront" data-catalog-scope={electronicsCategorySlug}>
+      <ElectronicsMobileCarousel content={content} spotlight={spotlight} seconds={data.settings.autoBannerSeconds} storefrontPath={data.tenant.storefrontPath} />
       <section className="electronics-hero" aria-labelledby="electronics-title">
         <div className="container electronics-hero-grid">
           <div className="electronics-hero-copy">
@@ -107,6 +110,7 @@ export function ElectronicsScreen() {
         categories={catalog.categories}
         searchPlaceholder="Busque por eletrônico, modelo ou marca"
         emptyMessage="Quando um eletrônico for publicado no painel, ele aparecerá automaticamente aqui."
+        groupsBuilder={buildElectronicsProductGroups}
       />
 
       <section className="electronics-purchase-guide" id="como-comprar" aria-labelledby="electronics-guide-title">

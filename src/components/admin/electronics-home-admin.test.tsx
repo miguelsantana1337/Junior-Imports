@@ -21,6 +21,32 @@ function announcementForm() {
 }
 
 describe("edição de eletrônicos no painel compartilhado", () => {
+  it("ativa e desativa um banner adicional sem modificar o primeiro", async () => {
+    const block = electronicsHomeBlock(seedData.tenant.id, "banner-2");
+    const view = render(<ElectronicsHomeAdmin />);
+    const form = within(screen.getByRole("heading", { name: block.name }).closest("section")!);
+    const toggle = form.getByRole("checkbox", { name: "Exibir no carrossel mobile" });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    fireEvent.click(form.getByRole("button", { name: "Salvar seção" }));
+    await waitFor(() => expect(handlers.savePageBlock).toHaveBeenCalledWith({ ...block, active: true }));
+    handlers.useAdminData.mockReturnValue({ data: { ...seedData, pageBlocks: [...seedData.pageBlocks, { ...block, active: true }] }, ...handlers });
+    view.rerender(<ElectronicsHomeAdmin />);
+    await waitFor(() => expect(toggle).toBeChecked());
+    fireEvent.click(toggle);
+    fireEvent.click(form.getByRole("button", { name: "Salvar seção" }));
+    await waitFor(() => expect(handlers.savePageBlock).toHaveBeenLastCalledWith({ ...block, active: false }));
+  });
+
+  it("salva imagem e textos do banner adicional no espaço de eletrônicos", async () => {
+    const block = electronicsHomeBlock(seedData.tenant.id, "banner-3");
+    render(<ElectronicsHomeAdmin />);
+    const form = within(screen.getByRole("heading", { name: block.name }).closest("section")!);
+    fireEvent.change(form.getByLabelText("Imagem do banner (opcional)"), { target: { value: "https://example.com/banner.webp" } });
+    fireEvent.click(form.getByRole("button", { name: "Salvar seção" }));
+    await waitFor(() => expect(handlers.savePageBlock).toHaveBeenCalledWith({ ...block, imageUrl: "https://example.com/banner.webp" }));
+  });
+
   it("salva somente a seção de eletrônicos e cria sua página antes do primeiro uso", async () => {
     render(<ElectronicsHomeAdmin />);
     const form = announcementForm();
