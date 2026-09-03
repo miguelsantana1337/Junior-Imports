@@ -7358,3 +7358,28 @@ html[data-admin-theme="dark"] .mcp-integration-alert.error { border-color: #643b
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) {
   .electronics-mobile-slide { transition: none; }
 }
+
+/* Storage options retain the original SKU; model cards never add an arbitrary capacity. */
+.product-storage-summary { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 12px; }
+.product-storage-summary span { padding: 3px 6px; border: 1px solid var(--line); border-radius: 4px; color: var(--muted); font-size: 11px; line-height: 1.3; white-space: nowrap; }
+.product-price-from { display: block; margin-bottom: 5px; color: var(--muted); font-size: 11px; }
+.product-card:has(.product-options-link) .product-bottom { flex-wrap: wrap; }
+.product-options-link { width: 100%; min-height: 44px; margin-top: 4px; padding-inline: 8px; font-size: 12px; }
+.product-storage-selector { min-width: 0; margin: 22px 0; }
+.product-storage-selector h2 { margin: 0 0 5px; font-size: 16px; line-height: 1.3; }
+.product-storage-selector > p { margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.product-storage-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr)); gap: 8px; }
+.product-storage-option { display: flex; min-width: 0; min-height: 92px; flex-direction: column; gap: 6px; padding: 12px 10px; border: 1px solid var(--line); border-radius: 8px; text-decoration: none; background: var(--surface); }
+.product-storage-option.selected { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); background: color-mix(in srgb, var(--primary) 8%, var(--surface)); }
+.product-storage-option:hover { border-color: var(--primary); }
+.product-storage-option:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.product-storage-label { display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 14px; }
+.product-storage-label svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--primary); }
+.product-storage-option > b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.product-storage-option > small { color: var(--muted); font-size: 11px; }
+@media (max-width: 700px) {
+  .electronics-app-shell .product-storage-option { border-radius: 4px; }
+  .electronics-storefront .product-storage-summary { gap: 4px; margin-bottom: 9px; }
+  .electronics-storefront .product-storage-summary span { padding: 3px 4px; font-size: 10px; }
+  .electronics-storefront .product-options-link { border-radius: 2px; }
+}

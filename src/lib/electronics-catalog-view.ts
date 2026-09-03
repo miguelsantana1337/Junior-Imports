@@ -1,6 +1,7 @@
 import { slugify } from "@/lib/format";
 import type { CatalogProductGroup, CatalogSort } from "@/lib/catalog-view";
 import type { Category, StorefrontProduct } from "@/types/store";
+import { groupElectronicsProductModels, type ElectronicsProductModel } from "@/lib/electronics-product-variants";
 
 const families = [
   { id: "iphone", name: "iPhone", match: (name: string) => name.startsWith("iphone") },
@@ -11,13 +12,21 @@ const families = [
   { id: "acessorios", name: "Acessórios", match: (name: string) => /^(apple pencil|airtag)\b/.test(name) },
 ] as const;
 
-function sortProducts(products: StorefrontProduct[], sort: CatalogSort) {
-  return [...products].sort((a, b) => {
-    if (sort === "price-asc") return a.price - b.price;
-    if (sort === "price-desc") return b.price - a.price;
-    if (sort === "name") return a.name.localeCompare(b.name, "pt-BR");
-    return a.order - b.order;
+function modelOrder(model: ElectronicsProductModel) {
+  return model.selection ? Math.min(...model.selection.options.map(({ product }) => product.order)) : model.product.order;
+}
+
+function sortModels(models: ElectronicsProductModel[], sort: CatalogSort) {
+  return [...models].sort((a, b) => {
+    if (sort === "price-asc") return a.product.price - b.product.price;
+    if (sort === "price-desc") return b.product.price - a.product.price;
+    if (sort === "name") return (a.selection?.name ?? a.product.name).localeCompare(b.selection?.name ?? b.product.name, "pt-BR");
+    return modelOrder(a) - modelOrder(b);
   });
+}
+
+function searchText(value: string) {
+  return value.trim().toLocaleLowerCase("pt-BR").replace(/(\d)\s+(gb|tb)\b/g, "$1$2");
 }
 
 export function electronicsProductFamily(product: StorefrontProduct) {
@@ -31,11 +40,11 @@ export function buildElectronicsProductGroups(
   search: string,
   sort: CatalogSort,
 ): CatalogProductGroup[] {
-  const term = search.trim().toLocaleLowerCase("pt-BR");
-  const visibleProducts = products
-    .filter((product) => product.active)
-    .filter((product) => !term || [product.name, product.brand, product.description]
-      .some((value) => value.toLocaleLowerCase("pt-BR").includes(term)));
+  const term = searchText(search);
+  // Search every capacity, but keep the complete model together in the results.
+  const visibleModels = groupElectronicsProductModels(products).filter((model) => !term
+    || (model.selection?.options.map(({ product }) => product) ?? [model.product])
+      .some((product) => [product.name, product.brand, product.description].some((value) => searchText(value).includes(term))));
 
   const definitions = [
     ...families.map(({ id, name }) => ({ id, name })),
@@ -43,12 +52,13 @@ export function buildElectronicsProductGroups(
   ];
 
   return definitions.flatMap(({ id, name }) => {
-    const familyProducts = visibleProducts.filter((product) => electronicsProductFamily(product) === id);
-    return familyProducts.length ? [{
+    const familyModels = sortModels(visibleModels.filter(({ product }) => electronicsProductFamily(product) === id), sort);
+    return familyModels.length ? [{
       id: `electronics-${id}`,
       slug: slugify(name),
       name,
-      products: sortProducts(familyProducts, sort),
+      products: familyModels.map(({ product }) => product),
+      selections: Object.fromEntries(familyModels.flatMap(({ product, selection }) => selection ? [[product.id, selection]] : [])),
     }] : [];
   });
 }

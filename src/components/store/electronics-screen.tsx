@@ -11,6 +11,7 @@ import { formatMoney } from "@/lib/format";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { electronicsHomeHref, resolveElectronicsHome } from "@/lib/electronics-home";
 import { buildElectronicsProductGroups } from "@/lib/electronics-catalog-view";
+import { groupElectronicsProductModels } from "@/lib/electronics-product-variants";
 import type { HomeSection, PageBlock } from "@/types/store";
 import { CatalogSection } from "./catalog-section";
 import { ElectronicsMobileCarousel } from "./electronics-mobile-carousel";
@@ -57,6 +58,7 @@ export function ElectronicsScreen() {
     .filter((product) => product.active)
     .sort((a, b) => a.order - b.order);
   const spotlight = activeProducts.find((product) => product.featured) ?? activeProducts[0];
+  const modelCount = useMemo(() => groupElectronicsProductModels(catalog.products).length, [catalog.products]);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
   const productHref = spotlight
     ? storeHref(`/produtos/${spotlight.slug}`)
@@ -97,7 +99,7 @@ export function ElectronicsScreen() {
 
       <aside className="electronics-scope-note">
         <div className="container">
-          <strong>{activeProducts.length} {activeProducts.length === 1 ? "produto disponível" : "produtos disponíveis"}</strong>
+          <strong>{modelCount} {modelCount === 1 ? "produto disponível" : "produtos disponíveis"}</strong>
           <span>Esta loja mostra somente os eletrônicos publicados pela Junior Imports.</span>
         </div>
       </aside>

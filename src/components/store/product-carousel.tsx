@@ -75,7 +75,7 @@ export function ProductCarousel({ group, desktopColumns }: { group: CatalogProdu
           aria-label={`Produtos da categoria ${group.name}`}
         >
           <div className="product-carousel-track" style={desktopColumns ? { "--catalog-columns": Math.max(1, Math.min(4, Math.round(desktopColumns))) } as CSSProperties : undefined}>
-            {group.products.map((product) => <ProductCard product={product} key={product.id} />)}
+            {group.products.map((product) => <ProductCard product={product} selection={group.selections?.[product.id]} key={product.id} />)}
           </div>
         </div>
       </div>

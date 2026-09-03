@@ -3,11 +3,17 @@ import type { Category, StorefrontProduct } from "@/types/store";
 
 export type CatalogSort = "order" | "price-asc" | "price-desc" | "name";
 
+export interface CatalogProductSelection {
+  name: string;
+  options: { label: string; product: StorefrontProduct }[];
+}
+
 export interface CatalogProductGroup {
   id: string;
   slug: string;
   name: string;
   products: StorefrontProduct[];
+  selections?: Record<string, CatalogProductSelection>;
 }
 
 function sortProducts(products: StorefrontProduct[], sort: CatalogSort) {

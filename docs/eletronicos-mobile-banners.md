@@ -37,6 +37,31 @@ O cliente pode arrastar horizontalmente, usar as setas ou escolher um indicador.
 
 Os novos blocos usam os identificadores exclusivos `electronics:<tenant>:banner-2` e `electronics:<tenant>:banner-3`, dentro da página de eletrônicos já existente. Nenhuma tabela nova é necessária. Os filtros de escopo impedem que esses blocos sejam enviados à vitrine farmacêutica.
 
+## Armazenamento como variação do mesmo modelo
+
+Na vitrine de eletrônicos, modelos que só diferem no armazenamento aparecem em um único cartão. No catálogo atual:
+
+| Produto | Opções no mesmo produto |
+| --- | --- |
+| iPhone 17 Pro | 256 GB e 512 GB |
+| iPhone 17 Pro Max | 256 GB, 512 GB e 1 TB |
+| iPad 11 A16 | 128 GB e 256 GB |
+
+O cliente clica em **Ver opções**, escolhe o armazenamento e confere o preço e a disponibilidade daquela versão. A opção atual tem borda azul e marca de seleção. No carrinho e no pedido, o nome continua completo, com a capacidade escolhida. Trocar de versão reinicia a quantidade em uma unidade, respeitando o limite individual.
+
+O cartão mostra **A partir de** com o menor preço entre as opções disponíveis. Uma versão esgotada pode ser consultada, mas não adicionada ao carrinho. A busca encontra todas as capacidades, incluindo termos como `512 GB`, sem repetir o cartão do modelo.
+
+### Como o Junior administra
+
+- **Produtos** continua com os cadastros individuais de cada capacidade. Edite preço, foto, estoque, encomenda e visibilidade de cada versão normalmente no mesmo painel.
+- O agrupamento acontece na vitrine: não há exclusão ou fusão dos registros do banco. Os IDs, links antigos, atualização pelo dólar, estoque, itens de carrinho e pedidos históricos continuam separados por versão.
+- Para reconhecer opções, o nome precisa terminar em uma capacidade, como `iPhone 17 Pro 256GB` e `iPhone 17 Pro 512GB`. Marca e categoria precisam ser iguais, e o tipo precisa ser não medicamentoso. O agrupamento atual reconhece iPhone, iPad e MacBook.
+- Pro/Pro Max, gerações, tamanhos de tela, RAM e outros qualificadores não são removidos do nome do modelo. Por isso MacBook de 13,6 e 15,3 polegadas, Apple Watch de tamanhos diferentes e AirPods com/sem ANC continuam distintos.
+- Se houver dois cadastros do mesmo modelo com a mesma capacidade, a loja não adivinha se são cores ou condições diferentes: mantém esses anúncios separados. Variações por cor/condição não fazem parte desta entrega.
+- Ocultar uma versão remove somente aquela opção. Um modelo com apenas uma versão ativa volta a aparecer com seu nome completo.
+
+Com os 26 cadastros Apple atuais, isso resulta em 22 cartões, sem alteração financeira ou migração de dados.
+
 ## Limites intencionais
 
 O protótipo possui exemplos de trade-in, comparador, conta do cliente, estoque em lojas físicas e parcelamento. Essas informações não foram transformadas em promessas reais: a atualização preserva somente funções e condições comerciais já existentes no sistema.

@@ -16,10 +16,18 @@ import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-co
 import { normalizeProductImages } from "@/lib/product-images";
 import { getProductImageFramingStyle } from "@/lib/product-image-framing";
 import { withStorefrontPath } from "@/lib/storefront-path";
+import { groupElectronicsProductModels, type ElectronicsProductModel } from "@/lib/electronics-product-variants";
 import { ProductCard } from "./product-card";
+import { ProductStorageSelector } from "./product-storage-selector";
 
 export function ProductDetail({ slug }: { slug: string }) {
-  const { data } = useStore();
+  // Next can reuse this component when following a capacity link. Remount the
+  // selection state so quantity and gallery never leak into another SKU.
+  return <ProductDetailVariant slug={slug} key={slug} />;
+}
+
+function ProductDetailVariant({ slug }: { slug: string }) {
+  const { data, storefrontScope } = useStore();
   const { addItem, favorites, toggleFavorite, setDrawerOpen, ready: cartReady, trackEvent } = useCart();
   const toast = useToast();
   const [quantity, setQuantity] = useState(1);
@@ -28,10 +36,12 @@ export function ProductDetail({ slug }: { slug: string }) {
   const product = data.products.find((item) => item.slug === slug && item.active);
   const bundle = data.bundles.find((item) => item.productId === product?.id);
   const storeHref = (href: string) => withStorefrontPath(data.tenant.storefrontPath, href);
-  const related = useMemo(
-    () => data.products.filter((item) => item.active && item.categoryId === product?.categoryId && item.id !== product?.id).slice(0, 4),
-    [data.products, product],
-  );
+  const models = useMemo<ElectronicsProductModel[]>(() => storefrontScope === "electronics"
+    ? groupElectronicsProductModels(data.products)
+    : data.products.filter((item) => item.active).map((product) => ({ product })), [data.products, storefrontScope]);
+  const currentModel = models.find((model) => model.product.id === product?.id || model.selection?.options.some((option) => option.product.id === product?.id));
+  const selection = currentModel?.selection;
+  const related = models.filter((model) => model !== currentModel && model.product.categoryId === product?.categoryId).slice(0, 4);
   const gallery = useMemo(() => product ? normalizeProductImages(product) : [], [product]);
   const bundleOptions = useMemo(() => bundle
     ? bundle.options.map((option) => ({ ...option, product: data.products.find((item) => item.id === option.productId) })).filter((option) => option.product?.active)
@@ -87,8 +97,9 @@ export function ProductDetail({ slug }: { slug: string }) {
           </div>
           <div className="product-detail-copy">
             <span className="section-kicker">{product.category} · {product.brand}</span>
-            <div className="product-title-row"><h1>{product.name}</h1><button className={`favorite-button detail-favorite ${favorite ? "active" : ""}`} onClick={() => toggleFavorite(product.id)} aria-label="Alternar favorito"><Heart fill={favorite ? "currentColor" : "none"} /></button></div>
+            <div className="product-title-row"><h1>{selection?.name ?? product.name}</h1><button className={`favorite-button detail-favorite ${favorite ? "active" : ""}`} onClick={() => toggleFavorite(product.id)} aria-label="Alternar favorito"><Heart fill={favorite ? "currentColor" : "none"} /></button></div>
             <p className="product-long-description">{product.description}</p>
+            {selection && <ProductStorageSelector selection={selection} productId={product.id} storefrontPath={data.tenant.storefrontPath} />}
             <div className="detail-price price-stack">{product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}<strong>{formatMoney(product.price)}</strong>{product.currencyPricingEnabled && <small>Preço atualizado conforme o dólar</small>}{isPixDiscountEligible(data.settings, product.price) && <small>{data.settings.pixDiscount}% OFF no Pix</small>}</div>
             {(cashbackOffer.value > 0 || cashbackOffer.fixedBonus > 0) && <div className="product-detail-cashback"><strong>{cashbackOffer.type === "percent" ? `Ganhe ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de cashback${cashbackOffer.fixedBonus > 0 ? ` + ${formatMoney(cashbackOffer.fixedBonus)}` : ""}` : `Ganhe até ${formatMoney(cashbackOffer.value * quantity)} de cashback`}</strong><span>Calculado sobre o valor pago pelos produtos, após descontos e sem frete · liberado após a confirmação</span></div>}
             {bundle && <section className="bundle-selector" aria-labelledby="bundle-selector-title"><header><div><span>KIT CONFIGURÁVEL</span><h2 id="bundle-selector-title">{bundle.selectionLabel}</h2></div><strong>{selectedComponents.length}/{bundle.componentCount}</strong></header><p>Monte a composição antes de adicionar ao carrinho. O estoque de cada opção é conferido novamente ao finalizar.</p><div className="bundle-option-grid">{bundleOptions.map((option) => { const selected = selectedComponents.filter((id) => id === option.productId).length; const unavailable = !option.product || option.product.stock <= 0; return <article className={selected ? "selected" : ""} key={option.productId}><ProductArt product={option.product!} /><div><strong>{option.product!.name}</strong><small>{unavailable ? "Esgotado" : `${option.product!.stock} disponível${option.product!.stock === 1 ? "" : "is"}`}</small></div><div><button type="button" onClick={() => adjustComponent(option.productId, -1)} disabled={!selected} aria-label={`Remover ${option.product!.name}`}><Minus /></button><b>{selected}</b><button type="button" onClick={() => adjustComponent(option.productId, 1)} disabled={unavailable || selectedComponents.length >= bundle.componentCount || (!bundle.allowRepetition && selected > 0)} aria-label={`Adicionar ${option.product!.name}`}><Plus /></button></div></article>; })}</div><footer className={selectedComponents.length === bundle.componentCount ? "complete" : ""}>{selectedComponents.length === bundle.componentCount ? <><ShieldCheck /> Kit completo e pronto para o carrinho.</> : `Faltam ${bundle.componentCount - selectedComponents.length} escolha${bundle.componentCount - selectedComponents.length === 1 ? "" : "s"}.`}</footer></section>}
@@ -105,7 +116,7 @@ export function ProductDetail({ slug }: { slug: string }) {
         </div>
       </section>
       {cartEligible && <div className="product-mobile-purchase" aria-label="Compra rápida"><div><small>{bundle ? `${selectedComponents.length}/${bundle.componentCount} escolhas` : `${quantity} ${quantity === 1 ? "unidade" : "unidades"}`}{cashbackOffer.value > 0 ? cashbackOffer.type === "percent" ? ` · ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% cashback` : ` · até ${formatMoney(cashbackOffer.value * quantity)} cashback` : ""}</small><strong>{formatMoney(product.price * quantity)}</strong></div><button className="button button-primary" disabled={!cartReady || Boolean(bundle && selectedComponents.length !== bundle.componentCount)} onClick={addToCart} aria-label={`Compra rápida: adicionar ${product.name}`}><ShoppingCart /> {bundle && selectedComponents.length !== bundle.componentCount ? "Escolha" : "Adicionar"}</button></div>}
-      {related.length > 0 && <section className="section related-section"><div className="container"><h2>Produtos relacionados.</h2><div className="product-grid">{related.map((item) => <ProductCard product={item} key={item.id} />)}</div></div></section>}
+      {related.length > 0 && <section className="section related-section"><div className="container"><h2>Produtos relacionados.</h2><div className="product-grid">{related.map(({ product, selection }) => <ProductCard product={product} selection={selection} key={product.id} />)}</div></div></section>}
     </>
   );
 }

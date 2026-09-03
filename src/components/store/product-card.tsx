@@ -13,9 +13,10 @@ import { isPixDiscountEligible } from "@/lib/store-promotion";
 import { canAddProductToCart, isProductPubliclySellable } from "@/lib/product-compliance";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import type { StorefrontProduct } from "@/types/store";
+import type { CatalogProductSelection } from "@/lib/catalog-view";
 import { ElectronicsBlueprintCorners } from "./electronics-blueprint-corners";
 
-export function ProductCard({ product }: { product: StorefrontProduct }) {
+export function ProductCard({ product, selection }: { product: StorefrontProduct; selection?: CatalogProductSelection }) {
   const { favorites, toggleFavorite, addItem, setDrawerOpen, ready: cartReady } = useCart();
   const { data, storefrontScope } = useStore();
   const toast = useToast();
@@ -26,6 +27,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
   const cartEligible = canAddProductToCart(product, data.settings.checkoutMode);
   const cashbackOffer = storefrontCashbackOffer(product, data.cashbackCampaigns);
   const detailHref = withStorefrontPath(data.tenant.storefrontPath, `/produtos/${product.slug}`);
+  const name = selection?.name ?? product.name;
 
   return (
     <article className="product-card" data-testid={`product-${product.slug}`}>
@@ -37,16 +39,18 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
           onClick={() => toggleFavorite(product.id)}
           aria-label={favorite ? `Remover ${product.name} dos favoritos` : `Adicionar ${product.name} aos favoritos`}
         ><Heart fill={favorite ? "currentColor" : "none"} /></button>
-        <Link href={detailHref} aria-label={`Ver detalhes de ${product.name}`}><ProductArt product={product} /></Link>
+        <Link href={detailHref} aria-label={`Ver detalhes de ${name}`}><ProductArt product={product} /></Link>
         <Link className="quick-link" href={detailHref}>Ver detalhes</Link>
       </div>
       <div className="product-card-body">
         <div className="product-meta"><span>{product.category}</span><small className={`stock-${stock.tone}`}>{stock.label}</small></div>
-        <Link href={detailHref}><h3>{product.name}</h3></Link>
+        <Link href={detailHref}><h3>{name}</h3></Link>
+        {selection && <div className="product-storage-summary" aria-label="Opções de armazenamento">{selection.options.map(({ label, product: option }) => <span key={option.id}>{label}</span>)}</div>}
         <p>{product.description}</p>
         {(cashbackOffer.value > 0 || cashbackOffer.fixedBonus > 0) && <div className="product-cashback-badge">{cashbackOffer.type === "percent" ? `Ganhe ${cashbackOffer.value.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de cashback${cashbackOffer.fixedBonus > 0 ? ` + ${formatMoney(cashbackOffer.fixedBonus)}` : ""}` : `Até ${formatMoney(cashbackOffer.value)} de cashback`}</div>}
         <div className="product-bottom">
           <div className="price-stack">
+            {selection && <span className="product-price-from">A partir de</span>}
             {product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}
             <strong>{formatMoney(product.price)}</strong>
             <small>{product.currencyPricingEnabled
@@ -55,7 +59,7 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
               ? isPixDiscountEligible(data.settings, product.price) ? `${data.settings.pixDiscount}% OFF no Pix` : "Confirmação pelo WhatsApp"
               : cartEligible ? "Comprar pelo WhatsApp" : "Consulte a disponibilidade"}</small>
           </div>
-          {cartEligible ? <button
+          {selection ? <Link className="button button-ghost product-options-link" href={detailHref} aria-label={`Escolher armazenamento de ${name}`}>Ver opções</Link> : cartEligible ? <button
               className="add-button"
               disabled={!cartReady || product.stock <= 0}
               onClick={() => {
