@@ -20,7 +20,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: electronicsStorefrontUrl(`/produtos/${product.slug}`),
       changeFrequency: "daily" as const,
       priority: 0.8,
-      ...(product.imageUrls.length ? { images: product.imageUrls } : {}),
     })),
   ];
 }
