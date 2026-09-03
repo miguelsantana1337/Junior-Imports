@@ -5,7 +5,9 @@ export function sanitizeProductForStorefront(
   purchaseLimit = product.stock,
   bucketStock = false,
 ): StorefrontProduct {
-  const publicPurchaseLimit = !bucketStock
+  const publicPurchaseLimit = product.madeToOrder
+    ? 10
+    : !bucketStock
     ? Math.min(10, Math.max(0, purchaseLimit))
     : purchaseLimit <= 0
     ? 0
@@ -44,5 +46,8 @@ export function sanitizeProductForStorefront(
     presentation: product.presentation,
     regulatoryWarning: product.regulatoryWarning,
     pharmacistReviewed: product.pharmacistReviewed,
+    madeToOrder: Boolean(product.madeToOrder),
+    currencyPricingEnabled: Boolean(product.currencyPricingEnabled),
+    currencyPriceUpdatedAt: product.currencyPriceUpdatedAt ?? "",
   };
 }

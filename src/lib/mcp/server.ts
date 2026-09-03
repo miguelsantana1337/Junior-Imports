@@ -253,7 +253,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
         ? admin.from("orders").select("id, code, created_at, operational_status, payment_status, amount_paid, total, financial_total, archived_at").eq("tenant_id", actor.tenantId).is("archived_at", null).order("created_at", { ascending: false }).limit(250)
         : Promise.resolve({ data: [] }),
       can(actor, "inventory") || can(actor, "catalog")
-        ? admin.from("products").select("id, name, sku, stock, min_stock").eq("tenant_id", actor.tenantId).is("deleted_at", null).eq("active", true).order("stock", { ascending: true }).limit(250)
+        ? admin.from("products").select("id, name, sku, stock, min_stock, made_to_order").eq("tenant_id", actor.tenantId).is("deleted_at", null).eq("active", true).order("stock", { ascending: true }).limit(250)
         : Promise.resolve({ data: [] }),
       can(actor, "finance")
         ? admin.from("financial_transactions").select("type, status, amount, paid_at, created_at").eq("tenant_id", actor.tenantId).eq("status", "paid").order("created_at", { ascending: false }).limit(500)
@@ -265,7 +265,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
     const transactions = (financeResponse.data ?? []) as JsonObject[];
     const newOrders = orders.filter((item) => item.operational_status === "Novo");
     const pendingPayments = orders.filter((item) => ["Pendente", "Parcial"].includes(String(item.payment_status)) && !["Cancelado", "Entregue"].includes(String(item.operational_status)));
-    const lowStock = products.filter((item) => numberValue(item.stock) <= Math.max(numberValue(item.min_stock), 10));
+    const lowStock = products.filter((item) => item.made_to_order !== true && numberValue(item.stock) <= Math.max(numberValue(item.min_stock), 10));
     const todayTransactions = transactions.filter((item) => formatStoreDateKey(String(item.paid_at ?? item.created_at)) === today);
     const income = todayTransactions.filter((item) => item.type === "income").reduce((sum, item) => sum + numberValue(item.amount), 0);
     const expense = todayTransactions.filter((item) => item.type === "expense").reduce((sum, item) => sum + numberValue(item.amount), 0);
@@ -381,7 +381,7 @@ export function createJuniorImportsMcpServer(actor: McpActor) {
     const admin = createAdminClient();
     if (!admin) throw new Error("Supabase indisponível.");
     const { data, error } = await admin.from("products")
-      .select("id, name, sku, brand, price, cost_price, stock, min_stock, active, updated_at")
+      .select("id, name, sku, brand, price, cost_price, stock, min_stock, made_to_order, active, updated_at")
       .eq("tenant_id", actor.tenantId)
       .is("deleted_at", null)
       .order("stock", { ascending: true })

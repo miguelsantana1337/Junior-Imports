@@ -178,12 +178,20 @@ export interface StorefrontProduct {
   presentation: string;
   regulatoryWarning: string;
   pharmacistReviewed: boolean;
+  madeToOrder?: boolean;
+  currencyPricingEnabled?: boolean;
+  currencyPriceUpdatedAt?: string;
 }
 
 export interface Product extends StorefrontProduct {
   costPrice: number;
   minStock: number;
   sku: string;
+  currencyBasePrice?: number;
+  currencyBaseRate?: number;
+  currencyBaseDate?: string;
+  currencyLastRate?: number;
+  currencyLastRateDate?: string;
 }
 
 export interface Category {

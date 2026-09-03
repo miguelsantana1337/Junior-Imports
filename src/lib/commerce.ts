@@ -176,6 +176,7 @@ export function calculateCart(
 }
 
 export function stockLabel(product: StorefrontProduct) {
+  if (product.madeToOrder) return { label: "Sob encomenda", tone: "ok" } as const;
   if (product.stock <= 0) return { label: "Esgotado", tone: "out" } as const;
   if (product.stock <= 5)
     return { label: "Últimas unidades", tone: "low" } as const;

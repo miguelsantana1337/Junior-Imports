@@ -3047,6 +3047,7 @@ html[data-admin-theme="dark"] .password-reset-field button { border-color: #3140
 .product-publish-options strong, .product-publish-options small { display: block; }
 .product-publish-options strong { color: #1a2d47; font-size: 11px; }
 .product-publish-options small { margin-top: 4px; color: #6d7d92; font-size: 9px; }
+.product-commerce-options { margin-top: 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .product-review-card { margin-top: 20px; padding: 14px; display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: center; gap: 16px; border: 1px solid #dce4ee; border-radius: 10px; background: #fafbfd; }
 .product-review-image { aspect-ratio: 1; overflow: hidden; display: grid; place-items: center; border-radius: 9px; background: #e9eef5; }
 .product-review-image img { width: 100%; height: 100%; object-fit: cover; }
@@ -3128,6 +3129,7 @@ html[data-admin-theme="dark"] .password-reset-field button { border-color: #3140
   .product-editor-section-heading { margin-bottom: 20px; padding-bottom: 16px; }
   .product-editor-section-heading h2 { font-size: 21px; }
   .product-editor-fields { grid-template-columns: 1fr; gap: 14px; }
+  .product-commerce-options { grid-template-columns: 1fr; }
   .product-editor-fields label.full { grid-column: auto; }
   .product-photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
   .product-photo-add-tile { min-height: 150px; }

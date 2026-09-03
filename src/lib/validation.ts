@@ -102,6 +102,8 @@ export const productSchema = z.object({
   presentation: z.string().trim().max(180),
   regulatoryWarning: z.string().trim().max(500),
   pharmacistReviewed: z.boolean(),
+  madeToOrder: z.boolean().optional().default(false),
+  currencyPricingEnabled: z.boolean().optional().default(false),
 }).superRefine((product, context) => {
   const isSupportedImage = (value: string) => !value || /^(https?:\/\/|data:image\/|\/)/i.test(value);
   if (!isSupportedImage(product.imageUrl)) context.addIssue({ code: "custom", path: ["imageUrl"], message: "Use uma URL de imagem válida." });

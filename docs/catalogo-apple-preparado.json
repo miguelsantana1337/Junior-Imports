@@ -1,7 +1,7 @@
 {
   "preparedAt": "2026-09-02",
-  "status": "awaiting_commercial_confirmation",
-  "note": "Preparação, não importação. Preços de referência foram transcritos da mensagem do usuário e não são preços de venda aprovados. Estoque e custo não informados permanecem nulos. Não importar nem publicar antes da confirmação. Imagens oficiais são ilustrativas da família/modelo, não garantem cor, conectividade ou variante disponível.",
+  "status": "approved_and_imported",
+  "note": "Manifesto histórico da preparação. Em 02/09/2026, o usuário aprovou o menor preço de cada faixa e a venda sob encomenda. Os valores ativos, a PTAX-base de venda (5,1273) e o vínculo cambial estão na migração 202609020001_apple_catalog_usd_pricing.sql. Os campos nulos abaixo preservam o rascunho anterior e não representam o estado atual do banco. Imagens oficiais são ilustrativas da família/modelo; cor, condição, prazo e disponibilidade são confirmados no atendimento.",
   "products": [
     {
       "draftKey": "apple-01",

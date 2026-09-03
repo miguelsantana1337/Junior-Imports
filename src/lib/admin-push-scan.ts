@@ -25,7 +25,7 @@ export async function scanAdminPushTenant(client: SupabaseClient, tenantId: stri
   const [recentOrders, staleOrders, products, securityEvents, carts] = await Promise.all([
     client.from("orders").select("id, code, created_at").eq("tenant_id", tenantId).eq("status", "Novo").gte("created_at", recentBoundary).limit(100),
     client.from("orders").select("id, code, created_at").eq("tenant_id", tenantId).eq("status", "Novo").lte("created_at", staleBoundary).order("created_at", { ascending: true }).limit(100),
-    client.from("products").select("id, name, stock, min_stock, active").eq("tenant_id", tenantId).eq("active", true).limit(1000),
+    client.from("products").select("id, name, stock, min_stock, active, made_to_order").eq("tenant_id", tenantId).eq("active", true).limit(1000),
     client.from("audit_logs").select("id, entity_type, action, created_at").eq("tenant_id", tenantId).in("entity_type", ["auth_mfa_factors", "profiles", "tenant_members"]).gte("created_at", new Date(now - day).toISOString()).limit(100),
     client.from("storefront_cart_sessions").select("id, last_activity_at, status").eq("tenant_id", tenantId).eq("status", "active").lte("last_activity_at", new Date(now - 45 * 60_000).toISOString()).limit(100),
   ]);
@@ -61,6 +61,7 @@ export async function scanAdminPushTenant(client: SupabaseClient, tenantId: stri
   const unavailableProducts: string[] = [];
   const lowProducts: string[] = [];
   for (const product of products.data ?? []) {
+    if (product.made_to_order) continue;
     const stock = Number(product.stock) || 0;
     const minimum = Math.max(0, Number(product.min_stock) || 0);
     if (stock > minimum) continue;

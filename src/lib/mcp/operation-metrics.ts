@@ -119,8 +119,9 @@ export function summarizeMcpInventory(products: DataRow[], options: {
   limit?: number;
 } = {}) {
   const considered = options.includeInactive ? products : products.filter((product) => product.active !== false);
-  const lowStock = considered.filter((product) => numeric(product.stock) <= Math.max(numeric(product.min_stock), 10));
-  const outOfStock = considered.filter((product) => numeric(product.stock) <= 0);
+  const stockTracked = considered.filter((product) => product.made_to_order !== true);
+  const lowStock = stockTracked.filter((product) => numeric(product.stock) <= Math.max(numeric(product.min_stock), 10));
+  const outOfStock = stockTracked.filter((product) => numeric(product.stock) <= 0);
   const filtered = options.status === "low_stock"
     ? lowStock
     : options.status === "out_of_stock"
@@ -131,7 +132,7 @@ export function summarizeMcpInventory(products: DataRow[], options: {
 
   return {
     totalProducts: considered.length,
-    totalUnits: considered.reduce((sum, product) => sum + numeric(product.stock), 0),
+    totalUnits: stockTracked.reduce((sum, product) => sum + numeric(product.stock), 0),
     lowStockProducts: lowStock.length,
     outOfStockProducts: outOfStock.length,
     stockValueAtCost: considered.reduce((sum, product) => sum + Math.max(0, numeric(product.stock)) * numeric(product.cost_price), 0),
@@ -146,7 +147,8 @@ export function summarizeMcpInventory(products: DataRow[], options: {
       minStock: numeric(product.min_stock),
       price: numeric(product.price),
       costPrice: numeric(product.cost_price),
-      needsReview: numeric(product.stock) <= Math.max(numeric(product.min_stock), 10),
+      madeToOrder: product.made_to_order === true,
+      needsReview: product.made_to_order !== true && numeric(product.stock) <= Math.max(numeric(product.min_stock), 10),
     })),
   };
 }

@@ -40,7 +40,7 @@ export function financialSummary(transactions: FinancialTransaction[], now = new
 
 export function inventoryAlerts(products: Product[]) {
   return products
-    .filter((product) => product.active && product.stock <= product.minStock)
+    .filter((product) => product.active && !product.madeToOrder && product.stock <= product.minStock)
     .sort((a, b) => (a.stock - a.minStock) - (b.stock - b.minStock));
 }
 

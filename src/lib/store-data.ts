@@ -111,6 +111,14 @@ function mapProduct(row: Row, categories: Category[]): Product {
     presentation: str(row.presentation),
     regulatoryWarning: str(row.regulatory_warning),
     pharmacistReviewed: Boolean(row.pharmacist_reviewed),
+    madeToOrder: Boolean(row.made_to_order),
+    currencyPricingEnabled: Boolean(row.currency_pricing_enabled),
+    currencyPriceUpdatedAt: str(row.currency_price_updated_at),
+    currencyBasePrice: num(row.currency_base_price),
+    currencyBaseRate: num(row.currency_base_rate),
+    currencyBaseDate: str(row.currency_base_date),
+    currencyLastRate: num(row.currency_last_rate),
+    currencyLastRateDate: str(row.currency_last_rate_date),
   };
 }
 
@@ -309,6 +317,9 @@ function mapStorefrontProduct(row: Row, categories: Category[]): StorefrontProdu
     presentation: str(row.presentation),
     regulatoryWarning: str(row.regulatory_warning),
     pharmacistReviewed: Boolean(row.pharmacist_reviewed),
+    madeToOrder: Boolean(row.made_to_order),
+    currencyPricingEnabled: Boolean(row.currency_pricing_enabled),
+    currencyPriceUpdatedAt: str(row.currency_price_updated_at),
   };
 }
 
@@ -834,7 +845,7 @@ export async function getStoreData(options: AdminStoreDataOptions | PublicStoreD
       ? scopeTenant(supabase.from("products").select("*"), tenantId).is("deleted_at", null).order("order_index")
       : options.admin
         ? emptyQuery()
-        : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, cashback_type, badge, accent, description, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, availability, purchase_limit"), tenantId).order("order_index"),
+        : scopeTenant(supabase.from("storefront_products").select("tenant_id, id, slug, name, category_id, brand, price, compare_at, cashback, cashback_type, badge, accent, description, featured, active, order_index, image_url, image_urls, product_type, regulatory_status, active_ingredient, anvisa_registration, presentation, regulatory_warning, pharmacist_reviewed, made_to_order, currency_pricing_enabled, currency_price_updated_at, availability, purchase_limit"), tenantId).order("order_index"),
     scopeTenant(supabase.from("banners").select("*"), tenantId).order("order_index"),
     scopeTenant(supabase.from("home_sections").select("*"), tenantId).order("order_index"),
     options.admin && canRead("marketing")

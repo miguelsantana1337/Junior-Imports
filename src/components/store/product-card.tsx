@@ -47,7 +47,9 @@ export function ProductCard({ product }: { product: StorefrontProduct }) {
           <div className="price-stack">
             {product.compareAt > product.price && <del>{formatMoney(product.compareAt)}</del>}
             <strong>{formatMoney(product.price)}</strong>
-            <small>{orderable
+            <small>{product.currencyPricingEnabled
+              ? `Preço pelo dólar${isPixDiscountEligible(data.settings, product.price) ? ` · ${data.settings.pixDiscount}% OFF no Pix` : ""}`
+              : orderable
               ? isPixDiscountEligible(data.settings, product.price) ? `${data.settings.pixDiscount}% OFF no Pix` : "Confirmação pelo WhatsApp"
               : cartEligible ? "Comprar pelo WhatsApp" : "Consulte a disponibilidade"}</small>
           </div>

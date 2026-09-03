@@ -44,7 +44,7 @@ export function DashboardAdmin() {
   const operationStart = operationStartTime(data.settings);
   const customerInsights = buildCustomerInsights(data.customers, data.orders, now);
   const customersNeedingContact = customerInsights.filter((customer) => ["at_risk", "inactive"].includes(customer.segment));
-  const lowStock = activeProducts.filter((product) => product.stock <= 10);
+  const lowStock = activeProducts.filter((product) => !product.madeToOrder && product.stock <= 10);
   const periodOrders = filterByAdminPeriod(operationOrders, (order) => order.createdAt, range);
   const periodTransactions = filterByAdminPeriod(operationTransactions, (transaction) => transaction.paidAt || transaction.createdAt, range);
   const periodBuyers = customerInsights.filter((customer) => periodOrders.some((order) => customerMatchesOrder(customer, order)));
