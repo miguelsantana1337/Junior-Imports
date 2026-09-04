@@ -1,0 +1,41 @@
+.electronics-buying-support { padding-block: 30px 72px; }
+.electronics-buying-support section { padding-block: 36px; scroll-margin-top: 96px; }
+.electronics-buying-support header { max-width: 780px; margin-bottom: 24px; }
+.electronics-buying-support h2 { font-family: var(--font-electronics-heading), sans-serif; font-size: clamp(2rem, 4vw, 3.3rem); line-height: 1.08; margin: 12px 0; }
+.electronics-buying-support p { line-height: 1.7; opacity: .82; }
+.electronics-delivery-rates { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 16px; margin-bottom: 22px; }
+.electronics-delivery-rates article { padding: 22px; border: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 18%, transparent); }
+.electronics-delivery-rates h3 { font-size: 1rem; margin: 0 0 16px; }
+.electronics-delivery-rates strong { font-size: 1.5rem; }
+.electronics-faq-list { margin-bottom: 28px; }
+.electronics-faq-list details { border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); padding: 20px 0; }
+.electronics-faq-list summary { cursor: pointer; font-weight: 700; font-size: 1.1rem; padding-right: 16px; }
+.electronics-faq-list p { max-width: 850px; margin-bottom: 0; }
+.electronics-buying-support a:not(.button), .electronics-policy-page a { text-underline-offset: 4px; }
+.electronics-policy-shell { width: min(1160px, calc(100% - 40px)); margin: auto; padding: 40px 0 80px; }
+.electronics-policy-back { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 32px; }
+.electronics-policy-back svg { width: 18px; }
+.electronics-policy-layout { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 56px; }
+.electronics-policy-layout aside > strong { display: block; margin: 12px 0 22px; }
+.electronics-policy-layout nav { display: grid; gap: 8px; }
+.electronics-policy-layout nav a { padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 20%, transparent); }
+.electronics-policy-layout nav a.active { font-weight: 800; }
+.electronics-policy-content { min-width: 0; }
+.electronics-policy-content h1 { font-family: var(--font-electronics-heading), sans-serif; font-size: clamp(2.3rem, 4vw, 3.5rem); line-height: 1.1; }
+.electronics-policy-content h2 { font-size: 1.4rem; line-height: 1.3; }
+.electronics-policy-content p { line-height: 1.8; }
+.electronics-policy-content section { margin-top: 32px; }
+.electronics-policy-content header > small { opacity: .65; }
+.electronics-policy-rate-list > div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0; border-bottom: 1px solid color-mix(in srgb, currentColor 18%, transparent); }
+.electronics-policy-contact { border-top: 1px solid color-mix(in srgb, currentColor 18%, transparent); padding-top: 24px; }
+.electronics-policy-contact a, .electronics-policy-contact > div > span { display: flex; align-items: center; gap: 12px; padding: 12px 0; overflow-wrap: anywhere; }
+.electronics-policy-contact svg, .electronics-policy-note svg { width: 22px; flex: 0 0 22px; }
+.electronics-policy-contact small { display: block; margin-top: 4px; }
+.electronics-policy-note { display: flex; gap: 12px; align-items: center; }
+@media (max-width: 700px) {
+  .electronics-policy-layout { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+  .electronics-policy-layout nav { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+  .electronics-policy-shell { width: calc(100% - 32px); }
+  .electronics-delivery-rates { grid-template-columns: minmax(0, 1fr); }
+  .electronics-buying-support section { padding-block: 24px; }
+}

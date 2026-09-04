@@ -58,6 +58,7 @@ export function StoreHeader() {
               <Link href={storeHref("/")} aria-current={pathname === storeHref("/") ? "page" : undefined}>Início</Link>
               <Link href={storeHref("/#catalogo")}>Eletrônicos</Link>
               <Link href={storeHref("/#como-comprar")}>Como comprar</Link>
+              <Link href={storeHref("/#duvidas")}>Dúvidas</Link>
             </> : <>
               <Link href={storeHref("/#destaques")}>Destaques</Link>
               <Link href={storeHref("/#catalogo")}>Produtos</Link>
@@ -120,6 +121,7 @@ export function StoreHeader() {
               <Link href={storeHref("/")} aria-current={pathname === storeHref("/") ? "page" : undefined} onClick={() => setMenuOpen(false)}>Início</Link>
               <Link href={storeHref("/#catalogo")} onClick={() => setMenuOpen(false)}>Eletrônicos</Link>
               <Link href={storeHref("/#como-comprar")} onClick={() => setMenuOpen(false)}>Como comprar</Link>
+              <Link href={storeHref("/#duvidas")} onClick={() => setMenuOpen(false)}>Dúvidas</Link>
             </> : <>
               <Link href={storeHref("/#destaques")} onClick={() => setMenuOpen(false)}>Destaques</Link>
               <Link href={storeHref("/#catalogo")} onClick={() => setMenuOpen(false)}>Produtos</Link>

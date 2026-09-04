@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { checkoutCustomerSchema } from "@/lib/validation";
-import { CHECKOUT_TERMS_VERSION } from "@/lib/checkout-terms";
+import { CHECKOUT_TERMS_VERSION, ELECTRONICS_CHECKOUT_TERMS_VERSION } from "@/lib/checkout-terms";
 import { sendAdminPush } from "@/lib/admin-push";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { featureEnabled } from "@/lib/feature-flags";
@@ -25,6 +25,7 @@ const requestSchema = z.object({
   })).min(1).max(50),
   payment: z.enum(["Pix", "Cartao", "Dinheiro"]),
   termsAccepted: z.literal(true),
+  termsVersion: z.enum([CHECKOUT_TERMS_VERSION, ELECTRONICS_CHECKOUT_TERMS_VERSION]).default(CHECKOUT_TERMS_VERSION),
   couponCode: z.string().trim().max(30),
   idempotencyKey: z.string().uuid(),
   botField: z.string().max(0),
@@ -81,12 +82,12 @@ export async function POST(request: Request) {
       couponCode: parsed.data.couponCode.toUpperCase(),
       referralCode: parsed.data.referralCode?.toUpperCase() ?? "",
       components: parsed.data.items.map((item) => item.components ?? []),
-      termsVersion: CHECKOUT_TERMS_VERSION,
+      termsVersion: parsed.data.termsVersion,
     });
     const orderCustomer = {
       ...parsed.data.customer,
       termsAcceptedAt: new Date().toISOString(),
-      termsVersion: CHECKOUT_TERMS_VERSION,
+      termsVersion: parsed.data.termsVersion,
     };
     const { data, error } = await supabase.rpc("create_tenant_order_with_promotions_secure", {
       p_tenant_id: parsed.data.tenantId,

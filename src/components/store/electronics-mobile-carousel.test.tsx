@@ -93,7 +93,7 @@ describe("carrossel mobile de eletrônicos", () => {
     Object.defineProperty(document, "hidden", { configurable: true, value: false });
     fireEvent(document, new Event("visibilitychange"));
     const region = screen.getByRole("region", { name: "Destaques da loja" });
-    fireEvent.focus(screen.getByRole("link", { name: "Ver eletrônicos" }));
+    fireEvent.focus(screen.getByRole("link", { name: "Ver produtos" }));
     fireEvent.mouseEnter(region);
     fireEvent.mouseLeave(region);
     act(() => vi.advanceTimersByTime(5000));
@@ -118,7 +118,7 @@ describe("carrossel mobile de eletrônicos", () => {
     const blocks = content();
     blocks.hero = { ...blocks.hero, imageUrl: "https://example.com/banner.jpg", buttonLink: "https://outro.com" };
     render(<ElectronicsMobileCarousel content={blocks} spotlight={seedData.products[0]} seconds={5} storefrontPath="/loja/teste" />);
-    expect(screen.getByRole("link", { name: "Ver eletrônicos" })).toHaveAttribute("href", "/loja/teste#catalogo");
+    expect(screen.getByRole("link", { name: "Ver produtos" })).toHaveAttribute("href", "/loja/teste#catalogo");
     expect(screen.queryByText("Foto do produto")).not.toBeInTheDocument();
   });
 });

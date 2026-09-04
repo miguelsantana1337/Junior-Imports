@@ -9,7 +9,7 @@ describe("editor da home de eletrônicos", () => {
     const tenant = seedData.tenant.id;
     expect(storePageSchema.safeParse(electronicsHomePage(tenant)).success).toBe(true);
     for (const key of electronicsHomeKeys) expect(pageBlockSchema.safeParse(electronicsHomeBlock(tenant, key)).success).toBe(true);
-    expect(resolveElectronicsHome(tenant, []).hero.title).toContain("Tecnologia Apple");
+    expect(resolveElectronicsHome(tenant, []).hero.title).toContain("Tecnologia que você quer");
     expect(resolveElectronicsHome(tenant, [])["banner-2"].active).toBe(false);
   });
   it("usa valores salvos, inclusive textos opcionais vazios, sem alterar outros blocos", () => {
@@ -17,7 +17,7 @@ describe("editor da home de eletrônicos", () => {
     const result = resolveElectronicsHome(seedData.tenant.id, [hero]);
     expect(result.hero.title).toBe(hero.title);
     expect(result.hero.body).toBe("");
-    expect(result.catalog.title).toContain("Tecnologia selecionada");
+    expect(result.catalog.title).toContain("ecossistema Apple");
     expect(resolveElectronicsHome("outro-tenant", [hero]).hero.title).not.toBe(hero.title);
   });
   it("não envia textos da outra vitrine e preserva as configurações financeiras", () => {

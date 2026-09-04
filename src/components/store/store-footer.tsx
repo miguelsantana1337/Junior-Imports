@@ -54,6 +54,13 @@ export function StoreFooter() {
           </div>
           <div>
             <strong>Compra segura</strong>
+            {storefrontScope === "electronics" && <>
+              <Link href={storeHref("/politicas/termos-de-compra")}>Termos de compra</Link>
+              <Link href={storeHref("/politicas/entrega")}>Entrega e retirada</Link>
+              <Link href={storeHref("/politicas/trocas-e-devolucoes")}>Trocas e devoluções</Link>
+              <Link href={storeHref("/politicas/privacidade")}>Privacidade</Link>
+              <Link href={storeHref("/#duvidas")}>Perguntas frequentes</Link>
+            </>}
             <Link href={storeHref("/#catalogo")}><ShoppingBag /> Escolha seus produtos</Link>
             <Link href={storeHref(storefrontScope === "electronics" ? "/#como-comprar" : "/#duvidas")}><ShieldCheck /> Pagamento, envio e garantia</Link>
             <span>Pedido registrado no site</span>

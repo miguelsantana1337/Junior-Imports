@@ -21,5 +21,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily" as const,
       priority: 0.8,
     })),
+    ...["termos-de-compra", "entrega", "trocas-e-devolucoes", "privacidade"].map((slug) => ({
+      url: electronicsStorefrontUrl(`/politicas/${slug}`),
+      changeFrequency: "monthly" as const,
+      priority: 0.4,
+    })),
   ];
 }

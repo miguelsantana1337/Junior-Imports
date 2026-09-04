@@ -12,7 +12,7 @@ import { ProductArt } from "@/components/ui/product-art";
 import { formatMoney } from "@/lib/format";
 import { checkoutSchema, type CheckoutFormInput, type CheckoutInput } from "@/lib/validation";
 import { checkoutWhatsappUrl } from "@/lib/whatsapp-order";
-import { CHECKOUT_TERMS_VERSION, checkoutTerms } from "@/lib/checkout-terms";
+import { CHECKOUT_TERMS_VERSION, ELECTRONICS_CHECKOUT_TERMS_VERSION, checkoutTerms, electronicsCheckoutTerms } from "@/lib/checkout-terms";
 import { withStorefrontPath } from "@/lib/storefront-path";
 import { normalizePostalCode, type PostalCodeAddress } from "@/lib/postal-code";
 import {
@@ -56,7 +56,9 @@ type PersistedOrder = {
 };
 
 export function CheckoutScreen() {
-  const { data, addOrder, demoMode } = useStore();
+  const { data, addOrder, demoMode, storefrontScope } = useStore();
+  const electronicsOnly = storefrontScope === "electronics";
+  const activeTermsVersion = electronicsOnly ? ELECTRONICS_CHECKOUT_TERMS_VERSION : CHECKOUT_TERMS_VERSION;
   const { lines, coupon, calculate, clearCart, cartSessionId, trackCheckout, trackEvent } = useCart();
   const [submitError, setSubmitError] = useState("");
   const [turnstileToken, setTurnstileToken] = useState("");
@@ -205,7 +207,7 @@ export function CheckoutScreen() {
       number: values.number,
       complement: values.complement,
       termsAcceptedAt,
-      termsVersion: CHECKOUT_TERMS_VERSION,
+      termsVersion: activeTermsVersion,
     };
     const items = cartProducts.map(({ line, product }) => ({
       productId: product!.id,
@@ -250,6 +252,7 @@ export function CheckoutScreen() {
           items: items.map((item) => ({ productId: item.productId, quantity: item.quantity, components: item.components.flatMap((component) => Array.from({ length: component.quantity / item.quantity }, () => component.productId)) })),
           payment: values.payment,
           termsAccepted: values.termsAccepted,
+          termsVersion: activeTermsVersion,
           couponCode: coupon?.code ?? "",
           idempotencyKey: requestId,
           botField: values.botField,
@@ -326,8 +329,17 @@ export function CheckoutScreen() {
             )}
           </fieldset>
           <fieldset><legend>3. Forma de pagamento preferida</legend><div className="payment-options">{(["Pix", "Cartao", "Dinheiro"] as const).map((method) => <label key={method}><input type="radio" value={method} {...register("payment")} /><span><strong>{method === "Cartao" ? "Cartão" : method}</strong><small>{method === "Pix" ? isPixDiscountEligible(data.settings, merchandiseAfterCoupon) ? `${data.settings.pixDiscount}% de desconto aplicado` : data.settings.pixDiscount > 0 ? `${data.settings.pixDiscount}% OFF a partir de ${formatMoney(data.settings.pixDiscountMinimum)}` : "Confirmação pelo WhatsApp" : method === "Cartao" ? isCardInstallmentEligible(data.settings, merchandiseAfterCoupon) ? `${data.settings.cardInstallments}x sem juros` : `${data.settings.cardInstallments}x sem juros a partir de ${formatMoney(data.settings.cardInstallmentMinimum)}` : "Pagamento combinado no atendimento"}</small></span></label>)}</div></fieldset>
-          <StorePromotion compact />
-          <fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>
+          {!electronicsOnly && <StorePromotion compact />}
+          {electronicsOnly ? (
+            <fieldset className="checkout-terms">
+              <legend>{electronicsCheckoutTerms.title}</legend>
+              <div className="checkout-terms-content">{electronicsCheckoutTerms.items.map((item) => <p key={item}>{item}</p>)}
+                <p><Link href={storeHref("/politicas/termos-de-compra")} target="_blank">Termos de compra</Link> · <Link href={storeHref("/politicas/entrega")} target="_blank">Entrega</Link> · <Link href={storeHref("/politicas/trocas-e-devolucoes")} target="_blank">Trocas e devoluções</Link> · <Link href={storeHref("/politicas/privacidade")} target="_blank">Privacidade</Link></p>
+              </div>
+              <label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span>{electronicsCheckoutTerms.declaration}</span></label>
+              {errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}
+            </fieldset>
+          ) : (<fieldset className="checkout-terms"><legend><AlertTriangle /> {checkoutTerms.title}</legend><div className="checkout-terms-content"><p className="terms-positive">✅ {checkoutTerms.videoRequirement}</p><p className="terms-negative">❌ {checkoutTerms.noVideoWarning}</p><p className="terms-positive">✅ {checkoutTerms.agreement}</p><p className="terms-positive">✅ {checkoutTerms.sellerResponsibility}</p><div className="terms-exclusions"><strong>❌ Não nos responsabilizamos por:</strong><ul>{checkoutTerms.exclusions.map((item) => <li key={item}>{item}</li>)}</ul></div></div><label className="terms-acceptance"><input type="checkbox" {...register("termsAccepted")} /><span><strong>Declaração:</strong> {checkoutTerms.declaration}</span></label>{errors.termsAccepted && <small className="field-error">{errors.termsAccepted.message}</small>}</fieldset>)}
           <label className="checkout-honeypot" aria-hidden="true">Não preencha<input tabIndex={-1} autoComplete="off" {...register("botField")} /></label>
           <input type="hidden" {...register("startedAt")} />
           <p className="checkout-data-notice"><LockKeyhole /> Ao usar a loja e informar seus dados, eles poderão ser utilizados para registrar o pedido e oferecer suporte pelo WhatsApp, inclusive se o checkout não for concluído. Nenhuma mensagem é enviada automaticamente.</p>

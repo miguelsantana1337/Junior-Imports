@@ -15,6 +15,7 @@ import { groupElectronicsProductModels } from "@/lib/electronics-product-variant
 import type { HomeSection, PageBlock } from "@/types/store";
 import { CatalogSection } from "./catalog-section";
 import { ElectronicsMobileCarousel } from "./electronics-mobile-carousel";
+import { ElectronicsBuyingSupport } from "./electronics-buying-support";
 
 const electronicsSection: HomeSection = {
   id: "electronics-catalog",
@@ -127,6 +128,7 @@ export function ElectronicsScreen() {
           </div>
         </div>
       </section>
+      <ElectronicsBuyingSupport />
     </div>
   );
 }

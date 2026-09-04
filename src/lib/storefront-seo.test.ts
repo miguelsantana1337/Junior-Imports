@@ -8,6 +8,7 @@ import {
   isIndexableElectronicsPath,
   isOfficialElectronicsHost,
   serializeJsonLd,
+  isSearchEngineControlFile,
   storefrontRobotsHeader,
 } from "./storefront-seo";
 
@@ -57,6 +58,8 @@ describe("SEO separado da loja de eletrônicos", () => {
     expect(isIndexableElectronicsPath("/pedidos/JI-1001")).toBe(false);
     expect(storefrontRobotsHeader("www.juniorimportsoficial.com.br", "/")).toContain("index, follow");
     expect(storefrontRobotsHeader("farmaceuticos.juniorimportsoficial.com.br", "/")).toBe("noindex, nofollow");
+    expect(isSearchEngineControlFile("/google/merchant-center.xml")).toBe(true);
+    expect(storefrontRobotsHeader("www.juniorimportsoficial.com.br", "/google/merchant-center.xml")).toBeNull();
   });
 
   it("gera URLs canônicas somente no domínio oficial", () => {
@@ -73,7 +76,8 @@ describe("SEO separado da loja de eletrônicos", () => {
     expect(schema["@type"]).toBe("ProductGroup");
     expect(schema.variesBy).toBe("https://schema.org/size");
     expect(schema.hasVariant).toHaveLength(2);
-    expect(JSON.stringify(schema)).toContain("BackOrder");
+    expect(JSON.stringify(schema)).not.toContain("BackOrder");
+    expect(JSON.stringify(schema)).not.toContain('"availability"');
     expect(JSON.stringify(schema)).not.toContain("Farmac");
   });
 

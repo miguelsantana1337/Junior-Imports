@@ -34,11 +34,12 @@ export function isOfficialElectronicsHost(
 
 export function isIndexableElectronicsPath(pathname: string) {
   return pathname === "/"
+    || /^\/politicas\/(termos-de-compra|entrega|trocas-e-devolucoes|privacidade)\/?$/.test(pathname)
     || /^\/produtos\/[^/]+\/?$/.test(pathname);
 }
 
 export function isSearchEngineControlFile(pathname: string) {
-  return pathname === "/robots.txt" || pathname === "/sitemap.xml";
+  return pathname === "/robots.txt" || pathname === "/sitemap.xml" || pathname === "/google/merchant-center.xml";
 }
 
 export function storefrontRobotsHeader(hostname: string | null | undefined, pathname: string) {
@@ -64,7 +65,7 @@ function productOffer(product: StorefrontProduct) {
     priceCurrency: "BRL",
     price: product.price.toFixed(2),
     availability: product.madeToOrder
-      ? "https://schema.org/BackOrder"
+      ? undefined
       : product.stock > 0
         ? "https://schema.org/InStock"
         : "https://schema.org/OutOfStock",
