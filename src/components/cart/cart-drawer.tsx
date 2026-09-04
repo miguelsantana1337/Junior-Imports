@@ -30,17 +30,21 @@ export function CartDrawer() {
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const calculation = calculate();
   const quantityPromotion = data.settings.quantityPromotion;
-  const promotionSingleLine = lines.find((line) => line.productId === quantityPromotion.singleProductId);
-  const promotionSingleProduct = data.products.find((product) => product.id === quantityPromotion.singleProductId);
+  const configuredSingleIds = quantityPromotion.singleProductIds?.filter(Boolean) ?? [];
+  const promotionSingleIds = configuredSingleIds.length ? configuredSingleIds : [quantityPromotion.singleProductId].filter(Boolean);
   const groupQuantity = Math.max(2, quantityPromotion.groupQuantity || 3);
-  const canUnlockGroupDiscount = Boolean(
-    quantityPromotion.enabled
-      && isStorePromotionActive(data.settings)
-      && promotionSingleLine
-      && promotionSingleProduct
-      && promotionSingleLine.quantity % groupQuantity === groupQuantity - 1
-      && promotionSingleLine.quantity < promotionSingleProduct.stock,
-  );
+  const promotionUnlock = quantityPromotion.enabled && isStorePromotionActive(data.settings)
+    ? promotionSingleIds.map((productId) => ({
+        productId,
+        line: lines.find((line) => line.productId === productId),
+        product: data.products.find((product) => product.id === productId),
+      })).find(({ line, product }) => Boolean(
+        line
+          && product
+          && line.quantity % groupQuantity === groupQuantity - 1
+          && line.quantity < product.stock,
+      ))
+    : undefined;
 
   useEffect(() => {
     if (!drawerOpen) return;
@@ -124,7 +128,7 @@ export function CartDrawer() {
           )}
         </div>
         <div className="drawer-footer">
-          {calculation.promotionApplied && <div className="cart-promotion-summary"><Gift /><div><strong>Promoção aplicada nesta compra</strong>{calculation.promotionApplications.map((application) => <small key={application.key}>{application.label}</small>)}{canUnlockGroupDiscount && promotionSingleLine && <button type="button" onClick={() => updateItem(quantityPromotion.singleProductId, promotionSingleLine.quantity + 1)}>Adicionar mais 1 e aplicar {quantityPromotion.groupDiscountPercent}% OFF nela</button>}{calculation.promotionStockIssue && <small className="error-text">{calculation.promotionStockIssue}</small>}</div></div>}
+          {calculation.promotionApplied && <div className="cart-promotion-summary"><Gift /><div><strong>Promoção aplicada nesta compra</strong>{calculation.promotionApplications.map((application) => <small key={application.key}>{application.label}</small>)}{promotionUnlock?.line && <button type="button" onClick={() => updateItem(promotionUnlock.productId, promotionUnlock.line!.quantity + 1)}>Adicionar mais 1 da mesma marca e aplicar {quantityPromotion.groupDiscountPercent}% OFF nela</button>}{calculation.promotionStockIssue && <small className="error-text">{calculation.promotionStockIssue}</small>}</div></div>}
           {!calculation.promotionApplied && <form
             className="coupon-box"
             onSubmit={async (event) => {

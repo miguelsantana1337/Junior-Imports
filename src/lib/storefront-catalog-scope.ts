@@ -125,6 +125,10 @@ export function scopeStorefrontData(data: StorefrontData, scope: StorefrontCatal
         ...data.settings.quantityPromotion,
         singleProductId: productIds.has(data.settings.quantityPromotion.singleProductId) ? data.settings.quantityPromotion.singleProductId : "",
         boxProductId: productIds.has(data.settings.quantityPromotion.boxProductId) ? data.settings.quantityPromotion.boxProductId : "",
+        singleProductIds: data.settings.quantityPromotion.singleProductIds?.filter((productId) => productIds.has(productId)),
+        boxProductMappings: data.settings.quantityPromotion.boxProductMappings?.filter((mapping) => (
+          productIds.has(mapping.boxProductId) && productIds.has(mapping.giftProductId)
+        )),
         doseProductId: productIds.has(data.settings.quantityPromotion.doseProductId) ? data.settings.quantityPromotion.doseProductId : "",
       },
     },

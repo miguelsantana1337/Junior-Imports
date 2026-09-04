@@ -26,42 +26,72 @@ export function calculateQuantityPromotion(
   if (!config?.enabled || !isStorePromotionActive(settings, now)) return empty;
 
   const productMap = new Map(products.map((product) => [product.id, product]));
-  const quantityFor = (productId: string) => Math.max(0, lines.find((line) => line.productId === productId)?.quantity ?? 0);
-  const single = productMap.get(config.singleProductId);
-  const box = productMap.get(config.boxProductId);
+  const quantityByProduct = new Map<string, number>();
+  for (const line of lines) {
+    quantityByProduct.set(line.productId, (quantityByProduct.get(line.productId) ?? 0) + Math.max(0, line.quantity));
+  }
+  const quantityFor = (productId: string) => quantityByProduct.get(productId) ?? 0;
+  const configuredSingleIds = config.singleProductIds?.filter(Boolean) ?? [];
+  const singleProductIds = [...new Set(configuredSingleIds.length ? configuredSingleIds : [config.singleProductId].filter(Boolean))];
+  const configuredBoxMappings = config.boxProductMappings?.filter((mapping) => mapping.boxProductId && mapping.giftProductId) ?? [];
+  const boxProductMappings = configuredBoxMappings.length
+    ? configuredBoxMappings
+    : config.boxProductId && config.singleProductId
+      ? [{ boxProductId: config.boxProductId, giftProductId: config.singleProductId }]
+      : [];
   const dose = productMap.get(config.doseProductId);
-  const singleQuantity = single ? quantityFor(single.id) : 0;
-  const boxQuantity = box ? quantityFor(box.id) : 0;
   const groupQuantity = Math.max(2, config.groupQuantity || 3);
-  const groups = config.repeatable
-    ? Math.floor(singleQuantity / groupQuantity)
-    : Number(singleQuantity >= groupQuantity);
-  const groupUnits = groups * groupQuantity;
-  const remainder = Math.max(0, singleQuantity - groupUnits);
-  const doseGiftQuantity = remainder * Math.max(0, config.doseGiftPerRemainder || 0);
-  const boxGiftQuantity = boxQuantity * Math.max(0, config.boxGiftQuantity || 0);
+  const discountPercent = Math.max(0, Math.min(100, config.groupDiscountPercent));
+  let groupApplications = 0;
+  let doseGiftQuantity = 0;
+  let boxGiftQuantity = 0;
+  let discount = 0;
   const applications: QuantityPromotionApplication[] = [];
-  const gifts: QuantityPromotionGift[] = [];
+  const giftsByProduct = new Map<string, QuantityPromotionGift>();
 
-  if (groups > 0 && single) {
+  for (const productId of singleProductIds) {
+    const single = productMap.get(productId);
+    if (!single) continue;
+    const singleQuantity = quantityFor(single.id);
+    const groups = config.repeatable
+      ? Math.floor(singleQuantity / groupQuantity)
+      : Number(singleQuantity >= groupQuantity);
+    const groupUnits = groups * groupQuantity;
+    const remainder = Math.max(0, singleQuantity - groupUnits);
+    groupApplications += groups;
+    doseGiftQuantity += remainder * Math.max(0, config.doseGiftPerRemainder || 0);
+    discount += groups * single.price * discountPercent / 100;
+  }
+
+  for (const mapping of boxProductMappings) {
+    const giftProduct = productMap.get(mapping.giftProductId);
+    const boxQuantity = productMap.has(mapping.boxProductId) ? quantityFor(mapping.boxProductId) : 0;
+    const giftQuantity = boxQuantity * Math.max(0, config.boxGiftQuantity || 0);
+    if (!giftProduct || giftQuantity <= 0) continue;
+    boxGiftQuantity += giftQuantity;
+    const existing = giftsByProduct.get(giftProduct.id);
+    if (existing) existing.quantity += giftQuantity;
+    else giftsByProduct.set(giftProduct.id, { productId: giftProduct.id, name: giftProduct.name, quantity: giftQuantity });
+  }
+
+  if (groupApplications > 0) {
     applications.push({
       key: "group-discount",
-      label: `${groups} ${groups === 1 ? "ampola com" : "ampolas com"} ${config.groupDiscountPercent}% OFF`,
-      applications: groups,
+      label: `${groupApplications} ${groupApplications === 1 ? "ampola com" : "ampolas com"} ${config.groupDiscountPercent}% OFF`,
+      applications: groupApplications,
     });
   }
   if (doseGiftQuantity > 0 && dose) {
-    gifts.push({ productId: dose.id, name: dose.name, quantity: doseGiftQuantity });
+    const existing = giftsByProduct.get(dose.id);
+    if (existing) existing.quantity += doseGiftQuantity;
+    else giftsByProduct.set(dose.id, { productId: dose.id, name: dose.name, quantity: doseGiftQuantity });
     applications.push({
       key: "single-gift",
       label: `${doseGiftQuantity} ${doseGiftQuantity === 1 ? "dose extra de 2,5 mg" : "doses extras de 2,5 mg"}`,
       applications: doseGiftQuantity,
     });
   }
-  if (boxGiftQuantity > 0 && single) {
-    const existing = gifts.find((gift) => gift.productId === single.id);
-    if (existing) existing.quantity += boxGiftQuantity;
-    else gifts.push({ productId: single.id, name: single.name, quantity: boxGiftQuantity });
+  if (boxGiftQuantity > 0) {
     applications.push({
       key: "box-gift",
       label: `${boxGiftQuantity} ${boxGiftQuantity === 1 ? "ampola grátis pela caixa" : "ampolas grátis pelas caixas"}`,
@@ -69,6 +99,7 @@ export function calculateQuantityPromotion(
     });
   }
 
+  const gifts = [...giftsByProduct.values()];
   let stockIssue = "";
   for (const gift of gifts) {
     const product = productMap.get(gift.productId);
@@ -78,10 +109,6 @@ export function calculateQuantityPromotion(
       break;
     }
   }
-
-  const discount = single
-    ? groups * single.price * Math.max(0, Math.min(100, config.groupDiscountPercent)) / 100
-    : 0;
 
   return {
     applied: applications.length > 0,

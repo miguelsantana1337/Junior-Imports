@@ -355,6 +355,11 @@ export const settingsSchema = z.object({
     enabled: z.boolean(),
     singleProductId: z.string().max(160),
     boxProductId: z.string().max(160),
+    singleProductIds: z.array(z.string().min(1).max(160)).max(50).optional(),
+    boxProductMappings: z.array(z.object({
+      boxProductId: z.string().min(1).max(160),
+      giftProductId: z.string().min(1).max(160),
+    })).max(50).optional(),
     doseProductId: z.string().max(160),
     groupQuantity: z.coerce.number().int().min(2).max(20),
     groupDiscountPercent: z.coerce.number().min(0).max(100),

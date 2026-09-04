@@ -78,4 +78,66 @@ describe("promoção por quantidade", () => {
     );
     expect(result.stockIssue).toContain("estoque suficiente");
   });
+
+  it("aplica as regras por marca sem combinar quantidades de produtos diferentes", () => {
+    const otherSingle = { ...single, id: "other-single", name: "Outra tirzepatida 15 mg", price: 480 };
+    const multiSettings: StoreSettings = {
+      ...settings,
+      quantityPromotion: {
+        ...settings.quantityPromotion,
+        singleProductIds: [single.id, otherSingle.id],
+      },
+    };
+    const result = calculateQuantityPromotion(
+      [{ productId: single.id, quantity: 2 }, { productId: otherSingle.id, quantity: 1 }],
+      [...products, otherSingle],
+      multiSettings,
+    );
+    expect(result.discount).toBe(0);
+    expect(result.gifts).toEqual([{ productId: dose.id, name: dose.name, quantity: 3 }]);
+  });
+
+  it("soma o desconto calculado separadamente para cada marca", () => {
+    const otherSingle = { ...single, id: "other-single", name: "Outra tirzepatida 15 mg", price: 480 };
+    const multiSettings: StoreSettings = {
+      ...settings,
+      quantityPromotion: {
+        ...settings.quantityPromotion,
+        singleProductIds: [single.id, otherSingle.id],
+      },
+    };
+    const result = calculateQuantityPromotion(
+      [{ productId: single.id, quantity: 3 }, { productId: otherSingle.id, quantity: 3 }],
+      [...products, otherSingle],
+      multiSettings,
+    );
+    expect(result.discount).toBe(465);
+    expect(result.gifts).toEqual([]);
+    expect(result.applications[0]).toMatchObject({ key: "group-discount", applications: 2 });
+  });
+
+  it("entrega a ampola da mesma marca para cada caixa", () => {
+    const otherSingle = { ...single, id: "other-single", name: "Outra tirzepatida 15 mg", price: 480 };
+    const otherBox = { ...box, id: "other-box", name: "Outra tirzepatida 15 mg (4 ampolas)", price: 1_850 };
+    const multiSettings: StoreSettings = {
+      ...settings,
+      quantityPromotion: {
+        ...settings.quantityPromotion,
+        boxProductMappings: [
+          { boxProductId: box.id, giftProductId: single.id },
+          { boxProductId: otherBox.id, giftProductId: otherSingle.id },
+        ],
+      },
+    };
+    const result = calculateQuantityPromotion(
+      [{ productId: box.id, quantity: 1 }, { productId: otherBox.id, quantity: 2 }],
+      [...products, otherSingle, otherBox],
+      multiSettings,
+    );
+    expect(result.gifts).toEqual([
+      { productId: single.id, name: single.name, quantity: 1 },
+      { productId: otherSingle.id, name: otherSingle.name, quantity: 2 },
+    ]);
+    expect(result.applications).toContainEqual(expect.objectContaining({ key: "box-gift", applications: 3 }));
+  });
 });

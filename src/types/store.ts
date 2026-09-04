@@ -74,6 +74,8 @@ export interface QuantityPromotionSettings {
   enabled: boolean;
   singleProductId: string;
   boxProductId: string;
+  singleProductIds?: string[];
+  boxProductMappings?: QuantityPromotionBoxMapping[];
   doseProductId: string;
   groupQuantity: number;
   groupDiscountPercent: number;
@@ -82,6 +84,11 @@ export interface QuantityPromotionSettings {
   repeatable: boolean;
   allowCoupons: boolean;
   allowAdditionalDiscounts: boolean;
+}
+
+export interface QuantityPromotionBoxMapping {
+  boxProductId: string;
+  giftProductId: string;
 }
 
 export interface QuantityPromotionGift {

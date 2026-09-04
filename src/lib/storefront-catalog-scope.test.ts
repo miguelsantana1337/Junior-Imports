@@ -74,7 +74,19 @@ describe("escopos públicos dos catálogos", () => {
   });
 
   it("não serializa conteúdo editorial do catálogo original na loja de eletrônicos", () => {
-    const data = { ...seedData, products, categories };
+    const data = {
+      ...seedData,
+      products,
+      categories,
+      settings: {
+        ...seedData.settings,
+        quantityPromotion: {
+          ...seedData.settings.quantityPromotion,
+          singleProductIds: ["medicine"],
+          boxProductMappings: [{ boxProductId: "medicine", giftProductId: "medicine" }],
+        },
+      },
+    };
     const result = scopeStorefrontData(data, "electronics");
     expect(result.products.map((item) => item.id)).toEqual(["phone", "legacy-phone"]);
     for (const key of ["banners", "sections", "pages", "pageBlocks", "trustItems", "benefits", "faqs", "orders"] as const) {
@@ -83,6 +95,8 @@ describe("escopos públicos dos catálogos", () => {
     expect(JSON.stringify(result)).not.toContain('"medicine"');
     expect(result.settings.whatsapp).toBe(data.settings.whatsapp);
     expect(result.settings.quantityPromotion.singleProductId).toBe("");
+    expect(result.settings.quantityPromotion.singleProductIds).toEqual([]);
+    expect(result.settings.quantityPromotion.boxProductMappings).toEqual([]);
     expect(scopeStorefrontData(data, "all")).toBe(data);
   });
 
