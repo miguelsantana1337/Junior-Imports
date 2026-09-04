@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canDelegateAdminAccess, canManageGlobalIdentity } from "@/lib/admin-user-scope";
 import { AdminRequestError, guardAdminMutation } from "@/lib/admin-request-guard";
 import { requireAdmin } from "@/lib/require-admin";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
 
   const { data: membership, error: membershipError } = await supabase
     .from("tenant_members")
-    .select("role, active")
+    .select("role, permissions, active")
     .eq("tenant_id", actor.tenantId)
     .eq("user_id", parsed.data.id)
     .maybeSingle();
@@ -48,6 +49,20 @@ export async function POST(request: Request) {
       { error: "Somente o proprietário pode redefinir a senha de outro proprietário." },
       { status: 403 },
     );
+  }
+
+  if (!canDelegateAdminAccess(actor, membership.role, membership.permissions ?? [])) {
+    return NextResponse.json({ error: "Você não pode redefinir a senha de um acesso superior ao seu." }, { status: 403 });
+  }
+  const [{ data: targetProfile, error: targetProfileError }, { data: targetMemberships, error: targetMembershipsError }] = await Promise.all([
+    supabase.from("profiles").select("is_platform_admin").eq("id", parsed.data.id).maybeSingle(),
+    supabase.from("tenant_members").select("tenant_id").eq("user_id", parsed.data.id),
+  ]);
+  if (targetProfileError || targetMembershipsError || !targetProfile || !targetMemberships) {
+    return NextResponse.json({ error: "Não foi possível verificar o escopo da conta." }, { status: 503 });
+  }
+  if (!canManageGlobalIdentity(actor, { isPlatformAdmin: Boolean(targetProfile.is_platform_admin), tenantIds: targetMemberships.map((item) => item.tenant_id) })) {
+    return NextResponse.json({ error: "Esta conta possui acesso global ou a outras lojas. Use a recuperação pessoal de senha." }, { status: 403 });
   }
 
   const { data: authResult, error: authReadError } = await supabase.auth.admin.getUserById(parsed.data.id);

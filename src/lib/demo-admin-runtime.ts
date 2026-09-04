@@ -10,8 +10,8 @@ export function shouldAllowDemoAdmin({
   vercelEnv: string | undefined;
 }) {
   if (supabaseConfigured) return false;
-  if (vercelEnv) return vercelEnv !== "production";
-  return nodeEnv !== "production";
+  if (vercelEnv) return false;
+  return nodeEnv === "development" || nodeEnv === "test";
 }
 
 export function isDemoAdminAllowed() {

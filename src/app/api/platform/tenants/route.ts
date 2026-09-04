@@ -60,8 +60,6 @@ export async function POST(request: Request) {
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revise os dados." }, { status: 400 });
 
   const input = parsed.data;
-  let ownerId = "";
-  let createdOwner = false;
   const created = await supabase.auth.admin.createUser({
     email: input.ownerEmail,
     password: input.ownerPassword,
@@ -69,14 +67,10 @@ export async function POST(request: Request) {
     user_metadata: { full_name: input.ownerName, must_change_password: true },
   });
 
-  if (created.data.user) {
-    ownerId = created.data.user.id;
-    createdOwner = true;
-  } else {
-    const users = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
-    ownerId = users.data.users.find((user) => user.email?.toLowerCase() === input.ownerEmail.toLowerCase())?.id ?? "";
-    if (!ownerId) return NextResponse.json({ error: "Não foi possível criar o responsável da loja." }, { status: 400 });
+  if (!created.data.user) {
+    return NextResponse.json({ error: "Não foi possível criar o responsável. Use um e-mail que ainda não esteja cadastrado." }, { status: 409 });
   }
+  const ownerId = created.data.user.id;
 
   const { error: profileError } = await supabase.from("profiles").upsert({
     id: ownerId,
@@ -89,7 +83,7 @@ export async function POST(request: Request) {
     is_platform_admin: false,
   });
   if (profileError) {
-    if (createdOwner) await supabase.auth.admin.deleteUser(ownerId);
+    await supabase.auth.admin.deleteUser(ownerId);
     return NextResponse.json({ error: "Não foi possível preparar o perfil do responsável." }, { status: 500 });
   }
 
@@ -103,7 +97,7 @@ export async function POST(request: Request) {
     p_owner_id: ownerId,
   });
   if (error || !tenantId) {
-    if (createdOwner) await supabase.auth.admin.deleteUser(ownerId);
+    await supabase.auth.admin.deleteUser(ownerId);
     const duplicate = error?.message.toLowerCase().includes("duplicate");
     return NextResponse.json({ error: duplicate ? "Já existe um cliente com este endereço." : "Não foi possível provisionar a nova loja." }, { status: 400 });
   }

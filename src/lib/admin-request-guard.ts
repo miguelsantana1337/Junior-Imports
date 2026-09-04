@@ -1,3 +1,5 @@
+import { hasAllowedStorefrontSource } from "@/lib/storefront-request-origin";
+
 const attempts = new Map<string, number[]>();
 
 export class AdminRequestError extends Error {
@@ -8,9 +10,7 @@ export class AdminRequestError extends Error {
 
 export function guardAdminMutation(request: Request, actorId: string, limit = 30, windowMs = 60_000) {
   const url = new URL(request.url);
-  const origin = request.headers.get("origin");
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if ((origin && origin !== url.origin) || fetchSite === "cross-site") {
+  if (!hasAllowedStorefrontSource(request)) {
     throw new AdminRequestError("Origem da solicitação não permitida.", 403);
   }
 

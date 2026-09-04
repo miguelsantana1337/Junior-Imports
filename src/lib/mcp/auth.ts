@@ -59,13 +59,13 @@ export async function authenticateMcpRequest(request: Request): Promise<McpActor
   if (new Date(stored.expires_at).getTime() <= Date.now()) throw new McpAuthError("A sessão da integração expirou.");
 
   const [{ data: profile }, { data: membership }, { data: tenant }] = await Promise.all([
-    admin.from("profiles").select("email, full_name, active, is_platform_admin").eq("id", stored.user_id).maybeSingle(),
+    admin.from("profiles").select("email, full_name, active, is_platform_admin, must_change_password").eq("id", stored.user_id).maybeSingle(),
     admin.from("tenant_members").select("role, permissions, active").eq("tenant_id", stored.tenant_id).eq("user_id", stored.user_id).maybeSingle(),
     admin.from("tenants").select("slug, status").eq("id", stored.tenant_id).maybeSingle(),
   ]);
 
   const isPlatformAdmin = Boolean(profile?.is_platform_admin);
-  if (!profile?.active || !tenant || !["active", "trial"].includes(tenant.status)) {
+  if (!profile?.active || profile.must_change_password || !tenant || !["active", "trial"].includes(tenant.status)) {
     throw new McpAuthError("O usuário ou a loja está inativo.", 403, "access_denied");
   }
   if (!isPlatformAdmin && !membership?.active) {

@@ -6,8 +6,8 @@ describe("modo demonstrativo administrativo", () => {
     expect(shouldAllowDemoAdmin({ supabaseConfigured: false, nodeEnv: "development", vercelEnv: undefined })).toBe(true);
   });
 
-  it("fica disponível em preview, mas nunca na produção da Vercel", () => {
-    expect(shouldAllowDemoAdmin({ supabaseConfigured: false, nodeEnv: "production", vercelEnv: "preview" })).toBe(true);
+  it("bloqueia o demo em qualquer ambiente hospedado", () => {
+    expect(shouldAllowDemoAdmin({ supabaseConfigured: false, nodeEnv: "production", vercelEnv: "preview" })).toBe(false);
     expect(shouldAllowDemoAdmin({ supabaseConfigured: false, nodeEnv: "production", vercelEnv: "production" })).toBe(false);
   });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { canDelegateAdminAccess, canManageGlobalIdentity } from "@/lib/admin-user-scope";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, type AdminSessionUser } from "@/lib/require-admin";
 import { adminUserCreateSchema, adminUserUpdateSchema } from "@/lib/validation";
@@ -125,29 +126,26 @@ export async function POST(request: Request) {
   if (!supabase) return unavailable();
   const parsed = adminUserCreateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revise os dados." }, { status: 400 });
+  if (!canDelegateAdminAccess(actor, parsed.data.role, parsed.data.permissions)) return NextResponse.json({ error: "Você não pode conceder permissões superiores às suas." }, { status: 403 });
   if (parsed.data.role === "owner" && actor.role !== "owner" && !actor.isPlatformAdmin) return NextResponse.json({ error: "Somente o proprietário pode criar outro proprietário." }, { status: 403 });
 
   const existing = (await listAuthUsers()).find((user) => user.email?.toLowerCase() === parsed.data.email.toLowerCase());
-  let authUser = existing;
-  let created = false;
-  if (!authUser) {
-    const { data, error } = await supabase.auth.admin.createUser({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      email_confirm: true,
-      user_metadata: { full_name: parsed.data.fullName, must_change_password: true },
-    });
-    if (error || !data.user) return NextResponse.json({ error: "Não foi possível criar o usuário." }, { status: 400 });
-    authUser = data.user;
-    created = true;
-  }
+  if (existing) return NextResponse.json({ error: "Não foi possível criar esta conta. Gerencie contas existentes pelo acesso já cadastrado." }, { status: 409 });
+  const { data, error: createUserError } = await supabase.auth.admin.createUser({
+    email: parsed.data.email,
+    password: parsed.data.password,
+    email_confirm: true,
+    user_metadata: { full_name: parsed.data.fullName, must_change_password: true },
+  });
+  if (createUserError || !data.user) return NextResponse.json({ error: "Não foi possível criar o usuário." }, { status: 400 });
+  const authUser = data.user;
 
   const [{ error: profileError }, { error: membershipError }] = await Promise.all([
     supabase.from("profiles").upsert({ id: authUser.id, full_name: parsed.data.fullName, email: parsed.data.email, active: true, must_change_password: true }),
     supabase.from("tenant_members").upsert({ tenant_id: actor.tenantId, user_id: authUser.id, role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active }),
   ]);
   if (profileError || membershipError) {
-    if (created) await supabase.auth.admin.deleteUser(authUser.id);
+    await supabase.auth.admin.deleteUser(authUser.id);
     return NextResponse.json({ error: "A conta foi revertida porque o acesso à loja não pôde ser salvo." }, { status: 500 });
   }
   await recordUserAudit(actor, "insert", authUser.id, null, { role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active });
@@ -162,16 +160,26 @@ export async function PATCH(request: Request) {
   if (!supabase) return unavailable();
   const parsed = adminUserUpdateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Revise os dados." }, { status: 400 });
+  if (!canDelegateAdminAccess(actor, parsed.data.role, parsed.data.permissions)) return NextResponse.json({ error: "Você não pode conceder permissões superiores às suas." }, { status: 403 });
   const { data: membership } = await supabase.from("tenant_members").select("role, permissions, active").eq("tenant_id", actor.tenantId).eq("user_id", parsed.data.id).maybeSingle();
   if (!membership) return NextResponse.json({ error: "Usuário não encontrado nesta loja." }, { status: 404 });
+  if (!canDelegateAdminAccess(actor, membership.role, membership.permissions ?? [])) return NextResponse.json({ error: "Você não pode alterar um acesso superior ao seu." }, { status: 403 });
   if ((membership.role === "owner" || parsed.data.role === "owner") && actor.role !== "owner" && !actor.isPlatformAdmin) return NextResponse.json({ error: "Somente o proprietário pode alterar este perfil." }, { status: 403 });
   if (parsed.data.id === actor.id && (parsed.data.role !== actor.role || !parsed.data.active)) return NextResponse.json({ error: "Você não pode remover o próprio acesso ou cargo." }, { status: 400 });
   if (membership.role === "owner" && (parsed.data.role !== "owner" || !parsed.data.active) && await isLastOwner(parsed.data.id, actor.tenantId)) return NextResponse.json({ error: "A loja precisa manter ao menos um proprietário ativo." }, { status: 400 });
 
+  const [{ data: targetProfile, error: targetProfileError }, { data: targetMemberships, error: targetMembershipsError }] = await Promise.all([
+    supabase.from("profiles").select("is_platform_admin, full_name").eq("id", parsed.data.id).maybeSingle(),
+    supabase.from("tenant_members").select("tenant_id").eq("user_id", parsed.data.id),
+  ]);
+  if (targetProfileError || targetMembershipsError || !targetProfile || !targetMemberships) return NextResponse.json({ error: "Não foi possível verificar o escopo da conta." }, { status: 503 });
+  const canEditIdentity = canManageGlobalIdentity(actor, { isPlatformAdmin: Boolean(targetProfile.is_platform_admin), tenantIds: targetMemberships.map((item) => item.tenant_id) });
+  if (!canEditIdentity && parsed.data.fullName !== targetProfile.full_name) return NextResponse.json({ error: "O nome desta conta é compartilhado com outras lojas e deve ser alterado pelo administrador da plataforma." }, { status: 403 });
+
   const [{ error: membershipError }, { error: profileError }, { error: authError }] = await Promise.all([
     supabase.from("tenant_members").update({ role: parsed.data.role, permissions: parsed.data.permissions, active: parsed.data.active }).eq("tenant_id", actor.tenantId).eq("user_id", parsed.data.id),
-    supabase.from("profiles").update({ full_name: parsed.data.fullName }).eq("id", parsed.data.id),
-    supabase.auth.admin.updateUserById(parsed.data.id, { user_metadata: { full_name: parsed.data.fullName } }),
+    canEditIdentity ? supabase.from("profiles").update({ full_name: parsed.data.fullName }).eq("id", parsed.data.id) : Promise.resolve({ error: null }),
+    canEditIdentity ? supabase.auth.admin.updateUserById(parsed.data.id, { user_metadata: { full_name: parsed.data.fullName } }) : Promise.resolve({ error: null }),
   ]);
   if (membershipError || profileError || authError) return NextResponse.json({ error: "Não foi possível atualizar o usuário." }, { status: 500 });
   await recordUserAudit(actor, "update", parsed.data.id, membership, parsed.data);
@@ -188,6 +196,7 @@ export async function DELETE(request: Request) {
   if (id === actor.id) return NextResponse.json({ error: "Você não pode excluir o próprio acesso." }, { status: 400 });
   const { data: membership } = await supabase.from("tenant_members").select("role, permissions, active").eq("tenant_id", actor.tenantId).eq("user_id", id).maybeSingle();
   if (!membership) return NextResponse.json({ error: "Usuário não encontrado nesta loja." }, { status: 404 });
+  if (!canDelegateAdminAccess(actor, membership.role, membership.permissions ?? [])) return NextResponse.json({ error: "Você não pode excluir um acesso superior ao seu." }, { status: 403 });
   if (membership.role === "owner" && actor.role !== "owner" && !actor.isPlatformAdmin) return NextResponse.json({ error: "Somente o proprietário pode excluir outro proprietário." }, { status: 403 });
   if (await isLastOwner(id, actor.tenantId)) return NextResponse.json({ error: "A loja precisa manter ao menos um proprietário ativo." }, { status: 400 });
   const { error } = await supabase.from("tenant_members").delete().eq("tenant_id", actor.tenantId).eq("user_id", id);

@@ -9,6 +9,11 @@ function request(origin = "http://localhost:3000", site = "same-origin") {
 }
 
 describe("guardAdminMutation", () => {
+  it("nega mutações sem origem comprovada", () => {
+    expect(() => guardAdminMutation(new Request("http://localhost:3000/api/admin/users", { method: "POST" }), "missing-origin")).toThrow(AdminRequestError);
+    expect(() => guardAdminMutation(request("null", "same-origin"), "null-origin")).toThrow(AdminRequestError);
+  });
+
   it("aceita uma alteração da mesma origem", () => {
     expect(() => guardAdminMutation(request(), "same-origin-user")).not.toThrow();
   });

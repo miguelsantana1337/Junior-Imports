@@ -1,3 +1,4 @@
+import { AdminRequestError, guardAdminMutation } from "@/lib/admin-request-guard";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -5,11 +6,16 @@ import { requireAdmin } from "@/lib/require-admin";
 
 export async function POST(request: Request) {
   const actor = await requireAdmin();
+  try {
+    guardAdminMutation(request, actor.id);
+  } catch (error) {
+    return NextResponse.json({ error: "Solicitação não permitida." }, { status: error instanceof AdminRequestError ? error.status : 400 });
+  }
   const payload = await request.json().catch(() => null) as { slug?: string } | null;
   const slug = String(payload?.slug ?? "");
   const supabase = createAdminClient();
   if (!supabase || !slug) return NextResponse.json({ error: "Cliente inválido." }, { status: 400 });
-  const { data: tenant } = await supabase.from("tenants").select("id, slug").eq("slug", slug).maybeSingle();
+  const { data: tenant } = await supabase.from("tenants").select("id, slug").eq("slug", slug).in("status", ["active", "trial"]).maybeSingle();
   if (!tenant) return NextResponse.json({ error: "Cliente não encontrado." }, { status: 404 });
   if (!actor.isPlatformAdmin) {
     const { data: membership } = await supabase.from("tenant_members").select("active").eq("tenant_id", tenant.id).eq("user_id", actor.id).maybeSingle();
